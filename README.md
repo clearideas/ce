@@ -10,7 +10,7 @@ Learn more about Clear Ideas at [clearideas.com](https://clearideas.com/). For h
 
 ## Run In 5 Minutes
 
-Clone the repo and start a complete local stack with HTTPS, app, MongoDB, and Mailpit email capture:
+Clone the repo and start a complete local stack with the app, MongoDB, and Mailpit email capture:
 
 ```bash
 git clone https://github.com/clearideas/clearideas-ce.git
@@ -18,7 +18,7 @@ cd clearideas-ce
 docker compose -f docker-compose.yml -f docker-compose.quickstart.yml up -d --build
 ```
 
-Open `https://localhost:4100`. Open Mailpit at `http://localhost:8025` to read sign-in codes and invites.
+Open `http://localhost:4100`. Open Mailpit at `http://localhost:8025` to read sign-in codes and invites.
 
 The quick-start stack uses local development secrets and creates the first owner as `admin@example.com`. For anything beyond a local trial, copy `.env.example` to `.env`, set real secrets, and use the production-shaped Compose options below.
 
@@ -100,7 +100,7 @@ For those capabilities, use hosted Clear Ideas. See [clearideas.com](https://cle
 
 ## Quick Start
 
-Clear Ideas runs as one app container behind a Caddy HTTPS proxy. The bundled Caddyfile is configured for local HTTPS with Caddy's internal certificate authority. For a public domain, use your own reverse proxy/TLS setup or change the Caddyfile to use public ACME certificates before exposing the app.
+Clear Ideas runs as one app container behind a small Caddy reverse proxy. The local quickstart uses plain HTTP on `localhost` to avoid local certificate warnings. For public deployments, serve the app over HTTPS with a real domain, either through your own reverse proxy/load balancer or by setting `CADDY_SITE` to an HTTPS domain so Caddy can issue a browser-trusted certificate.
 
 ### 1. Create Your Env File
 
@@ -111,9 +111,9 @@ cp .env.example .env
 Edit `.env` and set at least:
 
 ```env
-APP_URL=https://localhost:4100
-BETTER_AUTH_URL=https://localhost:4100
-CADDY_SITE=https://localhost:4100
+APP_URL=http://localhost:4100
+BETTER_AUTH_URL=http://localhost:4100
+CADDY_SITE=http://localhost:4100
 BETTER_AUTH_SECRET=replace-with-a-long-random-secret
 FILE_ACCESS_TOKEN_SECRET=replace-with-another-long-random-secret
 FIRST_USER_EMAIL=you@example.com
@@ -154,7 +154,7 @@ docker compose --env-file .env up -d --build
 
 ### 3. Or Start With Local MongoDB Too
 
-Use this for a complete local stack with app, HTTPS proxy, and MongoDB:
+Use this for a complete local stack with app, reverse proxy, and MongoDB:
 
 ```bash
 docker compose --env-file .env \
@@ -166,12 +166,12 @@ docker compose --env-file .env \
 ### 4. Open The App
 
 ```text
-https://localhost:4100
+http://localhost:4100
 ```
 
-Compose starts the app and a Caddy HTTPS proxy. The bundled Caddyfile uses an internal certificate authority for local HTTPS, so your browser may show a certificate warning unless you trust Caddy's local CA.
+Compose starts the app and a Caddy reverse proxy. The default local configuration uses HTTP on `localhost` so browsers do not show untrusted-certificate warnings.
 
-If port `4100` is already in use, set `CLEARIDEAS_CE_HOST_PORT`, `APP_URL`, `BETTER_AUTH_URL`, and `CADDY_SITE` to another local port, for example `https://localhost:4110`.
+If port `4100` is already in use, set `CLEARIDEAS_CE_HOST_PORT`, `APP_URL`, `BETTER_AUTH_URL`, and `CADDY_SITE` to another local port, for example `http://localhost:4110`.
 
 The app creates `FIRST_USER_EMAIL` as the first owner before the server starts. The bootstrap is idempotent, so restarts do not duplicate the user.
 
@@ -257,6 +257,7 @@ BETTER_AUTH_SECRET=change-me-to-a-long-random-secret
 FILE_ACCESS_TOKEN_SECRET=change-me-to-another-long-random-secret
 MONGODB_URI=mongodb://mongo.example.com:27017/clearideas_ce
 HTTPS_REQUIRED=true
+CLEARIDEAS_TRUST_PROXY=1
 EMAIL_PROVIDER=smtp
 EMAIL_FROM="Clear Ideas <noreply@example.com>"
 SMTP_HOST=smtp.example.com
@@ -268,7 +269,11 @@ FIRST_USER_EMAIL=you@example.com
 FIRST_USER_NAME=Your Name
 ```
 
-Production requires a reverse proxy or load balancer that terminates HTTPS and forwards `X-Forwarded-Proto=https`, plus a strong auth secret, MongoDB, and SMTP. If you use the bundled Caddy service for a real domain, remove `tls internal` from `Caddyfile` and configure DNS so Caddy can issue a browser-trusted certificate.
+Production requires HTTPS for user traffic, plus a strong auth secret, MongoDB, and SMTP. The app itself listens over HTTP inside the container, so TLS can be terminated by an upstream reverse proxy or load balancer such as an AWS Application Load Balancer (ALB). In that setup, keep `APP_URL` and `BETTER_AUTH_URL` set to the public `https://` URL, set `CLEARIDEAS_TRUST_PROXY=1`, and keep `HTTPS_REQUIRED=true` when the proxy forwards `X-Forwarded-Proto=https`.
+
+If your proxy or network deliberately terminates HTTPS upstream but cannot provide `X-Forwarded-Proto=https`, you can set `HTTPS_REQUIRED=false`; only do this when direct access to the app container is blocked and users still reach Clear Ideas through HTTPS externally.
+
+If you use the bundled Caddy service for a real domain, set `CADDY_SITE=https://your-domain.example` and configure DNS so Caddy can issue a browser-trusted certificate.
 
 ### Rate Limiting
 
@@ -304,7 +309,7 @@ CLEARIDEAS_DOCS_ENABLED=false
 ## Model Context Protocol (MCP) Example
 
 ```bash
-curl -X POST https://localhost:4100/api/mcp \
+curl -X POST http://localhost:4100/api/mcp \
   -H "Authorization: Bearer $CLEAR_IDEAS_MCP_KEY" \
   -H "Content-Type: application/json" \
   -d '{"tool":"clearideas.list_sites","args":{}}'
@@ -326,7 +331,7 @@ OPENAI_API_KEY=<key>
 
 - Back up MongoDB, `STORAGE_ROOT`, and `SEARCH_INDEX_ROOT` together.
 - Use SMTP for production email; use Mailpit only for local development.
-- Keep `HTTPS_REQUIRED=true` for any public deployment.
+- Serve every public deployment over HTTPS. Keep `HTTPS_REQUIRED=true` when your proxy forwards `X-Forwarded-Proto=https`; set it to `false` only behind a trusted TLS terminator that blocks direct HTTP access to the app.
 - Use long random values for `BETTER_AUTH_SECRET` and `FILE_ACCESS_TOKEN_SECRET`.
 - Tune rate limits for your proxy, expected traffic, and user count.
 - Run `npm run check:ce-release` before publishing or distributing a modified build.
