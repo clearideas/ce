@@ -8,11 +8,11 @@ services:
       HOST: 0.0.0.0
       PORT: 4100
       CLEARIDEAS_TRUST_PROXY: ${CLEARIDEAS_TRUST_PROXY:-}
-      APP_URL: ${APP_URL:-https://localhost:4100}
+      APP_URL: ${APP_URL:-http://localhost:4100}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-dev-only-change-me}
       FILE_ACCESS_TOKEN_SECRET: ${FILE_ACCESS_TOKEN_SECRET:-}
-      HTTPS_REQUIRED: ${HTTPS_REQUIRED:-true}
+      HTTPS_REQUIRED: ${HTTPS_REQUIRED:-false}
       MONGODB_URI: ${MONGODB_URI:-}
       MONGODB_HOST: ${MONGODB_HOST:-}
       MONGODB_DATABASE_NAME: ${MONGODB_DATABASE_NAME:-clearideas_ce}
@@ -77,7 +77,7 @@ services:
     ports:
       - "${CLEARIDEAS_CE_HOST_PORT:-4100}:${CLEARIDEAS_CE_HOST_PORT:-4100}"
     environment:
-      CADDY_SITE: ${CADDY_SITE:-https://localhost:4100}
+      CADDY_SITE: ${CADDY_SITE:-http://localhost:4100}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

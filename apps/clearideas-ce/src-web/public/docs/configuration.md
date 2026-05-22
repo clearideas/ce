@@ -7,14 +7,14 @@ Community Edition is configured with a small environment surface. Public Docker 
 For the public Docker Compose setup, start with:
 
 ```env
-APP_URL=https://localhost:4100
-BETTER_AUTH_URL=https://localhost:4100
-CADDY_SITE=https://localhost:4100
+APP_URL=http://localhost:4100
+BETTER_AUTH_URL=http://localhost:4100
+CADDY_SITE=http://localhost:4100
 BETTER_AUTH_SECRET=<long-random-secret>
 FILE_ACCESS_TOKEN_SECRET=<another-long-random-secret>
 FIRST_USER_EMAIL=admin@example.com
 FIRST_USER_NAME=Clear Ideas Admin
-HTTPS_REQUIRED=true
+HTTPS_REQUIRED=false
 CLEARIDEAS_DOCS_ENABLED=true
 EMAIL_PROVIDER=smtp
 EMAIL_FROM="Clear Ideas <noreply@example.com>"
@@ -55,6 +55,7 @@ MONGODB_URI=mongodb://mongo:27017/clearideas_ce
 FIRST_USER_EMAIL=admin@your-domain.example
 FIRST_USER_NAME=Clear Ideas Admin
 HTTPS_REQUIRED=true
+CLEARIDEAS_TRUST_PROXY=1
 CLEARIDEAS_DOCS_ENABLED=false
 EMAIL_PROVIDER=smtp
 EMAIL_FROM="Clear Ideas <noreply@your-domain.example>"
@@ -85,7 +86,13 @@ FIRST_USER_EMAIL=you@example.com
 
 For production-shaped Docker startup, configure real SMTP in `.env`. For local development without SMTP credentials, use `docker-compose.dev.yml` to run Mailpit.
 
-The app listens over HTTP inside the container. The bundled Caddyfile is intended for local HTTPS and uses Caddy's internal certificate authority. In production, terminate HTTPS at a reverse proxy or load balancer and forward `X-Forwarded-Proto=https`. Keep `HTTPS_REQUIRED=true` so direct insecure requests are rejected. If you use the bundled Caddy service for a real domain, remove `tls internal` from `Caddyfile` and configure DNS so Caddy can issue a browser-trusted certificate.
+The app listens over HTTP inside the container. The local Docker quickstart uses HTTP on `localhost` to avoid local certificate warnings. In production, users should reach Clear Ideas over HTTPS.
+
+If you terminate HTTPS at a reverse proxy or load balancer such as an AWS Application Load Balancer (ALB), keep `APP_URL` and `BETTER_AUTH_URL` set to the public `https://` URL, set `CLEARIDEAS_TRUST_PROXY=1`, and keep `HTTPS_REQUIRED=true` when the proxy forwards `X-Forwarded-Proto=https`.
+
+If your proxy or network deliberately terminates HTTPS upstream but cannot provide `X-Forwarded-Proto=https`, you can set `HTTPS_REQUIRED=false`; only do this when direct access to the app container is blocked and users still reach Clear Ideas through HTTPS externally.
+
+If you use the bundled Caddy service for a real domain, set `CADDY_SITE=https://your-domain.example` and configure DNS so Caddy can issue a browser-trusted certificate.
 
 ## Storage And Search
 

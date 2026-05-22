@@ -4,7 +4,7 @@ Docker Compose is the recommended way to evaluate Clear Ideas Community Edition 
 
 ## Run In 5 Minutes
 
-Start a complete local stack with HTTPS, app, MongoDB, and Mailpit email capture:
+Start a complete local stack with the app, MongoDB, and Mailpit email capture:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.quickstart.yml up -d --build
@@ -13,7 +13,7 @@ docker compose -f docker-compose.yml -f docker-compose.quickstart.yml up -d --bu
 Open:
 
 ```text
-https://localhost:4100
+http://localhost:4100
 ```
 
 Open Mailpit to read sign-in codes and invites:
@@ -37,10 +37,10 @@ docker compose --env-file .env up -d --build
 The app listens on:
 
 ```text
-https://localhost:4100
+http://localhost:4100
 ```
 
-Caddy terminates local HTTPS and forwards requests to the app container. Your browser may show a certificate warning unless Caddy's local CA is trusted.
+Caddy forwards local HTTP requests to the app container. The default local setup uses HTTP on `localhost` to avoid untrusted-certificate warnings.
 
 ## Quick Start With Local MongoDB
 
@@ -60,7 +60,7 @@ With this override, you can leave MongoDB env variables blank. The override sets
 ## Services
 
 - `clearideas-ce`: the single-server app serving `/api` and the web UI
-- `caddy`: local HTTPS reverse proxy in front of the app
+- `caddy`: local reverse proxy in front of the app
 
 The app container creates the first owner before starting the server. `FIRST_USER_EMAIL` is required in `.env` and `FIRST_USER_NAME` is optional:
 

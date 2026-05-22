@@ -1,4 +1,3 @@
-{$CADDY_SITE:https://localhost:4100} {
-  tls internal
-  reverse_proxy clearideas-ce:4100
+{$CADDY_SITE:http://localhost:4100} {
+	reverse_proxy clearideas-ce:4100
 }

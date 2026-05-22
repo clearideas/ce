@@ -27,7 +27,7 @@ Create MCP access keys from Settings. Keys are shown once when created and are s
 ## Example Request
 
 ```bash
-curl -X POST https://localhost:4100/api/mcp \
+curl -X POST http://localhost:4100/api/mcp \
   -H "Authorization: Bearer $CLEAR_IDEAS_MCP_KEY" \
   -H "Content-Type: application/json" \
   -d '{"tool":"clearideas.list_sites","args":{}}'

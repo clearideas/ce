@@ -20,7 +20,7 @@ docker compose -f docker-compose.yml -f docker-compose.quickstart.yml up -d --bu
 Then open:
 
 ```text
-https://localhost:4100
+http://localhost:4100
 ```
 
 Open Mailpit to read sign-in codes and invites:
@@ -40,7 +40,7 @@ $EDITOR .env
 
 Set `FIRST_USER_EMAIL`, `BETTER_AUTH_SECRET`, SMTP settings, and one MongoDB option.
 
-If you already have MongoDB configured in `.env`, start the app and HTTPS proxy:
+If you already have MongoDB configured in `.env`, start the app and reverse proxy:
 
 ```bash
 docker compose --env-file .env up -d --build
@@ -58,10 +58,10 @@ docker compose --env-file .env \
 Then open:
 
 ```text
-https://localhost:4100
+http://localhost:4100
 ```
 
-The app creates `FIRST_USER_EMAIL` as the first owner before startup. Caddy provides local HTTPS; your browser may ask you to trust the local certificate.
+The app creates `FIRST_USER_EMAIL` as the first owner before startup. The local Docker quickstart uses HTTP on `localhost` to avoid local certificate warnings. For production, serve the public app URL over HTTPS through Caddy, a reverse proxy, or a load balancer.
 
 For development without real SMTP credentials, add Mailpit:
 
