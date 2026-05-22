@@ -14,6 +14,7 @@ const PUBLIC_ROUTES = new Map([
   [key('auth.routes.ts', 'ALL', '/{*any}'), 'Better Auth public/internal auth endpoints'],
   [key('mcp.routes.ts', 'GET', '/mcp'), 'MCP status only'],
   [key('mcp.routes.ts', 'OPTIONS', '/mcp'), 'MCP CORS preflight'],
+  [key('app.ts', 'GET', '/api/app-config'), 'browser bootstrap configuration'],
 ])
 
 const QUERY_VALIDATED_ROUTES = new Set([
