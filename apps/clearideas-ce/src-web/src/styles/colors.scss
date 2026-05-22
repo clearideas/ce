@@ -1,0 +1,33 @@
+.background {
+  background: var(--ci-background);
+  color: var(--ci-on-background);
+}
+
+.surface {
+  background: var(--ci-surface);
+  color: var(--ci-on-surface);
+}
+
+.elevated-surface {
+  background: var(--ci-elevated-surface);
+  color: var(--ci-on-elevated-surface);
+}
+
+.color-accent-1 {
+  color: var(--ci-accent-1);
+}
+.color-accent-2 {
+  color: var(--ci-accent-2);
+}
+.color-accent-3 {
+  color: var(--ci-accent-3);
+}
+.color-accent-feature {
+  color: var(--ci-feature);
+}
+.color-accent-feature-secondary {
+  color: var(--ci-feature-secondary);
+}
+.color-ai-tools {
+  color: var(--ci-ai-tools);
+}

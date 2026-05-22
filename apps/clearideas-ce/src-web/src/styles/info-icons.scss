@@ -1,0 +1,57 @@
+.info-icons {
+  display: flex;
+  align-items: center;
+  justify-content: start;
+  column-gap: 8px;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-grow: 0;
+  margin-right: 1px;
+  margin-left: 1px;
+}
+
+.info-icon {
+  display: flex;
+  font-size: 11px;
+  align-items: center;
+  justify-content: center;
+  flex-grow: 0;
+  flex-shrink: 0;
+  line-height: 1;
+  margin: 0 !important;
+
+  > * {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+    line-height: 1;
+    margin: 0 !important;
+  }
+
+  .v-icon,
+  .v-badge,
+  .svg-inline--fa {
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+    width: auto;
+    height: auto;
+    vertical-align: middle;
+  }
+}
+
+@media (max-width: 600px) {
+  .info-icons {
+    gap: 12px;
+  }
+}
+
+@media (max-width: 1264px) {
+  .info-icons {
+    gap: 8px;
+    column-gap: 8px;
+  }
+}

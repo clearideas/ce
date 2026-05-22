@@ -1,0 +1,27 @@
+services:
+  clearideas-ce:
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/clearideas_ce
+      MONGODB_HOST: ""
+      MONGODB_DATABASE_NAME: clearideas_ce
+      MONGODB_AUTH_MECHANISM: ""
+      MONGODB_USERNAME: ""
+      MONGODB_PASSWORD: ""
+      MONGODB_CERTIFICATE_BASE64: ""
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - clearideas_mongo:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  clearideas_mongo:

@@ -1,0 +1,94 @@
+:root {
+  --v-font-body: "Inter", sans-serif;
+  --v-font-heading: "Inter", sans-serif;
+  --ci-navbar-height: 64px;
+  // default colors
+  --ci-white: #ffffff;
+  --ci-black-on: #162033;
+  --ci-black: #0f172a;
+  --ci-border-radius: 6px;
+
+  // colors
+  --ci-primary: #4d6bfe;
+  --ci-on-primary: var(--ci-white);
+  --ci-secondary: #7b8798;
+  --ci-on-secondary: var(--ci-white);
+  --ci-info: #3b82f6;
+  --ci-on-info: var(--ci-white);
+  --ci-success: #158a52;
+  --ci-on-success: #fff;
+  --ci-warning: #e9a23b;
+  --ci-on-warning: var(--ci-white);
+  --ci-error: #d94b4b;
+  --ci-on-error: var(--ci-white);
+  --ci-background: #f8fafd;
+  --ci-on-background: var(--ci-black-on);
+  --ci-surface: #ffffff;
+  --ci-on-surface: var(--ci-black);
+  --ci-elevated-surface: #f4f7fb;
+  --ci-panel-surface: rgba(255, 255, 255, 0.88);
+  --ci-shell-shadow: 0 8px 24px rgba(15, 23, 42, 0.045);
+  --ci-panel-shadow: 0 16px 36px rgba(15, 23, 42, 0.07);
+  --ci-on-elevated-surface: var(--ci-black-on);
+  --ci-feature: #f96a51;
+  --ci-feature-secondary: #ed9858;
+  --ci-accent-1: #8fcf63;
+  --ci-on-accent-1: var(--ci-white);
+  --ci-accent-2: #41768b;
+  --ci-on-accent-2: var(--ci-white);
+  --ci-accent-3: #51a586;
+  --ci-on-accent-3: var(--ci-white);
+  --ci-medium-emphasis: rgba(#6e6e6e, var(--medium-emphasis-opacity));
+  --ci-border-color: #c9d5e5;
+  --ci-table-header-color: #f8fbfe;
+  --ci-scrollbar-thumb: #c5d1e1;
+  --ci-disabled-opacity: 0.48;
+  --ci-medium-emphasis-opacity: 0.68;
+  --ci-high-emphasis-opacity: 0.9;
+  --ci-chart-fill-opacity: 0.2;
+}
+.v-theme--dark, .dark {
+  // colors
+  --ci-primary: #4080f2;
+  --ci-on-primary: var(--ci-white);
+  --ci-secondary: #95989f;
+  --ci-on-secondary: var(--ci-white);
+  --ci-info: #5a87d7;
+  --ci-on-info: var(--ci-white);
+  --ci-success: #3aa56e;
+  --ci-on-success: var(--ci-white);
+  --ci-warning: #e9a23b;
+  --ci-on-warning: var(--ci-white);
+  --ci-error: #e06d6d;
+  --ci-on-error: var(--ci-white);
+  --ci-background: #171717;
+  --ci-on-background: var(--ci-white);
+  --ci-surface: #1f1f1f;
+  --ci-on-surface: var(--ci-white);
+  --ci-feature: #f96a51;
+  --ci-feature-secondary: #ed9858;
+  --ci-elevated-surface: #242424;
+  --ci-panel-surface: rgba(31, 31, 31, 0.9);
+  --ci-shell-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
+  --ci-panel-shadow: 0 20px 48px rgba(0, 0, 0, 0.3);
+  --ci-on-elevated-surface: var(--ci-white);
+  --ci-accent-1: #8fcf63;
+  --ci-on-accent-1: var(--ci-white);
+  --ci-accent-2: #41768b;
+  --ci-on-accent-2: var(--ci-white);
+  --ci-accent-3: #51a586;
+  --ci-on-accent-3: var(--ci-white);
+  --ci-medium-emphasis: rgba(#6e6e6e, var(--medium-emphasis-opacity));
+  --ci-border-color: #4c4c4c;
+  --ci-table-header-color: #232323;
+  --ci-disabled-opacity: 0.48;
+  --ci-scrollbar-thumb: #555555;
+  --ci-medium-emphasis-opacity: 0.72;
+  --ci-high-emphasis-opacity: 0.9;
+  --ci-chart-fill-opacity: 0.2;
+};
+
+html,
+body {
+  font-family: "Inter", sans-serif;
+}

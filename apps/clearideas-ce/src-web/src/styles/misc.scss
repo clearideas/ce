@@ -1,0 +1,48 @@
+.svg-inline--fa[aria-hidden="true"] {
+  tabindex: -1;
+  outline: none;
+}
+
+.svg-inline--fa:focus:not([aria-hidden="true"]) {
+  outline: none;
+  outline-width: 0;
+}
+
+.wrap-text {
+  white-space: normal !important;
+  overflow-wrap: break-word !important;
+}
+
+.ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.v-overlay__scrim {
+  opacity: 0.3 !important;
+  background-color: rgb(var(--v-theme-surface)) !important;
+}
+
+
+
+.divider {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); /* Change line color or style as needed */
+}
+
+.divider::before {
+  margin-right: 0.5em; /* Adjust spacing between line and text */
+}
+
+.divider::after {
+  margin-left: 0.5em; /* Adjust spacing between text and line */
+}

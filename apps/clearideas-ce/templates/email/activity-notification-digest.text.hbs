@@ -1,0 +1,19 @@
+Hi {{name}},
+
+There was new activity in Clear Ideas:
+{{#each sites}}
+
+{{site_name}}
+{{#each notifications}}
+- {{action}}: {{item_name}}
+{{/each}}
+{{#if has_hidden}}
+Plus {{hidden_count}} other updates.
+{{/if}}
+{{/each}}
+{{#if has_hidden_sites}}
+Plus updates from {{hidden_site_count}} other sites.
+{{/if}}
+
+Open Clear Ideas:
+{{action_url}}

@@ -1,0 +1,298 @@
+//@use 'overrides';
+$card-transition-property-custom: box-shadow, opacity;
+$font-family-custom: "Inter";
+
+@forward "vuetify/settings" with (
+
+  //Custom
+  //$font-size-root: 14px, //14px,
+  //$font-size-root: 14px,
+  $field-font-size: 13px,
+
+  $body-font-family: $font-family-custom ,
+  $heading-font-family: $font-family-custom ,
+  $border-radius-root: 6px ,
+
+  // Global border radius
+  // $rounded: (
+  //   "sm": 4px,
+  //   "lg": 16px,
+  //   "shaped": 18px 0,
+  // ) ,
+
+  // container
+  $container-max-widths:(
+    "md":null,
+    "lg": 1440px,
+  ),
+
+  // Alert
+  $alert-density: ("default": -0.5, "comfortable": -1, "compact": -2) ,
+
+  // btn
+  $button-card-actions-padding: 0 12px ,
+  $button-padding-ratio: 2 ,
+  $button-card-actions-margin: 0 ,
+  $button-density: ("default": 0, "comfortable": -1, "compact": -2) ,
+
+  // card
+  $card-border-radius: 6px ,
+  $card-text-padding: 1.25rem ,
+  $card-item-padding: 1.25rem ,
+  $card-elevation: 1 ,
+  // $card-actions-padding: 0.5rem 1rem ,
+  $card-transition-property: $card-transition-property-custom ,
+  $sheet-border-radius: 6px ,
+
+  // chip
+  $chip-label-border-radius: 4px ,
+
+  // dialog
+  $dialog-card-header-padding: 1.25rem 1.25rem 0 ,
+  $dialog-card-header-text-padding-top: 1.25rem ,
+  $dialog-card-text-padding: 1.25rem ,
+
+  // Expansion Panel
+  $expansion-panel-active-title-min-height: 48px ,
+
+  // list
+  $list-item-prepend-size: 4px ,
+  $list-item-icon-margin-end: 12px ,
+  $list-item-icon-margin-start: 12px ,
+
+  // label
+  //$label-font-size: 0.875rem ,
+
+  // Vuetify 4 still supports custom elevation maps, but under the new
+  // key/ambient pair instead of Vuetify 3's umbra/penumbra/ambient trio.
+  // These values preserve the stronger Clear Ideas depth profile.
+  $shadow-key: (
+    0: (0 0 0 0 var(--v-shadow-key-umbra-opacity)),
+    1: (0 2px 1px -1px var(--v-shadow-key-umbra-opacity)),
+    2: (0 3px 1px -2px var(--v-shadow-key-umbra-opacity)),
+    3: (0 3px 3px -2px var(--v-shadow-key-umbra-opacity)),
+    4: (0 2px 4px -1px var(--v-shadow-key-umbra-opacity)),
+    5: (0 3px 5px -1px var(--v-shadow-key-umbra-opacity)),
+  ),
+
+  $shadow-ambient: (
+    0: (0 0 0 0 var(--v-shadow-key-penumbra-opacity)),
+    1: (0 1px 1px 0 var(--v-shadow-key-penumbra-opacity)),
+    2: (0 2px 2px 0 var(--v-shadow-key-penumbra-opacity)),
+    3: (0 3px 4px 1px var(--v-shadow-key-penumbra-opacity)),
+    4: (0 4px 5px 0 var(--v-shadow-key-penumbra-opacity)),
+    5: (0 5px 8px 0 var(--v-shadow-key-penumbra-opacity)),
+  ),
+
+  // 👉 Typography
+  $typography: (
+    "display-large": (
+      "size": 4rem,
+      "weight": 800,
+      "line-height": 5rem,
+      "letter-spacing": normal,
+      "font-family": $font-family-custom
+    ),
+    "display-medium": (
+      "size": 3rem,
+      "weight": 800,
+      "line-height": 4rem,
+      "letter-spacing": normal,
+      "font-family": $font-family-custom
+    ),
+    "display-small": (
+      "size": 2rem,
+      "weight": 700,
+      "line-height": 3rem,
+      "letter-spacing": normal,
+      "font-family": $font-family-custom
+    ),
+    "headline-large": (
+      "size": 2rem,
+      "weight": 700,
+      "line-height": 3rem,
+      "letter-spacing": normal,
+      "font-family": $font-family-custom
+    ),
+    "headline-medium": (
+      "size": 1.5rem,
+      "weight": 700,
+      "line-height": 2.25rem,
+      "letter-spacing": normal,
+      "font-family": $font-family-custom
+    ),
+    "headline-small": (
+      "size": 1.25rem,
+      "weight": 700,
+      "line-height": 1.875rem,
+      "letter-spacing": normal,
+      "font-family": $font-family-custom
+    ),
+    "title-large": (
+      "size": 1.125rem,
+      "weight": 700,
+      "line-height": 1.75rem,
+      "letter-spacing": normal,
+      "font-family": $font-family-custom
+    ),
+    "title-medium": (
+      "size": 0.95rem,
+      "weight": 600,
+      "line-height": 1.45rem,
+      "letter-spacing": 0,
+      "font-family": $font-family-custom
+    ),
+    "title-small": (
+      "size": 0.84rem,
+      "weight": 600,
+      "line-height": 1.3rem,
+      "letter-spacing": 0,
+      "font-family": $font-family-custom
+    ),
+    "body-large": (
+      "size": 0.95rem,
+      "weight": 400,
+      "line-height": 1.45rem,
+      "letter-spacing": normal,
+      "font-family": $font-family-custom
+    ),
+    "body-medium": (
+      "size": 0.84rem,
+      "weight": 400,
+      "line-height": 1.3rem,
+      "letter-spacing": normal,
+      "font-family": $font-family-custom
+    ),
+    "body-small": (
+      "size": 0.75rem,
+      "weight": 400,
+      "line-height": 1.125rem,
+      "letter-spacing": normal,
+      "font-family": $font-family-custom
+    ),
+    "label-large": (
+      "size": 0.84rem,
+      "weight": 700,
+      "line-height": 1.35rem,
+      "letter-spacing": normal,
+      "font-family": $font-family-custom
+    ),
+    "label-medium": (
+      "size": 0.75rem,
+      "weight": 700,
+      "line-height": 1.125rem,
+      "letter-spacing": 0,
+      "font-family": $font-family-custom
+    ),
+    "label-small": (
+      "size": 0.6875rem,
+      "weight": 700,
+      "line-height": 1rem,
+      "letter-spacing": 0,
+      "font-family": $font-family-custom
+    ),
+    "h1": (
+      "size": 4rem,
+      "weight": 800,
+      "line-height": 5rem,
+      "letter-spacing": normal,
+      "font-family": $font-family-custom
+    ),
+    "h2": (
+      "size": 3rem,
+      "weight": 800,
+      "line-height": 4rem,
+      "letter-spacing": normal,
+      "font-family": $font-family-custom
+    ),
+    "h3": (
+      "size": 2rem,
+      "weight": 700,
+      "line-height": 3rem,
+      "letter-spacing": normal,
+      "font-family": $font-family-custom
+    ),
+    "h4": (
+      "size": 1.5rem,
+      "weight": 700,
+      "line-height": 2.25rem,
+      "letter-spacing": normal,
+      "font-family": $font-family-custom
+    ),
+    "h5": (
+      "size": 1.25rem,
+      "weight": 700,
+      "line-height": 1.875rem,
+      "letter-spacing": normal,
+      "font-family": $font-family-custom
+    ),
+    "h6":(
+      "size": 1.125rem,
+      "line-height": 1.75rem,
+      "weight": 700,
+      "letter-spacing": normal,
+      "font-family": $font-family-custom
+    ),
+    "body-1":(
+      "size": 0.95rem,
+      "line-height": 1.45rem,
+      "weight": 400,
+      "letter-spacing": normal,
+      "font-family": $font-family-custom
+    ),
+    "body-2": (
+      "size": 0.84rem,
+      "line-height": 1.3rem,
+      "weight": 400,
+      "letter-spacing": normal,
+      "font-family": $font-family-custom
+    ),
+    "subtitle-1": (
+      "size": 0.95rem,
+      "line-height": 1.45rem,
+      "weight": 600,
+      "letter-spacing": 0,
+      "font-family": $font-family-custom
+    ),
+    "subtitle-2": (
+      "size": 0.84rem,
+      "weight": 600,
+      "line-height": 1.3rem,
+      "letter-spacing": 0,
+      "font-family": $font-family-custom
+    ),
+    "button": (
+      "size": 0.84rem,
+      "weight": 700,
+      "line-height": 1.35rem,
+      "letter-spacing": normal,
+      "font-family": $font-family-custom
+    ),
+    "caption":(
+      "size": 0.75rem,
+      "line-height": 1.125rem,
+      "weight": 400,
+      "letter-spacing": normal,
+      "font-family": $font-family-custom
+    ),
+    "overline": (
+      "size": 0.75rem,
+      "line-height": 1.125rem,
+      "weight": 700,
+      "letter-spacing": 0,
+      "font-family": $font-family-custom
+    )
+  ) ,
+
+  // snackbar
+  $snackbar-background: rgba(var(--v-theme-surface), 0.9) ,
+  $snackbar-color: rgb(var(--v-theme-on-surface)) ,
+  $snackbar-elevation: 2 ,
+
+  // tooltip
+  $tooltip-background-color: #000 ,
+  $tooltip-text-color: #fff ,
+
+  // badge
+  $badge-border-color: rgb(var(--v-theme-surface))
+);

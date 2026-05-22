@@ -1,0 +1,83 @@
+{
+  "name": "@clearideas/ce",
+  "version": "0.1.0",
+  "description": "Self-hosted Clear Ideas Community Edition virtual data room.",
+  "private": false,
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "packageManager": "npm@11.14.1",
+  "engines": {
+    "node": ">=24.0.0",
+    "npm": ">=11.0.0"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build:contracts:core && npm run build:core && npm run build:ce",
+    "test": "npm run test:ce",
+    "build:contracts:core": "npm run -w @clearideas/contracts-core build",
+    "type-check:contracts:core": "npm run -w @clearideas/contracts-core type-check",
+    "build:core": "npm run -w @clearideas/core build",
+    "build:ce": "npm run -w @clearideas/ce build",
+    "type-check:core": "npm run -w @clearideas/core type-check",
+    "type-check:ce": "npm run -w @clearideas/ce type-check",
+    "dev:ce": "npm run -w @clearideas/ce dev",
+    "bootstrap:ce": "npm run -w @clearideas/ce bootstrap",
+    "seed:ce": "npm run -w @clearideas/ce seed",
+    "smoke:ce": "npm run -w @clearideas/ce smoke",
+    "test:ce": "npm run test:ce:unit && npm run test:ce:api && npm run test:ce:web",
+    "test:ce:unit": "vitest run --config apps/clearideas-ce/vitest.unit.config.ts",
+    "test:ce:api": "vitest run --config apps/clearideas-ce/vitest.api.config.ts",
+    "test:ce:web": "vitest run --config apps/clearideas-ce/vitest.web.config.ts",
+    "test:ce:e2e": "npm run -w @clearideas/ce build && playwright install chromium && playwright test --config apps/clearideas-ce/playwright.config.ts",
+    "test:ce:coverage": "vitest run --coverage --config apps/clearideas-ce/vitest.coverage.config.ts && vitest run --coverage --config apps/clearideas-ce/vitest.web.config.ts",
+    "check:import-boundaries": "node scripts/check-import-boundaries.mjs",
+    "validate:ce-routes": "node scripts/validate-ce-routes.mjs",
+    "check:ce-env-contract": "node scripts/check-ce-env-contract.mjs",
+    "check:ce-hygiene": "node scripts/check-ce-hygiene.mjs",
+    "report:ce-css-usage": "node scripts/report-ce-css-usage.mjs",
+    "report:ce-vue-usage": "node scripts/report-ce-vue-usage.mjs",
+    "check:ce-release": "node scripts/check-ce-release-readiness.mjs --target ."
+  },
+  "overrides": {
+    "@hono/node-server": "1.19.14",
+    "hono": "4.12.18",
+    "zod": "^4.4.3",
+    "convict": "6.2.5",
+    "tar": ">=7.5.7",
+    "fast-xml-parser": "5.7.3",
+    "minimatch": "10.2.5",
+    "brace-expansion": "5.0.6",
+    "koa": "3.2.0",
+    "basic-ftp": "5.3.1",
+    "express-rate-limit": "8.5.1",
+    "flatted": "3.4.2",
+    "path-to-regexp": "8.4.2",
+    "anymatch": {
+      "picomatch": "2.3.2"
+    },
+    "readdirp": {
+      "picomatch": "2.3.2"
+    },
+    "tinyglobby": {
+      "picomatch": "4.0.4"
+    },
+    "fdir": {
+      "picomatch": "4.0.4"
+    },
+    "rollup": "4.60.3",
+    "undici": "7.24.5"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "@types/supertest": "^7.2.0",
+    "@vitest/coverage-istanbul": "^4.1.5",
+    "mongodb-memory-server": "^11.1.0",
+    "supertest": "^7.2.2",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.5"
+  }
+}

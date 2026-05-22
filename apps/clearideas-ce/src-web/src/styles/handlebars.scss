@@ -1,0 +1,52 @@
+/* Handlebars syntax highlighting styles */
+/* These styles are used throughout the app for highlighting Handlebars expressions */
+
+.handlebars-token {
+  display: inline;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  border-radius: 3px;
+  padding: 1px 3px;
+  margin: 0 1px;
+  font-weight: 500;
+  transition: all 0.15s ease;
+  font-family: 'Inter', monospace;
+}
+
+.handlebars-default-var {
+  color: rgb(var(--v-theme-primary));
+  background-color: rgba(var(--v-theme-primary), 0.1);
+  border: 1px solid rgba(var(--v-theme-primary), 0.3);
+}
+
+.handlebars-defined-var {
+  color: rgb(var(--v-theme-success));
+  background-color: rgba(var(--v-theme-success), 0.1);
+  border: 1px solid rgba(var(--v-theme-success), 0.3);
+}
+
+.handlebars-undefined-var {
+  color: rgb(var(--v-theme-error));
+  background-color: rgba(var(--v-theme-error), 0.1);
+  border: 1px solid rgba(var(--v-theme-error), 0.3);
+}
+
+.handlebars-helper {
+  color: rgb(var(--v-theme-info));
+  background-color: rgba(var(--v-theme-info), 0.1);
+  border: 1px solid rgba(var(--v-theme-info), 0.3);
+  font-weight: 600;
+}
+
+.handlebars-tool {
+  color: rgb(var(--v-theme-ai-tools));
+  background-color: rgba(var(--v-theme-ai-tools), 0.1);
+  border: 1px solid rgba(var(--v-theme-ai-tools), 0.3);
+  font-weight: 500;
+}
+
+.metadata-search-token {
+  color: rgb(var(--v-theme-primary));
+  background-color: rgba(var(--v-theme-primary), 0.1);
+  border: 1px solid rgba(var(--v-theme-primary), 0.3);
+}

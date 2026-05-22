@@ -1,0 +1,43 @@
+{
+  "title": "Clear Ideas Community Edition Docs",
+  "description": "Self-contained documentation for running and contributing to Clear Ideas Community Edition.",
+  "sections": [
+    {
+      "title": "Start Here",
+      "pages": [
+        { "title": "Getting Started", "slug": "getting-started", "description": "Install, run, and sign in for the first time." },
+        { "title": "Docker Compose", "slug": "docker-compose", "description": "Run the app, MongoDB, and optional local email capture." },
+        { "title": "Local Development", "slug": "local-development", "description": "Developer workflow, scripts, tests, and seed data." },
+        { "title": "Configuration", "slug": "configuration", "description": "Minimal environment variables and production defaults." }
+      ]
+    },
+    {
+      "title": "Core Workflows",
+      "pages": [
+        { "title": "Authentication", "slug": "authentication", "description": "Email-code sign-in, invites, and sessions." },
+        { "title": "Sites, Users, and Roles", "slug": "sites-users-roles", "description": "Sites, membership roles, user groups, and invitations." },
+        { "title": "Files and Content", "slug": "files-content", "description": "Folders, uploads, downloads, file viewing, and local storage." },
+        { "title": "Search and Extraction", "slug": "search-extraction", "description": "Filename, metadata, full-text search, and PDF text extraction." }
+      ]
+    },
+    {
+      "title": "Operations",
+      "pages": [
+        { "title": "Analytics and Activity", "slug": "analytics-activity", "description": "Activity logging and simple analytics reports." },
+        { "title": "Notifications and Email", "slug": "notifications-email", "description": "Log email, SMTP, notification templates, and worker polling." },
+        { "title": "MCP and Access Keys", "slug": "mcp-access-keys", "description": "MCP tools, access key scopes, and examples." },
+        { "title": "AI Chat", "slug": "ai-chat", "description": "Optional site-scoped AI chat configuration." }
+      ]
+    },
+    {
+      "title": "Release Readiness",
+      "pages": [
+        { "title": "Backups and Restore", "slug": "backups-restore", "description": "MongoDB and local storage backup guidance." },
+        { "title": "Testing", "slug": "testing", "description": "Unit, API, web, E2E, and coverage suites." },
+        { "title": "Security Model", "slug": "security-model", "description": "Authentication, authorization, storage, MCP, and production checks." },
+        { "title": "Contributing", "slug": "contributing", "description": "How to work on the project safely." },
+        { "title": "Release Checklist", "slug": "release-checklist", "description": "Go/no-go checklist for a public release." }
+      ]
+    }
+  ]
+}

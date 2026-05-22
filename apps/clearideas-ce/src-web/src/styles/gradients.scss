@@ -1,0 +1,243 @@
+@keyframes colorFadeAI {
+  0% {
+    color: var(--ci-feature);
+  }
+  50% {
+    color: var(--ci-feature-secondary);
+  }
+  100% {
+    color: var(--ci-feature-secondary);
+  }
+}
+
+.color-fade-ai {
+  animation: colorFadeAI 3s infinite;
+}
+
+.background-gradient-ai {
+  color: var(--ci-on-feature);
+  background: linear-gradient(
+    to right,
+    rgb(var(--v-theme-feature)),
+    rgb(var(--v-theme-feature-secondary))
+  ) !important;
+  opacity: 1 !important;
+}
+
+.v-btn.background-gradient-ai,
+.v-avatar.background-gradient-ai {
+  background: linear-gradient(
+    to right,
+    rgb(var(--v-theme-feature)),
+    rgb(var(--v-theme-feature-secondary))
+  ) !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.v-btn.background-gradient-ai .v-btn__overlay,
+.v-btn.background-gradient-ai .v-btn__underlay {
+  opacity: 0 !important;
+  background: transparent !important;
+}
+
+.v-btn.background-gradient-ai .v-icon,
+.v-btn.background-gradient-ai .v-btn__content,
+.v-avatar.background-gradient-ai .v-icon {
+  color: var(--ci-on-feature) !important;
+}
+
+.color-gradient-ai {
+  color: var(--ci-on-feature);
+  background: var(--ci-feature);
+  background: -webkit-radial-gradient(
+    33% 100% circle,
+    var(--ci-feature) 4%,
+    var(--ci-feature-secondary) 62%,
+    var(--ci-feature)
+  ) !important;
+  background: radial-gradient(
+    circle at 33% 100%,
+    var(--ci-feature) 4%,
+    var(--ci-feature-secondary) 62%,
+    var(--ci-feature)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.color-gradient-accent-1 {
+  background: var(--ci-accent-1);
+  background: -webkit-radial-gradient(
+    33% 100% circle,
+    var(--ci-accent-1) 0%,
+    var(--ci-accent-2) 50%,
+    var(--ci-accent-1)
+  );
+  background: radial-gradient(
+    circle at 33% 100%,
+    var(--ci-accent-1) 0%,
+    var(--ci-accent-2) 50%,
+    var(--ci-accent-1)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.color-gradient-accent-2 {
+  background: var(--ci-accent-2);
+  background: -webkit-radial-gradient(
+    33% 100% circle,
+    var(--ci-accent-2) 0%,
+    var(--ci-accent-3) 50%,
+    var(--ci-accent-2)
+  );
+  background: radial-gradient(
+    circle at 33% 100%,
+    var(--ci-accent-2) 0%,
+    var(--ci-accent-3) 50%,
+    var(--ci-accent-2)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.color-gradient-accent-3 {
+  background: var(--ci-accent-3);
+  background: -webkit-radial-gradient(
+    33% 100% circle,
+    var(--ci-accent-3) 0%,
+    var(--ci-accent-1) 50%,
+    var(--ci-accent-3)
+  );
+  background: radial-gradient(
+    circle at 33% 100%,
+    var(--ci-accent-3) 0%,
+    var(--ci-accent-1) 50%,
+    var(--ci-accent-3)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-gradient-ai {
+  background: linear-gradient(
+    to right,
+    rgb(var(--v-theme-feature)),
+    rgb(var(--v-theme-feature-secondary))
+  ) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+/* linear gradient */
+.fill-gradient-ai path {
+  fill: url(#linear);
+}
+
+.fill-gradient-feature path {
+  fill: url(#linear-feature);}
+
+.fill-gradient-accent-1-2 path {
+  fill: url(#linear-accent-1-2);
+}
+.fill-gradient-accent-2-3 path {
+  fill: url(#linear-accent-2-3);
+}
+.fill-gradient-accent-1-3 path {
+  fill: url(#linear-accent-1-3);
+}
+.fill-gradient-accent-2-1 path {
+  fill: url(#linear-accent-2-1);
+}
+.fill-gradient-accent-3-2 path {
+  fill: url(#linear-accent-3-2);
+}
+.fill-gradient-accent-3-1 path {
+  fill: url(#linear-accent-3-1);
+}
+/* setting colors for linear gradient */
+.linear-stop1 {
+  stop-color: var(--ci-feature);
+}
+
+.linear-stop2 {
+  stop-color: var(--ci-feature-secondary);
+}
+
+.stop-accent-1 {
+  stop-color: var(--ci-accent-1);
+}
+
+.stop-accent-2 {
+  stop-color: var(--ci-accent-2);
+}
+
+.stop-accent-3{
+  stop-color: var(--ci-accent-3);
+}
+
+/* radial gradient */
+.fill-gradient-radial-ai path {
+  fill: url(#radial);
+}
+.fill-gradient-radial-feature path {
+  fill: url(#radial-feature);
+}
+/* radial gradient */
+.fill-gradient-radial-accent-1-2 path {
+  fill: url(#radial-accent-1-2);
+}
+
+/* radial gradient */
+.fill-gradient-radial-accent-2-3 path {
+  fill: url(#radial-accent-2-3);
+}
+
+/* radial gradient */
+.fill-gradient-radial-accent-1-3 path {
+  fill: url(#radial-accent-1-3);
+}
+
+.fill-gradient-radial-accent-2-1 path {
+  fill: url(#radial-accent-2-1);
+}
+
+/* radial gradient */
+.fill-gradient-radial-accent-3-2 path {
+  fill: url(#radial-accent-3-2);
+}
+
+/* radial gradient */
+.fill-gradient-radial-accent-3-1 path {
+  fill: url(#radial-accent-3-1);
+}
+
+/* setting colors for radial gradient */
+.radial-stop1 {
+  stop-color: var(--ci-feature-secondary);
+}
+.radial-stop2 {
+  stop-color: var(--ci-feature);
+}
+
+
+.radial-stop-feature-2 {
+  stop-color: var(--ci-feature);
+}
+
+.radial-stop-feature-1 {
+  stop-color: var(--ci-feature-secondary);
+}
+
+
+.fill-solid {
+  color: #4263eb;
+}

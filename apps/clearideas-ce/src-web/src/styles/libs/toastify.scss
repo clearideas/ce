@@ -1,0 +1,63 @@
+
+:root {
+  --toastify-color-light: rgb(var(--v-theme-surface));
+  --toastify-color-dark: rgb(var(--v-theme-surface));
+  --toastify-color-info: rgb(var(--v-theme-info));
+  --toastify-color-success: rgb(var(--v-theme-success));
+  --toastify-color-warning: rgb(var(--v-theme-warning));
+  --toastify-color-error: rgb(var(--v-theme-error));
+  --toastify-color-transparent: rgba(var(--v-theme-surface), 70%);
+  --toastify-font-family: "Inter", sans-serif;
+  --toastify-text-color-light: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity));
+  --toastify-text-color-dark: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity));
+}
+
+// Wider toast container
+.Toastify__toast-container {
+  width: 480px !important;
+  max-width: calc(100vw - 32px) !important;
+}
+
+// Override mobile styles to keep consistent look with padding on sides
+@media only screen and (max-width: 480px) {
+  .Toastify__toast-container {
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: calc(100vw - 32px) !important;
+    max-width: calc(100vw - 32px) !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .Toastify__toast-container--top-center,
+  .Toastify__toast-container--top-left,
+  .Toastify__toast-container--top-right {
+    top: 16px !important;
+  }
+
+  .Toastify__toast {
+    border-radius: 4px !important;
+    margin-bottom: 8px !important;
+  }
+}
+
+.Toastify__close-button--light {
+  color: var(--toastify-text-color-light);
+}
+
+// Align icon and close button to top for long alerts
+.Toastify__toast {
+  .Toastify__toast-body {
+    align-items: flex-start !important;
+  }
+
+  .Toastify__toast-icon {
+    margin-top: 3px;
+    align-self: flex-start !important;
+  }
+
+  .Toastify__close-button {
+    align-self: flex-start !important;
+    margin-top: 2px;
+  }
+}

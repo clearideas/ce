@@ -1,0 +1,84 @@
+.layout-vertical-nav {
+  background: var(--ci-panel-surface) !important;
+  backdrop-filter: blur(16px);
+  border-inline-end: 1px solid rgba(var(--v-border-color), calc(var(--v-border-opacity) * 0.8));
+  box-shadow:
+    -8px 0 28px rgba(15, 23, 42, 0.07),
+    0 0 0 1px rgba(var(--v-border-color), calc(var(--v-border-opacity) * 0.25));
+
+  .v-icon--size-default {
+    font-size: 1.125rem;
+  }
+
+  .v-list-item__prepend > .v-icon,
+  .v-list-group__header .v-list-item__prepend > .v-icon {
+    font-size: 1.125rem !important;
+  }
+
+  .v-list-item__prepend > .v-icon .svg-inline--fa,
+  .v-list-group__header .v-list-item__prepend > .v-icon .svg-inline--fa {
+    --fa-primary-color: currentColor;
+    --fa-secondary-color: currentColor;
+    --fa-secondary-opacity: 0;
+  }
+
+  .v-list-item--nav {
+    margin-block: 2px;
+    border-radius: var(--ci-border-radius);
+    min-height: 38px;
+    padding-inline: 10px !important;
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease,
+      transform 0.2s ease;
+  }
+
+  .v-list-item-title {
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+
+  .v-list-subheader {
+    min-height: 26px;
+    padding-inline: 12px;
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+  }
+
+  .v-list-group__items {
+    .v-list-item--nav {
+      padding-inline-start: 8px !important;
+    }
+  }
+
+  &.v-navigation-drawer--expand-on-hover.v-navigation-drawer--rail:not(.v-navigation-drawer--is-hovering),
+  &.rail-mode-is-on {
+    .v-list-subheader {
+      .v-list-subheader__text {
+        opacity: 0;
+      }
+
+      &::before {
+        position: absolute;
+        background: rgba(var(--v-border-color), var(--v-border-opacity));
+        block-size: 1px;
+        content: "";
+        inline-size: 24px;
+      }
+    }
+  }
+
+  &.v-navigation-drawer--temporary {
+    background: rgb(var(--v-theme-surface)) !important;
+    backdrop-filter: none;
+    box-shadow: -8px 0 28px rgba(15, 23, 42, 0.08);
+  }
+}
+
+@media (max-width: 959px) {
+  .layout-vertical-nav {
+    background: rgb(var(--v-theme-surface)) !important;
+    backdrop-filter: none;
+    box-shadow: -8px 0 28px rgba(15, 23, 42, 0.08);
+  }
+}

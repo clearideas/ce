@@ -1,0 +1,51 @@
+services:
+  clearideas-ce:
+    environment:
+      APP_URL: ${APP_URL:-https://localhost:4100}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-https://localhost:4100}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-dev-only-change-me}
+      FILE_ACCESS_TOKEN_SECRET: ${FILE_ACCESS_TOKEN_SECRET:-dev-only-file-access-change-me}
+      HTTPS_REQUIRED: "true"
+      MONGODB_URI: mongodb://mongo:27017/clearideas_ce
+      MONGODB_HOST: ""
+      MONGODB_DATABASE_NAME: clearideas_ce
+      MONGODB_AUTH_MECHANISM: ""
+      MONGODB_USERNAME: ""
+      MONGODB_PASSWORD: ""
+      MONGODB_CERTIFICATE_BASE64: ""
+      FIRST_USER_EMAIL: ${FIRST_USER_EMAIL:-admin@example.com}
+      FIRST_USER_NAME: ${FIRST_USER_NAME:-Clear Ideas Admin}
+      EMAIL_PROVIDER: smtp
+      EMAIL_FROM: Clear Ideas <noreply@clearideas.local>
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      SMTP_SECURE: "false"
+      SMTP_USER: ""
+      SMTP_PASS: ""
+      CLEARIDEAS_DOCS_ENABLED: ${CLEARIDEAS_DOCS_ENABLED:-true}
+    depends_on:
+      mongo:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - clearideas_mongo:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+
+volumes:
+  clearideas_mongo:

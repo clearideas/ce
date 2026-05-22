@@ -1,0 +1,293 @@
+html,
+body {
+  overflow-x: clip;
+}
+
+p {
+  margin-block-end: 1rem !important;
+}
+
+body {
+  background: var(--ci-background);
+}
+
+.v-selection-control__input {
+  font-size: 14px !important;
+}
+
+.v-btn {
+  font-weight: 500 !important;
+  text-transform: none !important;
+  letter-spacing: -0.01em !important;
+}
+
+// Vuetify 4 narrows rounded icon buttons back to 6px via
+// `.v-btn--rounded.v-btn--icon { border-radius: 6px }`.
+// Keep icon-only controls aligned with the pill/circle shape seen in dev.
+.v-btn--rounded.v-btn--icon {
+  border-radius: 9999px !important;
+}
+
+.v-btn--icon:not(.background-gradient-ai) {
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.v-btn--icon:not(.background-gradient-ai) .v-btn__overlay,
+.v-btn--icon:not(.background-gradient-ai) .v-btn__underlay,
+.v-btn--icon:not(.background-gradient-ai) .v-btn__content,
+.v-btn--icon:not(.background-gradient-ai) .v-icon {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.v-btn .svg-inline--fa {
+  background: transparent !important;
+  background-color: transparent !important;
+  --fa-primary-color: currentColor;
+  --fa-secondary-color: currentColor;
+  --fa-secondary-opacity: 1;
+}
+
+.v-btn .svg-inline--fa path,
+.v-btn .svg-inline--fa .fa-primary,
+.v-btn .svg-inline--fa .fa-secondary {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.v-card-actions .v-btn~.v-btn:not(.v-btn-toggle .v-btn) {
+  margin-inline-start: .5rem !important;
+}
+
+a {
+  text-decoration: none !important;
+}
+
+.v-field:hover .v-field__outline {
+  --v-field-border-opacity: var(--v-medium-emphasis-opacity) !important;
+}
+
+.v-field {
+  border-radius: 6px !important;
+  background: rgba(var(--v-theme-surface), 0.92);
+}
+
+.v-field--variant-outlined .v-field__outline {
+  --v-field-border-opacity: calc(var(--v-border-opacity) * 0.9);
+}
+
+.v-field--focused {
+  box-shadow: 0 0 0 3px rgba(var(--v-theme-primary), 0.08);
+}
+
+.v-card,
+.v-sheet,
+.v-menu > .v-overlay__content {
+  box-shadow: var(--ci-shell-shadow) !important;
+}
+
+.v-dialog > .v-overlay__content > .v-card {
+  background: var(--ci-surface) !important;
+  color: var(--ci-on-surface) !important;
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)) !important;
+  border-radius: 8px !important;
+  box-shadow: var(--ci-panel-shadow) !important;
+}
+
+.v-dialog > .v-overlay__content > .v-card .v-card-title,
+.v-dialog > .v-overlay__content > .v-card .v-card-subtitle,
+.v-dialog > .v-overlay__content > .v-card .v-card-text {
+  color: inherit !important;
+}
+
+.v-dialog > .v-overlay__content > .v-card > .v-card-actions,
+.v-dialog > .v-overlay__content > .v-card > .bg-surface-light {
+  background: var(--ci-surface) !important;
+  color: inherit !important;
+  border-top: 1px solid rgba(var(--v-border-color), calc(var(--v-border-opacity) * 0.7));
+}
+
+.v-list-item--nav.v-list-item--active,
+.v-list-item--nav:hover {
+  background: rgba(var(--v-theme-primary), 0.075) !important;
+}
+
+.v-list-item--nav.v-list-item--active {
+  color: rgb(var(--v-theme-primary)) !important;
+}
+
+.v-tab {
+  min-width: 0;
+  padding-inline: 14px !important;
+}
+
+/* Do not force primary on selected tabs: VTabs/BaseTabs `color` (e.g. feature) must control
+   label and slider via Vuetify defaults + currentColor. */
+
+.v-data-table thead th {
+  background-color: rgb(var(--v-table-header-color)) !important;
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)) !important;
+  font-size: 0.72rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  height: 34px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.v-data-table tbody td {
+  border-bottom-color: rgba(var(--v-border-color), calc(var(--v-border-opacity) * 0.55)) !important;
+}
+
+.v-empty-state {
+  width: 100%;
+  min-height: 320px;
+  padding: 28px 24px !important;
+}
+
+.v-empty-state .v-empty-state__title {
+  font-weight: 600 !important;
+  letter-spacing: -0.02em;
+}
+
+.v-empty-state .v-empty-state__text {
+  max-width: 520px;
+  margin-inline: auto;
+}
+
+.v-empty-state .v-empty-state__media .v-icon,
+.v-empty-state .v-empty-state__media .svg-inline--fa {
+  font-size: 48px !important;
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)) !important;
+}
+
+.ci-empty-state-block {
+  width: 100%;
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 28px 24px;
+}
+
+.ci-empty-state-icon {
+  margin-bottom: 16px;
+  font-size: 48px !important;
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)) !important;
+}
+
+.ci-empty-state-title {
+  margin-bottom: 8px;
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity));
+}
+
+.ci-empty-state-body {
+  max-width: 520px;
+  margin-bottom: 0;
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+}
+
+.v-card--variant-outlined,
+.v-list-item--variant-outlined {
+  border-color: rgba(var(--v-border-color), var(--v-border-opacity)) !important;
+}
+
+.v-pagination {
+  .v-pagination__item {
+    .v-btn {
+      font-weight: 400 !important;
+    }
+  }
+}
+
+// .v-table {
+//   .v-checkbox-btn {
+//     font-size: 1rem;
+//   }
+
+//   thead {
+//     th {
+//       background-color: rgb(var(--v-table-header-color)) !important;
+//       border-block-end: 0 !important;
+//       box-shadow: none !important;
+//       color: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity)) !important;
+//       font-size: 0.875rem;
+
+//       .v-checkbox-btn {
+//         font-size: 1rem;
+//       }
+//     }
+//   }
+
+//   &.table-borderless {
+//     th,
+//     td {
+//       border-block-end: 0 !important;
+//     }
+//   }
+
+//   .v-data-table-footer {
+//     justify-content: unset;
+//     font-size: 0.875rem;
+//     padding-block-end: 1rem;
+//     padding-inline: 1rem;
+
+//     .v-data-table-footer__items-per-page {
+//       margin-inline-end: auto;
+//     }
+
+//     .v-data-table-footer__pagination {
+//       .v-btn--icon.v-btn--density-default {
+//         --v-btn-height: 1.5rem !important;
+//       }
+//     }
+//   }
+// }
+
+.v-tabs {
+  .v-tab {
+    .v-btn__overlay {
+      opacity: 0 !important;
+    }
+
+    .v-ripple__container {
+      display: none !important;
+    }
+  }
+}
+
+// ::-webkit-scrollbar {
+//   block-size: 6px !important;
+//   inline-size: 6px !important;
+//   background-color: transparent !important;
+// }
+
+// ::-webkit-scrollbar-thumb {
+//   background-color: rgb(var(--v-border-color), var(--v-border-opacity)) !important;
+//   border-radius: 10px;
+// }
+
+// ::-webkit-scrollbar-track {
+//   //background-color: rgba(var(--v-border-color), calc(var(--v-border-opacity) / 2)) !important;
+//   background-color: transparent !important;
+//   border-radius: 10px;
+// }
+
+// .scrollbar {
+//   -ms-overflow-style: auto !important;
+//   scrollbar-color: rgb(var(--v-scrollbar-thumb)) transparent !important;
+//   scrollbar-width: auto !important;
+
+// }
+
+.v-divider {
+  color: rgb(var(--v-border-color)) !important;
+}

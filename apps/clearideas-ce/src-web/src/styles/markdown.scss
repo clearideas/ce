@@ -1,0 +1,222 @@
+/* General styles for the markdown content */
+.markdown-content {
+  margin: 0 1em 0 1em;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+/* Table styles */
+.markdown-content table {
+  border-collapse: collapse;
+  margin: 1em 0;
+  width: 100%;
+  max-width: 100%;
+  table-layout: fixed;
+  display: table;
+}
+
+.markdown-content table th,
+.markdown-content table td {
+  border: 1px solid rgb(var(--v-theme-secondary));
+  padding: 0.5em 0.75em;
+  vertical-align: top;
+  text-align: left;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
+}
+
+.markdown-content table th {
+  background-color: rgba(var(--v-theme-primary), 0.1);
+  font-weight: 600;
+}
+
+.markdown-content table tr:nth-child(even) {
+  background-color: rgba(var(--v-theme-background), 0.5);
+}
+
+.markdown-content table tr:hover {
+  background-color: rgba(var(--v-theme-primary), 0.05);
+}
+
+/* Style for all paragraphs within the markdown content */
+.markdown-content p {
+  margin: 0.5em 0;
+  line-height: 1.6;
+}
+
+/* Remove bottom margin from paragraphs followed by lists */
+.markdown-content p:has(+ ul),
+.markdown-content p:has(+ ol) {
+  margin-bottom: 0 !important;
+}
+
+.markdown-content think {
+  font-weight: 400;
+  color: rgb(var(--v-theme-secondary));
+  font-size: 11px;
+}
+
+.markdown-content p:last-child {
+  margin-bottom: 0;
+}
+
+/* Style headings */
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+  margin: 1em 0 0.5em 0;
+  font-weight: 600;
+  line-height: 1.2em;
+}
+
+/* Specific heading sizes */
+.markdown-content h1 {
+  font-size: 1.5em;
+}
+
+.markdown-content h2 {
+  font-size: 1.3em;
+}
+
+.markdown-content h3 {
+  font-size: 1.1em;
+}
+
+/* Style lists */
+.markdown-content ul,
+.markdown-content ol {
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+
+.markdown-content ul ul,
+.markdown-content ul ol,
+.markdown-content ol ul,
+.markdown-content ol ol {
+  margin: 0.35em 0;
+}
+
+/* Remove top margin from lists that follow paragraphs */
+.markdown-content p + ul,
+.markdown-content p + ol {
+  margin-top: 0;
+}
+
+.markdown-content li {
+  margin: 0.25em 0;
+}
+
+.markdown-content p,
+.markdown-content li {
+  overflow-wrap: anywhere;
+}
+
+/* Style horizontal rules */
+.markdown-content hr {
+  border: 0;
+  border-top: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  margin: 1.25em 0;
+}
+
+/* Style blockquotes */
+.markdown-content blockquote {
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  margin: 1em 0;
+  padding: 0.5em 1em;
+  background-color: rgba(var(--v-theme-secondary), 0.1);
+  border-radius: var(--ci-border-radius);
+  font-style: italic;
+}
+
+.markdown-content blockquote p {
+  margin: 0.5em 0 !important;
+}
+
+/* Style code elements and preformatted text */
+.markdown-content code {
+  padding: 2px 4px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--ci-accent-1);
+}
+
+.markdown-content pre {
+  background-color: rgba(var(--v-theme-primary), 0.1) !important;
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  padding: 12px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 1em 0;
+  font-family: 'JetBrains Mono', monospace;
+  line-height: 1.4;
+}
+
+.markdown-content pre,
+.markdown-content code {
+  font-size: 1em;
+}
+
+/* Special styling for streaming code blocks with height limitation */
+.markdown-content pre.streaming-code-block {
+  max-height: 400px;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+/* Highlight.js code blocks */
+.hljs {
+  white-space: pre-wrap; /* Enable line wrapping */
+  word-break: break-word; /* Break long words */
+}
+
+/* Text formatting */
+.markdown-content strong {
+  font-weight: 600;
+}
+
+.markdown-content em {
+  font-style: italic;
+}
+
+.markdown-content a {
+  color: rgb(var(--v-theme-primary));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.markdown-content a:hover {
+  color: rgba(var(--v-theme-primary), 0.85);
+}
+
+/* Plaintext fenced code blocks use neutral readable body color */
+.markdown-content pre.hljs code.language-plaintext {
+  color: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity));
+}
+
+/* Style images */
+.markdown-content img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Chart container styling */
+.chart-container {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+.chart-container > * {
+  flex-shrink: 0;
+}
+
+.chart-container canvas {
+  flex-shrink: 0;
+  flex-grow: 0;
+}
+

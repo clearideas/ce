@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  ce:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npx --yes npm@11.14.1 ci
+      - run: npm run type-check:core
+      - run: npm run type-check:ce
+      - run: npm run check:import-boundaries
+      - run: npm run validate:ce-routes
+      - run: npm run check:ce-hygiene
+      - run: npm run test:ce
+      - run: npm run test:ce:e2e
+      - run: npm run check:ce-release
+      - run: npm audit --audit-level=high
+      - run: docker build -f apps/clearideas-ce/Dockerfile -t clearideas-ce:ci .

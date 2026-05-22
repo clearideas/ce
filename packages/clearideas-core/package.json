@@ -1,0 +1,140 @@
+{
+  "name": "@clearideas/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./errors": {
+      "types": "./dist/errors/index.d.ts",
+      "default": "./dist/errors/index.js"
+    },
+    "./providers": {
+      "types": "./dist/providers/index.d.ts",
+      "default": "./dist/providers/index.js"
+    },
+    "./models": {
+      "types": "./dist/models/index.d.ts",
+      "default": "./dist/models/index.js"
+    },
+    "./services/domain-services": {
+      "types": "./dist/services/domain-services.d.ts",
+      "default": "./dist/services/domain-services.js"
+    },
+    "./services/config": {
+      "types": "./dist/services/config.d.ts",
+      "default": "./dist/services/config.js"
+    },
+    "./services/site-endpoints": {
+      "types": "./dist/services/site-endpoints.d.ts",
+      "default": "./dist/services/site-endpoints.js"
+    },
+    "./services/site-query": {
+      "types": "./dist/services/site-query.d.ts",
+      "default": "./dist/services/site-query.js"
+    },
+    "./services/site-permissions": {
+      "types": "./dist/services/site-permissions.d.ts",
+      "default": "./dist/services/site-permissions.js"
+    },
+    "./services/email": {
+      "types": "./dist/services/email.d.ts",
+      "default": "./dist/services/email.js"
+    },
+    "./services/mcp": {
+      "types": "./dist/services/mcp.d.ts",
+      "default": "./dist/services/mcp.js"
+    },
+    "./services/mcp-tools": {
+      "types": "./dist/services/mcp-tools.d.ts",
+      "default": "./dist/services/mcp-tools.js"
+    },
+    "./services/validation": {
+      "types": "./dist/services/validation.d.ts",
+      "default": "./dist/services/validation.js"
+    },
+    "./services/validation-middleware": {
+      "types": "./dist/services/validation-middleware.d.ts",
+      "default": "./dist/services/validation-middleware.js"
+    },
+    "./services/user-attributes": {
+      "types": "./dist/services/user-attributes.d.ts",
+      "default": "./dist/services/user-attributes.js"
+    },
+    "./services/site-membership": {
+      "types": "./dist/services/site-membership.d.ts",
+      "default": "./dist/services/site-membership.js"
+    },
+    "./services/site-membership-service": {
+      "types": "./dist/services/site-membership-service.d.ts",
+      "default": "./dist/services/site-membership-service.js"
+    },
+    "./services/user-group-service": {
+      "types": "./dist/services/user-group-service.d.ts",
+      "default": "./dist/services/user-group-service.js"
+    },
+    "./services/search-query": {
+      "types": "./dist/services/search-query.d.ts",
+      "default": "./dist/services/search-query.js"
+    },
+    "./services/content-projection": {
+      "types": "./dist/services/content-projection.d.ts",
+      "default": "./dist/services/content-projection.js"
+    },
+    "./services/site-projection": {
+      "types": "./dist/services/site-projection.d.ts",
+      "default": "./dist/services/site-projection.js"
+    },
+    "./services/user-projection": {
+      "types": "./dist/services/user-projection.d.ts",
+      "default": "./dist/services/user-projection.js"
+    },
+    "./services/account-projection": {
+      "types": "./dist/services/account-projection.d.ts",
+      "default": "./dist/services/account-projection.js"
+    },
+    "./services/serializer": {
+      "types": "./dist/services/serializer.d.ts",
+      "default": "./dist/services/serializer.js"
+    },
+    "./services/content-service": {
+      "types": "./dist/services/content-service.d.ts",
+      "default": "./dist/services/content-service.js"
+    },
+    "./services/app-url": {
+      "types": "./dist/services/app-url.d.ts",
+      "default": "./dist/services/app-url.js"
+    },
+    "./services/analytics": {
+      "types": "./dist/services/analytics.d.ts",
+      "default": "./dist/services/analytics.js"
+    },
+    "./services/notification": {
+      "types": "./dist/services/notification.d.ts",
+      "default": "./dist/services/notification.js"
+    },
+    "./services/file-access-token": {
+      "types": "./dist/services/file-access-token.d.ts",
+      "default": "./dist/services/file-access-token.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "type-check": "tsc -b tsconfig.json"
+  },
+  "dependencies": {
+    "@clearideas/contracts-core": "0.1.0",
+    "handlebars": "^4.7.9",
+    "luxon": "^3.7.2",
+    "mongoose": "^9.6.1",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}

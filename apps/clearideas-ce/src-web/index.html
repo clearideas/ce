@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!--
+      Lock in Vuetify 4's CSS @layer order BEFORE any stylesheet loads.
+
+      Cascade layer priority is established by the first declaration of each
+      layer name in the document. In the production bundle, Rollup emits the
+      component CSS (e.g. `@layer vuetify-components { .v-application {...} }`
+      from VApp) before the layer-order declaration inside `vuetify/styles`,
+      which inverts the intended order and lets `vuetify-utilities` /
+      `vuetify-core.reset` outrank `vuetify-components`. That's why fonts,
+      icons and buttons appear larger in prod (reset/typography layers win).
+
+      Declaring the order here guarantees the browser sees it first regardless
+      of bundle order. Mirrors node_modules/vuetify/lib/styles/generic/_layers.scss.
+      See vuetifyjs/vuetify#22752 and #22801.
+    -->
+    <style>
+      @layer vuetify-core, vuetify-components, vuetify-overrides, vuetify-utilities, vuetify-final;
+      @layer vuetify-core {
+        @layer reset, base;
+      }
+      @layer vuetify-utilities {
+        @layer theme-base, typography, helpers, theme-background, theme-foreground;
+      }
+      @layer vuetify-final {
+        @layer transitions, trumps;
+      }
+    </style>
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16x16.png" />
+    <link rel="icon" href="/assets/icons/favicon.ico" />
+    <link rel="manifest" href="/assets/icons/site.webmanifest" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Clear Ideas Community Edition is a local-first open-source workspace for sites, files, users, search, analytics, MCP, and AI-assisted document workflows."
+    />
+    <meta name="theme-color" content="#ffffff" />
+    <title>Clear Ideas Community Edition</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

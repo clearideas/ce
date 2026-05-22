@@ -1,0 +1,28 @@
+.auth-page.web-auth-page {
+  min-height: 100vh;
+  min-width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 20% 18%, rgba(var(--v-theme-primary), 0.08), transparent 32%),
+    radial-gradient(circle at 82% 72%, rgba(var(--v-theme-feature), 0.08), transparent 34%),
+    rgb(var(--v-theme-background));
+}
+
+.web-auth-card {
+  width: min(460px, calc(100vw - 32px));
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 16px !important;
+  background: rgb(var(--v-theme-surface));
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.12) !important;
+}
+
+.auth-title {
+  color: rgb(var(--v-theme-on-surface));
+  font-size: 1.35rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}

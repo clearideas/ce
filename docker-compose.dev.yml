@@ -1,0 +1,24 @@
+services:
+  clearideas-ce:
+    environment:
+      APP_URL: ${APP_URL:-http://localhost:4100}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:4100}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-dev-only-change-me}
+      HTTPS_REQUIRED: "false"
+      EMAIL_PROVIDER: smtp
+      EMAIL_FROM: Clear Ideas <noreply@clearideas.local>
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      SMTP_SECURE: "false"
+      SMTP_USER: ""
+      SMTP_PASS: ""
+    depends_on:
+      mailpit:
+        condition: service_started
+
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
+      - "1025:1025"
