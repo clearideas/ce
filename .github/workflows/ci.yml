@@ -17,6 +17,7 @@ jobs:
         with:
           node-version: '24'
           cache: npm
+      - run: npm run check:ce-release
       - run: npx --yes npm@11.14.1 ci
       - run: npm run type-check:core
       - run: npm run type-check:ce
@@ -25,6 +26,5 @@ jobs:
       - run: npm run check:ce-hygiene
       - run: npm run test:ce
       - run: npm run test:ce:e2e
-      - run: npm run check:ce-release
       - run: npm audit --audit-level=high
       - run: docker build -f apps/clearideas-ce/Dockerfile -t clearideas-ce:ci .
