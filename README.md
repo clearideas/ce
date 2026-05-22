@@ -13,8 +13,8 @@ Learn more about Clear Ideas at [clearideas.com](https://clearideas.com/). For h
 Clone the repo and start a complete local stack with the app, MongoDB, and Mailpit email capture:
 
 ```bash
-git clone https://github.com/clearideas/clearideas-ce.git
-cd clearideas-ce
+git clone https://github.com/clearideas/ce.git
+cd ce
 docker compose -f docker-compose.yml -f docker-compose.quickstart.yml up -d --build
 ```
 
