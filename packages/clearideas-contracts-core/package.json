@@ -3,6 +3,15 @@
   "version": "0.1.0",
   "description": "Browser-safe Zod request DTO schemas for Clear Ideas CE/common contracts.",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/clearideas/clearideas-api.git",
+    "directory": "packages/clearideas-contracts-core"
+  },
+  "publishConfig": {
+    "access": "restricted",
+    "registry": "https://registry.npmjs.org/"
+  },
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

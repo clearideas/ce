@@ -10,19 +10,66 @@ export interface McpResponse {
   isError?: boolean
 }
 
+const genericMcpErrorMessage =
+  'The MCP request could not be completed. Please retry or contact support with the trace ID.'
+
+const unsafeMcpErrorPatterns = [
+  /\b(?:TypeError|ReferenceError|SyntaxError|RangeError|EvalError)\b/i,
+  /\bCannot\s+(?:read|set|access|convert)\b/i,
+  /\bundefined\b.*\b(?:reading|properties|property)\b/i,
+  /\b(?:stack|trace|at\s+[A-Za-z0-9_$.[\]/:-]+\s*\()/i,
+  /\b(?:node_modules|dist\/|src\/|\.ts:\d+|\.js:\d+|\/Users\/|\/home\/|\/var\/|\/tmp\/)\b/i,
+  /\b(?:Mongo|Mongoose|CastError|E11000|Redis|S3|AWS|Stripe|Modal|CloudWatch|SQS|KMS)\b/i,
+  /\b(?:ENOTFOUND|ECONNREFUSED|ECONNRESET|ETIMEDOUT|EAI_AGAIN|ECONNABORTED)\b/i,
+  /\b(?:secret|password|credential|authorization|bearer|private\s*key|api\s*key)\b/i,
+  /\b(?:token|signature)\s*[:=]\s*\S+/i,
+  /\b(?:mongodb(?:\+srv)?:\/\/|postgres(?:ql)?:\/\/|redis:\/\/|mysql:\/\/)\S+/i,
+  /\b[A-Za-z0-9_+/=-]{48,}\b/,
+]
+
+const isUnsafeMcpErrorText = (value: string): boolean => {
+  const text = value.trim()
+  if (!text) return false
+  if (text.length > 500) return true
+  return unsafeMcpErrorPatterns.some(pattern => pattern.test(text))
+}
+
+const sanitizeMcpErrorText = (value: string | undefined, fallback: string): string | undefined => {
+  if (typeof value !== 'string') return undefined
+  const trimmed = value.trim()
+  if (!trimmed) return undefined
+  return isUnsafeMcpErrorText(trimmed) ? fallback : trimmed
+}
+
+export function sanitizeMcpClientError(
+  error: string,
+  message?: string,
+): { error: string; message?: string } {
+  const sanitizedError = sanitizeMcpErrorText(error, 'MCP request failed') ?? 'MCP request failed'
+  const sanitizedMessage = sanitizeMcpErrorText(message, genericMcpErrorMessage)
+  return {
+    error: sanitizedError,
+    ...(sanitizedMessage ? { message: sanitizedMessage } : {}),
+  }
+}
+
 export function createMcpErrorResponse(input: {
   error: string
   message?: string
   traceId?: string
 }): McpResponse {
+  const sanitized = sanitizeMcpClientError(input.error, input.message)
   return {
     isError: true,
     content: [
-      { type: 'text', text: input.message ? `${input.error}: ${input.message}` : input.error },
+      {
+        type: 'text',
+        text: sanitized.message ? `${sanitized.error}: ${sanitized.message}` : sanitized.error,
+      },
     ],
     structuredContent: {
-      error: input.error,
-      ...(input.message ? { message: input.message } : {}),
+      error: sanitized.error,
+      ...(sanitized.message ? { message: sanitized.message } : {}),
       ...(input.traceId ? { traceId: input.traceId } : {}),
     },
     _meta: input.traceId ? { traceId: input.traceId } : {},
@@ -61,10 +108,25 @@ export function generateMcpContentUrl(input: {
   contentId: string
   kind?: string
 }): string {
-  const baseUrl = trimTrailingSlashes(input.appBaseUrl)
   return input.kind === 'file'
-    ? `${baseUrl}/site/${input.siteId}/file/${input.contentId}`
-    : `${baseUrl}/site/${input.siteId}/${input.contentId}`
+    ? generateMcpAppUrl(input.appBaseUrl, `/site/${input.siteId}/file/${input.contentId}`)
+    : generateMcpAppUrl(input.appBaseUrl, `/site/${input.siteId}/${input.contentId}`)
+}
+
+export function generateMcpAppUrl(appBaseUrl: string, path: string): string {
+  return `${trimTrailingSlashes(appBaseUrl)}/${path.replace(/^\/+/, '')}`
+}
+
+export function generateMcpSiteUrl(input: { appBaseUrl: string; siteId: string }): string {
+  return generateMcpAppUrl(input.appBaseUrl, `/site/${input.siteId}`)
+}
+
+export function generateMcpAgentUrl(input: { appBaseUrl: string; agentId: string }): string {
+  return generateMcpAppUrl(input.appBaseUrl, `/agents/workflow/${input.agentId}`)
+}
+
+export function generateMcpAgentRunUrl(input: { appBaseUrl: string; agentRunId: string }): string {
+  return generateMcpAppUrl(input.appBaseUrl, `/agents/run/${input.agentRunId}`)
 }
 
 function trimTrailingSlashes(value: string): string {

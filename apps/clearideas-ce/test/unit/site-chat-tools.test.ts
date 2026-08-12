@@ -30,6 +30,7 @@ describe('site chat tool schemas', () => {
   it('uses provider-compatible top-level JSON schemas for exported core MCP tool definitions', () => {
     for (const definition of createCoreMcpToolDefinitions({ includeAliases: true })) {
       expectProviderCompatibleObjectSchema(definition.name, definition.inputSchema)
+      expect(definition.outputSchema).toMatchObject({ type: 'object' })
     }
   })
 

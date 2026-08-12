@@ -19,12 +19,12 @@ describe('CE site chat request body', () => {
 
     const body = createSiteChatRequestBody({
       messages,
-      selectedModel: 'openai:gpt-5.4-mini',
+      selectedModel: 'openai:gpt-5.6-luna',
     })
 
     expect(body).toEqual({
       messages,
-      model: 'openai:gpt-5.4-mini',
+      model: 'openai:gpt-5.6-luna',
     })
     expect(body).not.toHaveProperty('id')
     expect(body).not.toHaveProperty('trigger')

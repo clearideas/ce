@@ -59,11 +59,12 @@ export async function extractPdfTextForFile(input: PdfExtractionInput) {
 
 async function extractTextFromPdfBuffer(buffer: Buffer) {
   const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
-  const document = await pdfjs.getDocument({
+  const loadingTask = pdfjs.getDocument({
     data: new Uint8Array(buffer),
     disableWorker: true,
     useSystemFonts: true,
-  } as any).promise
+  } as any)
+  const document = await loadingTask.promise
   const pages: string[] = []
 
   try {
@@ -78,7 +79,7 @@ async function extractTextFromPdfBuffer(buffer: Buffer) {
       page.cleanup()
     }
   } finally {
-    await document.destroy()
+    await loadingTask.destroy()
   }
 
   return pages.join('\n\n')

@@ -12,6 +12,8 @@ import {
   llmListContentArgsSchema,
   llmRetrieveFileContentArgsSchema,
   llmSearchContentArgsSchema,
+  getCoreMcpToolRequiredScope,
+  normalizeCoreMcpToolName,
   renderEmailTemplate,
   validateSchema,
   buildLoginUrl,
@@ -26,6 +28,13 @@ describe('core reusable services', () => {
     expect(hashAccessKeyValue(pair.key)).toHaveLength(64)
     expect(getInvalidScopesByType({ keyType: 'mcp', scopes: ['mcp:read', 'admin'] })).toEqual(['admin'])
     expect(getActiveScopesByType().mcp).toEqual(['mcp:read', 'mcp:write'])
+  })
+
+  it('accepts documented namespaced MCP tools and canonicalizes their scopes', () => {
+    expect(normalizeCoreMcpToolName('clearideas.list_sites')).toBe('list_sites')
+    expect(normalizeCoreMcpToolName('clearideas.create_folder')).toBe('create_folder')
+    expect(getCoreMcpToolRequiredScope('clearideas.list_sites')).toBe('mcp:read')
+    expect(getCoreMcpToolRequiredScope('clearideas.create_folder')).toBe('mcp:write')
   })
 
   it('builds invite login links that can carry one-time codes', () => {

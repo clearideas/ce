@@ -34,6 +34,26 @@ export const coreExtractionStatus = {
   limited: 'limited',
 } as const
 
+export const coreArchiveExtraction = {
+  maxArchiveBytes: 1024 * 1024 * 1024,
+  maxExpandedBytes: 2 * 1024 * 1024 * 1024,
+  maxEntries: 30_000,
+  maxFiles: 25_000,
+  maxFolders: 10_000,
+  maxDepth: 40,
+  maxPathBytes: 1024,
+  maxSingleFileBytes: 512 * 1024 * 1024,
+  maxNestedArchives: 0,
+  extractionTimeoutMs: 15 * 60 * 1000,
+  dbBatchSize: 500,
+  uploadConcurrency: 8,
+  textExtractionBatchMaxFiles: 250,
+  textExtractionBatchMaxBytes: 50 * 1024 * 1024,
+  textExtractionBatchConcurrencyPerArchive: 2,
+  metadataTriggerBatchMaxFiles: 250,
+  metadataTriggerConcurrency: 5,
+} as const
+
 export const coreNotificationAction = {
   uploaded: 'uploaded',
   created: 'created',
@@ -79,3 +99,4 @@ export type CoreRole = typeof coreRole[keyof typeof coreRole]
 export type CoreExtractionStatus = typeof coreExtractionStatus[keyof typeof coreExtractionStatus]
 export type CoreSiteRelationship = typeof coreSiteRelationship[keyof typeof coreSiteRelationship]
 export type CoreAcceptedFilterValue = typeof coreAcceptedFilter[keyof typeof coreAcceptedFilter]
+export type CoreArchiveExtractionConfig = typeof coreArchiveExtraction

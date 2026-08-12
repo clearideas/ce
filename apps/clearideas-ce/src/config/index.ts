@@ -1,4 +1,4 @@
-import { coreContentStatus, coreExtractionStatus, coreRole, coreSiteRoles, coreSiteStatus, coreSiteVisibility } from '@clearideas/core'
+import { coreArchiveExtraction, coreContentStatus, coreExtractionStatus, coreRole, coreSiteRoles, coreSiteStatus, coreSiteVisibility } from '@clearideas/core'
 import type { NotificationActionTypeRegistry } from '@clearideas/core'
 
 function numberFromEnv(name: string, fallback: number, options: { min?: number } = {}) {
@@ -49,6 +49,7 @@ export const config = {
   content: {
     status: coreContentStatus,
     extractionStatus: coreExtractionStatus,
+    archiveExtraction: coreArchiveExtraction,
   },
   analytics: {
     defaultActions: ['viewed', 'file-viewed', 'file-downloaded', 'file-uploaded', 'folder-created', 'content-deleted'],

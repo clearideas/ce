@@ -44,7 +44,7 @@ Minimal variables:
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS` (required as applicable for `smtp`)
 - `NOTIFICATIONS_ENABLED` and `NOTIFICATION_POLL_INTERVAL_MS` for the simple CE email notification worker
 - Optional site AI chat:
-  - `AI_CHAT_MODEL` in `provider:model` format, for example `openai:gpt-4.1-mini` or `anthropic:claude-3-5-haiku-latest`
+  - `AI_CHAT_MODEL` in `provider:model` format, for example `openai:gpt-5.6-luna` or `anthropic:claude-sonnet-5`
   - `AI_CHAT_MODELS` optional comma-separated allow-list; defaults to `AI_CHAT_MODEL`
   - `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` for the selected provider
 - Mongo using one of:

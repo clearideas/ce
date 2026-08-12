@@ -42,19 +42,28 @@
     "check:ce-release": "node scripts/check-ce-release-readiness.mjs --target ."
   },
   "overrides": {
-    "@hono/node-server": "1.19.14",
-    "hono": "4.12.18",
+    "@hono/node-server": "2.0.12",
+    "hono": "4.12.27",
+    "esbuild": "$esbuild",
     "zod": "^4.4.3",
     "convict": "6.2.5",
+    "qs": "6.15.2",
     "tar": ">=7.5.7",
+    "fast-uri": "3.1.5",
     "fast-xml-parser": "5.7.3",
     "minimatch": "10.2.5",
-    "brace-expansion": "5.0.6",
-    "koa": "3.2.0",
+    "brace-expansion": "5.0.9",
+    "koa": "3.2.1",
     "basic-ftp": "5.3.1",
     "express-rate-limit": "8.5.1",
+    "ip-address": "10.3.1",
     "flatted": "3.4.2",
     "path-to-regexp": "8.4.2",
+    "@grpc/grpc-js": "1.14.4",
+    "form-data": "4.0.6",
+    "protobufjs": "7.6.5",
+    "tmp": "0.2.7",
+    "ws": "8.21.0",
     "anymatch": {
       "picomatch": "2.3.2"
     },
@@ -67,8 +76,11 @@
     "fdir": {
       "picomatch": "4.0.4"
     },
+    "exceljs": {
+      "uuid": "11.1.1"
+    },
     "rollup": "4.60.3",
-    "undici": "7.24.5"
+    "undici": "7.29.0"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
