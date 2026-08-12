@@ -12,10 +12,25 @@ import {
 import { createCoreDomainServices } from '@clearideas/core'
 import { anthropic } from '@ai-sdk/anthropic'
 import { openai } from '@ai-sdk/openai'
-import { convertToModelMessages, jsonSchema, stepCountIs, streamText, tool, type UIMessage } from 'ai'
+import {
+  convertToModelMessages,
+  createUIMessageStream,
+  pipeUIMessageStreamToResponse,
+  jsonSchema,
+  stepCountIs,
+  streamText,
+  tool,
+  type UIMessage,
+} from 'ai'
 import type { Request, Response } from 'express'
 import { config } from '../../config/index.js'
 import type { CeAppContext } from '../../lib/app-context.js'
+import {
+  CE_SECURITY_PREAMBLE,
+  INSTRUCTION_LEAK_REFUSAL,
+  getLastUserText,
+  isInstructionLeakAttempt,
+} from '../../lib/instruction-leak-guard.js'
 import { extractPdfTextForFile } from '../../services/pdf-text-extraction.js'
 import { hydrateSearchResultsFromSource } from '../../services/search-result-hydration.js'
 
@@ -46,13 +61,25 @@ export class SiteChatController {
 
     const selectedModel = getConfiguredChatModel(typeof req.body?.model === 'string' ? req.body.model : undefined)
     const tools = this.buildSiteChatTools(site, siteId)
+    if (isInstructionLeakAttempt(getLastUserText(messages as any))) {
+      const stream = createUIMessageStream({
+        execute: ({ writer }) => {
+          const id = 'security-refusal'
+          writer.write({ type: 'text-start', id })
+          writer.write({ type: 'text-delta', id, delta: INSTRUCTION_LEAK_REFUSAL })
+          writer.write({ type: 'text-end', id })
+        },
+      })
+      pipeUIMessageStreamToResponse({ response: res as any, stream })
+      return
+    }
 
     const result = streamText({
       model: selectedModel.model,
       messages: await convertToModelMessages(messages),
       tools,
       stopWhen: stepCountIs(5),
-      system: `${config.ai.siteChatSystemPrompt} Current site: ${String((site as any).name ?? 'site')} (${siteId}).`,
+      system: `${CE_SECURITY_PREAMBLE}\n\n${config.ai.siteChatSystemPrompt} Current site: ${String((site as any).name ?? 'site')} (${siteId}).`,
     })
 
     result.pipeUIMessageStreamToResponse(res as any, {
@@ -257,7 +284,7 @@ function getConfiguredChatModel(requested?: string) {
   const [provider, ...modelParts] = configured.split(':')
   const modelId = modelParts.join(':')
   if (!provider || !modelId) {
-    throw new BadRequestError('AI_CHAT_MODEL must use provider:model, for example openai:gpt-4.1-mini')
+    throw new BadRequestError('AI_CHAT_MODEL must use provider:model, for example openai:gpt-5.6-luna')
   }
   if (provider === 'openai') return { provider, modelId, model: openai(modelId) }
   if (provider === 'anthropic') return { provider, modelId, model: anthropic(modelId) }

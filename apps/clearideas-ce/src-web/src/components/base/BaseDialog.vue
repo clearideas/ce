@@ -9,6 +9,7 @@ interface Props {
   showClose?: boolean
   cardClass?: string
   contentClass?: string
+  actionsClass?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -21,6 +22,7 @@ const props = withDefaults(defineProps<Props>(), {
   showClose: true,
   cardClass: '',
   contentClass: '',
+  actionsClass: '',
 })
 
 const dialogVisible = defineModel<boolean>({ required: true })
@@ -44,7 +46,17 @@ function closeDialog() {
     :fullscreen="props.fullscreen"
     :scrollable="props.scrollable"
   >
-    <VCard :class="props.cardClass">
+    <VCard
+      :class="[
+        'base-dialog__card',
+        { 'base-dialog__card--fullscreen': props.fullscreen },
+        props.cardClass,
+      ]"
+    >
+      <div v-if="$slots.top" class="base-dialog__top">
+        <slot name="top" />
+      </div>
+
       <VCardTitle
         v-if="$slots.title || $slots.append || props.title || props.showClose"
         class="base-dialog__title"
@@ -67,17 +79,38 @@ function closeDialog() {
         </div>
       </VCardTitle>
 
-      <div :class="props.contentClass">
+      <div class="base-dialog__body" :class="props.contentClass">
         <slot />
       </div>
+
+      <VCardActions v-if="$slots.actions" class="base-dialog__actions" :class="props.actionsClass">
+        <slot name="actions" />
+      </VCardActions>
     </VCard>
   </VDialog>
 </template>
 
 <style scoped>
+.base-dialog__card {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 48px);
+  overflow: hidden;
+}
+
+.base-dialog__card--fullscreen {
+  height: 100dvh;
+  max-height: 100dvh;
+}
+
+.base-dialog__top {
+  flex: 0 0 auto;
+}
+
 .base-dialog__title {
   align-items: center;
   display: flex;
+  flex: 0 0 auto;
   gap: 0.75rem;
   justify-content: space-between;
 }
@@ -92,5 +125,15 @@ function closeDialog() {
   display: flex;
   flex: 0 0 auto;
   gap: 0.5rem;
+}
+
+.base-dialog__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.base-dialog__actions {
+  flex: 0 0 auto;
 }
 </style>

@@ -107,7 +107,7 @@ export async function createCeRuntime(options: CeRuntimeOptions = {}): Promise<C
   const emailProvider = options.emailProvider ?? (await createCeEmailProvider({ templateRoot }))
 
   const auth = betterAuth({
-    database: mongodbAdapter(db as any, { client: mongoClient as any }),
+    database: mongodbAdapter(db as any, { client: mongoClient as any, transaction: false }),
     baseURL: baseUrl,
     secret: config.tokens.authSecret(),
     emailAndPassword: {

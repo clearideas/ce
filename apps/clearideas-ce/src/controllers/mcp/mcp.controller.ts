@@ -88,7 +88,7 @@ export class McpController {
     if (!requiredScope) throw new BadRequestError('Unsupported MCP tool')
     this.assertScope(req, requiredScope)
 
-    if (tool === 'clearideas.list_sites') {
+    if (tool === 'list_sites') {
       const actor = await this.getMcpActor(req)
       const siteIds = await this.getMcpEnabledSiteIds(req)
       const sites = siteIds.length > 0 ? await this.ctx.models.SiteModel.find({
@@ -105,7 +105,7 @@ export class McpController {
       return
     }
 
-    if (tool === 'clearideas.list_content') {
+    if (tool === 'list_content') {
       const siteId = String(args.siteId ?? '').trim()
       if (!siteId) throw new BadRequestError('siteId is required')
       const actor = await this.getMcpActor(req)
@@ -130,7 +130,7 @@ export class McpController {
       return
     }
 
-    if (tool === 'clearideas.get_site_metadata') {
+    if (tool === 'get_site_metadata') {
       const siteId = String(args.siteId ?? '').trim()
       if (!siteId) throw new BadRequestError('siteId is required')
       const actor = await this.getMcpActor(req)
@@ -168,7 +168,7 @@ export class McpController {
       return
     }
 
-    if (tool === 'clearideas.get_content_metadata') {
+    if (tool === 'get_content_metadata') {
       const contentId = String(args.contentId ?? args.id ?? '').trim()
       if (!contentId) throw new BadRequestError('contentId is required')
       const actor = await this.getMcpActor(req)
@@ -185,7 +185,7 @@ export class McpController {
       return
     }
 
-    if (tool === 'clearideas.retrieve_file_content') {
+    if (tool === 'retrieve_file_content') {
       const contentId = String(args.contentId ?? args.id ?? '').trim()
       if (!contentId) throw new BadRequestError(rawTool === 'fetch' ? 'id is required' : 'contentId is required')
       const actor = await this.getMcpActor(req)
@@ -219,7 +219,7 @@ export class McpController {
       return
     }
 
-    if (tool === 'clearideas.save_file') {
+    if (tool === 'save_file') {
       const siteId = String(args.siteId ?? '').trim()
       const folderId = args.folderId == null || args.folderId === '' ? '' : String(args.folderId)
       const name = String(args.name ?? '').trim()
@@ -286,7 +286,7 @@ export class McpController {
       return
     }
 
-    if (tool === 'clearideas.create_folder') {
+    if (tool === 'create_folder') {
       const siteId = String(args.siteId ?? '').trim()
       const folderId = args.folderId == null || args.folderId === '' ? '' : String(args.folderId)
       const name = String(args.name ?? '').trim()
@@ -318,7 +318,7 @@ export class McpController {
       return
     }
 
-    if (tool === 'clearideas.search_content') {
+    if (tool === 'search_content') {
       const query = String(args.q ?? args.query ?? '').trim()
       if (!query) throw new BadRequestError('q is required')
       const actor = await this.getMcpActor(req)

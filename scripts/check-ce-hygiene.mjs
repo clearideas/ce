@@ -54,6 +54,10 @@ async function checkNoTrackedRuntimeArtifacts() {
     { cwd: root, encoding: 'utf8', shell: false },
   )
   if (result.status !== 0) {
+    if (/not a git repository/i.test(result.stderr ?? '')) {
+      warnings.push('Skipped tracked CE runtime artifact check because the export target is not a Git worktree')
+      return
+    }
     failures.push(`Unable to inspect tracked CE runtime artifacts\n${trimCommandOutput(result)}`)
     return
   }
@@ -80,6 +84,7 @@ async function checkForbiddenSourceTerms() {
   const allowed = [
     /src\/controllers\/core\/core\.controller\.ts:.*signature/i,
     /src-web\/src\/components\/content\/actions\/UploadStatus\.vue:.*striped/i,
+    /packages\/clearideas-core\/src\/services\/mcp\.ts:.*Mongo.*Stripe.*CloudWatch/i,
   ]
 
   for (const sourceRoot of roots) {

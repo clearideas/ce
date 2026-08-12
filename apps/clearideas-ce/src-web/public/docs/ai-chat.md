@@ -7,8 +7,8 @@ Community Edition can enable non-persisted site-scoped AI chat.
 Set an allowed model and provider key:
 
 ```env
-AI_CHAT_MODEL=openai:gpt-4.1-mini
-AI_CHAT_MODELS=openai:gpt-4.1-mini
+AI_CHAT_MODEL=openai:gpt-5.6-luna
+AI_CHAT_MODELS=openai:gpt-5.6-luna
 OPENAI_API_KEY=<key>
 ```
 

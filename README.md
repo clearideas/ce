@@ -322,8 +322,8 @@ MCP access keys let approved external tools call scoped Clear Ideas operations, 
 AI chat is optional and disabled unless a model is configured. When enabled, Community Edition can answer site-scoped questions using your configured provider and the local Clear Ideas MCP tools. Chat responses are not persisted.
 
 ```env
-AI_CHAT_MODEL=openai:gpt-4.1-mini
-AI_CHAT_MODELS=openai:gpt-4.1-mini
+AI_CHAT_MODEL=openai:gpt-5.6-luna
+AI_CHAT_MODELS=openai:gpt-5.6-luna
 OPENAI_API_KEY=<key>
 ```
 

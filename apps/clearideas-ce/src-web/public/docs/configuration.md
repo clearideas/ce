@@ -114,8 +114,8 @@ AUTH_CODE_ALLOWED_ATTEMPTS=5
 ## Optional AI Chat
 
 ```env
-AI_CHAT_MODEL=openai:gpt-4.1-mini
-AI_CHAT_MODELS=openai:gpt-4.1-mini,anthropic:claude-3-5-haiku-latest
+AI_CHAT_MODEL=openai:gpt-5.6-luna
+AI_CHAT_MODELS=openai:gpt-5.6-luna,anthropic:claude-sonnet-5
 OPENAI_API_KEY=<key>
 ANTHROPIC_API_KEY=<key>
 ```

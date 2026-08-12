@@ -20,16 +20,16 @@ This package is the shared contract layer used by Clear Ideas Community Edition,
 
 ## Install
 
-Published releases are available from GitHub Packages:
+When published, releases are private packages in the Clear Ideas npm organization:
 
 ```sh
 npm install @clearideas/contracts-core
 ```
 
-Consumers need the Clear Ideas GitHub Packages registry configured:
+Consumers with access to this private package authenticate to npm:
 
 ```ini
-@clearideas:registry=https://npm.pkg.github.com/
+//registry.npmjs.org/:_authToken=${NPM_ACCESS_TOKEN}
 ```
 
 ## Usage
@@ -90,7 +90,7 @@ npm run build:contracts:core
 npm run type-check:contracts:core
 ```
 
-The build uses TypeScript project references and emits `dist/` for publishing. Release automation publishes the package with the release tag version, for example `v2.1.1` becomes `@clearideas/contracts-core@2.1.1`.
+The build uses TypeScript project references and emits `dist/` for publishing. The publishing script uses the release tag as the package version; for example, `v2.1.1` becomes `@clearideas/contracts-core@2.1.1`.
 
 ## Boundary Rules
 

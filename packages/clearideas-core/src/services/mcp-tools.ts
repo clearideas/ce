@@ -1,6 +1,9 @@
 import { z } from 'zod'
 
-const objectIdString = z.string().trim().regex(/^[a-f\d]{24}$/i, { error: 'Invalid ObjectId' })
+const objectIdString = z
+  .string()
+  .trim()
+  .regex(/^[a-f\d]{24}$/i, { error: 'Invalid ObjectId' })
 const nullableObjectIdString = z.preprocess(
   value => (value == null || value === '' ? null : String(value).trim()),
   z.union([objectIdString, z.null()]),
@@ -11,14 +14,14 @@ const optionalObjectIdString = z.preprocess(
 )
 
 export const CORE_MCP_TOOL_NAMES = [
-  'clearideas.list_sites',
-  'clearideas.list_content',
-  'clearideas.get_site_metadata',
-  'clearideas.get_content_metadata',
-  'clearideas.search_content',
-  'clearideas.retrieve_file_content',
-  'clearideas.save_file',
-  'clearideas.create_folder',
+  'list_sites',
+  'list_content',
+  'get_site_metadata',
+  'get_content_metadata',
+  'search_content',
+  'retrieve_file_content',
+  'save_file',
+  'create_folder',
 ] as const
 
 export type CoreMcpToolName = (typeof CORE_MCP_TOOL_NAMES)[number]
@@ -26,7 +29,6 @@ export type CoreMcpToolName = (typeof CORE_MCP_TOOL_NAMES)[number]
 export const McpListSitesArgsSchema = z.strictObject({
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(200).optional(),
-  accepted: z.coerce.boolean().optional(),
 })
 
 export const McpListContentArgsSchema = z.strictObject({
@@ -51,6 +53,7 @@ export const McpSaveFileArgsSchema = z.strictObject({
   folderId: nullableObjectIdString.optional(),
   name: z.string().trim().min(1).max(500),
   content: z.string().min(1).max(2_000_000),
+  contentEncoding: z.enum(['utf8', 'base64']).optional(),
   contentType: z.string().optional(),
   fileId: nullableObjectIdString.optional(),
 })
@@ -116,15 +119,10 @@ export const RetrieveDiffForFileArgsRequestSchema = McpRetrieveDiffForFileArgsSc
 
 export const McpOptionalSiteIdsSchema = z.array(optionalObjectIdString).optional()
 
-const optionalLlmObjectIdSchema = z.preprocess(
-  value => {
-    const normalized = String(value ?? '').trim()
-    return !normalized || normalized === 'undefined' || normalized === 'null'
-      ? undefined
-      : normalized
-  },
-  objectIdString.optional(),
-)
+const optionalLlmObjectIdSchema = z.preprocess(value => {
+  const normalized = String(value ?? '').trim()
+  return !normalized || normalized === 'undefined' || normalized === 'null' ? undefined : normalized
+}, objectIdString.optional())
 
 const llmContentReferenceBaseSchema = z.strictObject({
   contentId: optionalLlmObjectIdSchema,
@@ -211,6 +209,17 @@ export interface McpToolDefinition {
     required: string[]
     additionalProperties: false
   }
+  outputSchema: {
+    type: 'object'
+    properties: Record<string, unknown>
+    additionalProperties: true
+  }
+}
+
+export const genericMcpOutputSchema: McpToolDefinition['outputSchema'] = {
+  type: 'object',
+  properties: {},
+  additionalProperties: true,
 }
 
 export function createMcpToolDefinition(
@@ -228,61 +237,113 @@ export function createMcpToolDefinition(
       required,
       additionalProperties: false,
     },
+    outputSchema: genericMcpOutputSchema,
   }
 }
 
-export function createCoreMcpToolDefinitions(input: { includeAliases?: boolean } = {}): McpToolDefinition[] {
+export function createCoreMcpToolDefinitions(
+  input: { includeAliases?: boolean } = {},
+): McpToolDefinition[] {
   const tools = [
-    createMcpToolDefinition('clearideas.list_sites', 'List Clear Ideas sites available to this access key.', {}),
-    createMcpToolDefinition('clearideas.list_content', 'List folders and files in an MCP-enabled Clear Ideas site.', {
-      siteId: { type: 'string' },
-      folderId: { type: 'string' },
-      limit: { type: 'number' },
-    }, ['siteId']),
-    createMcpToolDefinition('clearideas.get_site_metadata', 'Inspect an MCP-enabled site, including role, visibility, counts, and storage size.', {
-      siteId: { type: 'string' },
-    }, ['siteId']),
-    createMcpToolDefinition('clearideas.get_content_metadata', 'Inspect an MCP-visible file or folder without reading file bytes.', {
-      contentId: { type: 'string' },
-    }, ['contentId']),
-    createMcpToolDefinition('clearideas.search_content', 'Search files by name, full text, or metadata syntax such as @contentType:application/pdf.', {
-      q: { type: 'string' },
-      siteIds: { type: 'array', items: { type: 'string' } },
-    }, ['q']),
-    createMcpToolDefinition('clearideas.retrieve_file_content', 'Retrieve UTF-8 text from a text-based file or extracted PDF text.', {
-      contentId: { type: 'string' },
-      maxTokens: { type: 'number' },
-      lines: {
-        type: 'object',
-        properties: { start: { type: 'number' }, end: { type: 'number' } },
-        additionalProperties: false,
+    createMcpToolDefinition(
+      'list_sites',
+      'List Clear Ideas sites available to this access key.',
+      {},
+    ),
+    createMcpToolDefinition(
+      'list_content',
+      'List folders and files in an MCP-enabled Clear Ideas site.',
+      {
+        siteId: { type: 'string' },
+        folderId: { type: 'string' },
+        limit: { type: 'number' },
       },
-    }, ['contentId']),
-    createMcpToolDefinition('clearideas.save_file', 'Create a UTF-8 text file in an MCP-enabled site or folder.', {
-      siteId: { type: 'string' },
-      folderId: { type: 'string' },
-      name: { type: 'string' },
-      content: { type: 'string' },
-      contentType: { type: 'string' },
-    }, ['siteId', 'name', 'content']),
-    createMcpToolDefinition('clearideas.create_folder', 'Create a folder in an MCP-enabled site or nested under another folder.', {
-      siteId: { type: 'string' },
-      folderId: { type: 'string' },
-      name: { type: 'string' },
-    }, ['siteId', 'name']),
+      ['siteId'],
+    ),
+    createMcpToolDefinition(
+      'get_site_metadata',
+      'Inspect an MCP-enabled site, including role, visibility, counts, and storage size.',
+      {
+        siteId: { type: 'string' },
+      },
+      ['siteId'],
+    ),
+    createMcpToolDefinition(
+      'get_content_metadata',
+      'Inspect an MCP-visible file or folder without reading file bytes.',
+      {
+        contentId: { type: 'string' },
+      },
+      ['contentId'],
+    ),
+    createMcpToolDefinition(
+      'search_content',
+      'Search files by name, full text, or metadata syntax such as @contentType:application/pdf.',
+      {
+        q: { type: 'string' },
+        siteIds: { type: 'array', items: { type: 'string' } },
+      },
+      ['q'],
+    ),
+    createMcpToolDefinition(
+      'retrieve_file_content',
+      'Retrieve UTF-8 text from a text-based file or extracted PDF text.',
+      {
+        contentId: { type: 'string' },
+        maxTokens: { type: 'number' },
+        lines: {
+          type: 'object',
+          properties: { start: { type: 'number' }, end: { type: 'number' } },
+          additionalProperties: false,
+        },
+      },
+      ['contentId'],
+    ),
+    createMcpToolDefinition(
+      'save_file',
+      'Create a UTF-8 text file in an MCP-enabled site or folder.',
+      {
+        siteId: { type: 'string' },
+        folderId: { type: 'string' },
+        name: { type: 'string' },
+        content: { type: 'string' },
+        contentType: { type: 'string' },
+      },
+      ['siteId', 'name', 'content'],
+    ),
+    createMcpToolDefinition(
+      'create_folder',
+      'Create a folder in an MCP-enabled site or nested under another folder.',
+      {
+        siteId: { type: 'string' },
+        folderId: { type: 'string' },
+        name: { type: 'string' },
+      },
+      ['siteId', 'name'],
+    ),
   ]
 
   if (!input.includeAliases) return tools
 
   return [
     ...tools,
-    createMcpToolDefinition('search', 'Compatibility alias for clearideas.search_content.', {
-      query: { type: 'string' },
-    }, ['query']),
-    createMcpToolDefinition('fetch', 'Compatibility alias for clearideas.retrieve_file_content.', {
-      id: { type: 'string' },
-      maxTokens: { type: 'number' },
-    }, ['id']),
+    createMcpToolDefinition(
+      'search',
+      'Compatibility alias for search_content.',
+      {
+        query: { type: 'string' },
+      },
+      ['query'],
+    ),
+    createMcpToolDefinition(
+      'fetch',
+      'Compatibility alias for retrieve_file_content.',
+      {
+        id: { type: 'string' },
+        maxTokens: { type: 'number' },
+      },
+      ['id'],
+    ),
   ]
 }
 
@@ -309,14 +370,15 @@ export function parseMcpStringArray(input: unknown): string[] | undefined {
 }
 
 export function normalizeCoreMcpToolName(tool: string): string {
-  if (tool === 'search') return 'clearideas.search_content'
-  if (tool === 'fetch') return 'clearideas.retrieve_file_content'
-  return tool
+  const normalized = tool.startsWith('clearideas.') ? tool.slice('clearideas.'.length) : tool
+  if (normalized === 'search') return 'search_content'
+  if (normalized === 'fetch') return 'retrieve_file_content'
+  return normalized
 }
 
 export function getCoreMcpToolRequiredScope(tool: string): 'mcp:read' | 'mcp:write' | undefined {
   const normalizedTool = normalizeCoreMcpToolName(tool)
-  if (normalizedTool === 'clearideas.save_file' || normalizedTool === 'clearideas.create_folder') return 'mcp:write'
+  if (normalizedTool === 'save_file' || normalizedTool === 'create_folder') return 'mcp:write'
   if ((CORE_MCP_TOOL_NAMES as readonly string[]).includes(normalizedTool)) return 'mcp:read'
   return undefined
 }

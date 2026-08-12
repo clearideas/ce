@@ -23,7 +23,7 @@ const models = registerCoreModels(mongoose)
 const mongoClient = mongoose.connection.getClient()
 const db = mongoClient.db(mongoose.connection.name)
 const auth = betterAuth({
-  database: mongodbAdapter(db as any, { client: mongoClient as any }),
+  database: mongodbAdapter(db as any, { client: mongoClient as any, transaction: false }),
   baseURL: process.env.BETTER_AUTH_URL ?? process.env.APP_URL ?? `http://${process.env.HOST ?? '127.0.0.1'}:${process.env.PORT ?? 4100}`,
   secret: config.tokens.authSecret(),
   emailAndPassword: { enabled: false },
