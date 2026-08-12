@@ -73,7 +73,7 @@ async function checkForbiddenSourceTerms() {
   ]
   const patterns = [
     { name: 'enterprise wording', pattern: /\benterprise\b/i },
-    { name: 'private API source reference', pattern: /clearideas-api\/src/i },
+    { name: 'private API source reference', pattern: /private-api\/src/i },
     { name: 'architecture mode flag', pattern: /\b(isEnterprise|enterpriseEnabled|ceMode|saasMode)\b/i },
     { name: 'archive feature leakage', pattern: /\barchivedMode\b|\barchived\b/i },
     { name: 'billing feature leakage', pattern: /\b(billing|stripe)\b/i },

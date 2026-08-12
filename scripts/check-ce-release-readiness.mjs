@@ -74,18 +74,18 @@ const forbiddenDocPatterns = [
   /\bsignature\b/i,
   /\bredaction\b/i,
   /docs\.clearideas\.com/i,
-  /clearideas-api\/src/i,
+  /private-api\/src/i,
 ]
 const forbiddenSourcePatterns = [
-  /from\s+['"][^'"]*clearideas-api/i,
-  /clearideas-api\/src/i,
+  /from\s+['"][^'"]*private-api/i,
+  /private-api\/src/i,
   /\.env\.development/i,
   /npm\.fontawesome\.com/i,
 ]
 const forbiddenPublicTextPatterns = [
   /\/Users\/[A-Za-z0-9._-]+\//,
   /docs\.clearideas\.com/i,
-  /clearideas-api\/src/i,
+  /private-api\/src/i,
   /\.env\.development/i,
 ]
 

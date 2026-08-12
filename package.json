@@ -1,6 +1,6 @@
 {
   "name": "@clearideas/ce",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Self-hosted Clear Ideas Community Edition virtual data room.",
   "private": false,
   "type": "module",

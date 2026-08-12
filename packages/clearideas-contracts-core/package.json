@@ -5,7 +5,7 @@
   "private": true,
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/clearideas/clearideas-api.git",
+    "url": "git+https://github.com/clearideas/ce.git",
     "directory": "packages/clearideas-contracts-core"
   },
   "publishConfig": {

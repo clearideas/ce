@@ -13,7 +13,7 @@ const boundaries = [
     roots: [path.join(repoRoot, 'packages/clearideas-contracts-core/src')],
     forbidden: [
       importFromContractsEnterprise,
-      /from\s+['"][^'"]*clearideas-api\/src/i,
+      /from\s+['"][^'"]*private-api\/src/i,
       /from\s+['"]@(?:routes|controllers|middlewares|services|helpers|models|config|validation)(?:\/|['"])/,
       /\benterprise\b/i,
       /\bfeedback\b/i,
@@ -35,7 +35,7 @@ const boundaries = [
     ],
     forbidden: [
       importFromContractsEnterprise,
-      /from\s+['"][^'"]*clearideas-api\/src/i,
+      /from\s+['"][^'"]*private-api\/src/i,
       /from\s+['"][^'"]*\.\.\/\.\.\/\.\.\/src/i,
       /from\s+['"][^'"]*\.\.\/\.\.\/src/i,
       /isEnterprise|enterpriseEnabled|ceMode|saasMode/,
