@@ -10,7 +10,7 @@ const checks = [
     dir: 'packages/clearideas-core/src',
     patterns: [
       importFromContractsEnterprise,
-      /clearideas-api/i,
+      /private-api/i,
       /from\s+['"]@(?:routes|controllers|middlewares|services|helpers|models)(?:\/|['"])/,
     ],
   },
@@ -19,7 +19,7 @@ const checks = [
     dir: 'packages/clearideas-contracts-core/src',
     patterns: [
       importFromContractsEnterprise,
-      /from\s+['"][^'"]*clearideas-api/i,
+      /from\s+['"][^'"]*private-api/i,
       /from\s+['"]@(?:routes|controllers|middlewares|services|helpers|models|config|validation)(?:\/|['"])/,
       /\benterprise\b/i,
       /\bfeedback\b/i,
@@ -42,7 +42,7 @@ const checks = [
     dir: 'apps/clearideas-ce/src',
     patterns: [
       importFromContractsEnterprise,
-      /from\s+['"][^'"]*clearideas-api/i,
+      /from\s+['"][^'"]*private-api/i,
       /from\s+['"]@(?:routes|controllers|services)(?:\/|['"])/,
       /from\s+['"][^'"]*\.\.\/\.\.\/\.\.\/src\//,
     ],
@@ -52,7 +52,7 @@ const checks = [
     dir: 'apps/clearideas-ce/src-web/src',
     patterns: [
       importFromContractsEnterprise,
-      /from\s+['"][^'"]*clearideas-api/i,
+      /from\s+['"][^'"]*private-api/i,
       /from\s+['"][^'"]*\.\.\/\.\.\/\.\.\/src\//,
     ],
   },
