@@ -24,6 +24,7 @@ const settings = {
 const VerticalMenuItems = computed(() => [
   { name: 'Sites', icon: 'fasds fa-home', to: { name: 'sites' } },
   { name: 'Users', icon: 'fasds fa-users', to: { name: 'users' } },
+  { name: 'Agents', icon: 'fasds fa-robot', to: { name: 'agents' } },
   { name: 'Analytics', icon: 'fasds fa-chart-line', to: { name: 'analytics' } },
 ])
 

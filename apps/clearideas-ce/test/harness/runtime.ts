@@ -6,6 +6,7 @@ import type { SuperTest, Test } from 'supertest'
 import supertest from 'supertest'
 import { createCeRuntime, type CeRuntime } from '../../src/app.js'
 import { createCapturedEmailProvider, type CapturedEmailProvider } from './email.js'
+import type { ModelAdapter } from '@clearideas/agent-runtime'
 
 export interface TestCeRuntime {
   runtime: CeRuntime
@@ -21,6 +22,7 @@ export interface CreateTestCeRuntimeOptions {
   appUrl?: string
   baseUrl?: string
   env?: Record<string, string>
+  agentModelAdapter?: ModelAdapter
 }
 
 export async function createTestCeRuntime(options: CreateTestCeRuntimeOptions = {}): Promise<TestCeRuntime> {
@@ -59,6 +61,7 @@ export async function createTestCeRuntime(options: CreateTestCeRuntimeOptions = 
     emailProvider: email,
     httpsRequired: false,
     startWorkers: false,
+    agentModelAdapter: options.agentModelAdapter,
   })
 
   return {

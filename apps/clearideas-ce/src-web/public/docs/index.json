@@ -26,7 +26,8 @@
         { "title": "Analytics and Activity", "slug": "analytics-activity", "description": "Activity logging and simple analytics reports." },
         { "title": "Notifications and Email", "slug": "notifications-email", "description": "Log email, SMTP, notification templates, and worker polling." },
         { "title": "MCP and Access Keys", "slug": "mcp-access-keys", "description": "MCP tools, access key scopes, and examples." },
-        { "title": "AI Chat", "slug": "ai-chat", "description": "Optional site-scoped AI chat configuration." }
+        { "title": "AI Chat", "slug": "ai-chat", "description": "Optional site-scoped AI chat configuration." },
+        { "title": "Agents", "slug": "agents", "description": "Portable prompt agents, Site tools, run history, and schedules." }
       ]
     },
     {

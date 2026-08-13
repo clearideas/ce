@@ -163,6 +163,28 @@ async function verifySiteRoleById(input: {
   input.req.siteRole = role
 }
 
+export async function assertSiteReadAccess(input: {
+  models: Models
+  accountId: string
+  userId: string
+  siteId: string
+}) {
+  const site = await input.models.SiteModel.findById(input.siteId).lean()
+  if (!site) throw new ForbiddenError('Site access denied')
+  const { allowed } = hasSiteRole({
+    site,
+    accountId: input.accountId,
+    userId: input.userId,
+    permittedRoles: config.site.roles.allNonDisabledRoles,
+    roles: config.site.roles,
+  })
+  const publicAccess =
+    site.visibility === config.site.visibility.public &&
+    config.site.roles.allNonDisabledRoles.includes(config.site.role.viewer)
+  if (!allowed && !publicAccess) throw new ForbiddenError('Site access denied')
+  return site
+}
+
 async function assertFolderBelongsToSite(models: Models, input: { siteId: string; folderId: string }) {
   const folder = await models.ContentModel.findOne({
     _id: input.folderId,

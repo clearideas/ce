@@ -1,5 +1,6 @@
 export { useAccessKeyStore } from './accessKey.store'
 export { useAnalyticsStore } from './analytics.store'
+export { starterAgentManifest, useAgentStore } from './agent.store'
 export { useAuthStore } from './auth.store'
 export { useContentStore } from './content.store'
 export { useProfileStore } from './profile.store'

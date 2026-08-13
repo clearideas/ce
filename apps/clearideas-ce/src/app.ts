@@ -23,6 +23,7 @@ import { buildActivityRoutes } from './routes/activity/activity.routes.js'
 import { buildAnalyticsRoutes } from './routes/analytics/analytics.routes.js'
 import { buildAuthRoutes } from './routes/auth/auth.routes.js'
 import { buildSiteChatRoutes } from './routes/chat/site-chat.routes.js'
+import { buildAgentRoutes } from './routes/agent/agent.routes.js'
 import { buildCoreRoutes } from './routes/core/core.routes.js'
 import { buildMcpRoutes } from './routes/mcp/mcp.routes.js'
 import { buildNotificationRoutes } from './routes/notification/notification.routes.js'
@@ -33,6 +34,13 @@ import {
   type NotificationWorkerHandle,
 } from './workers/notification-worker.js'
 import { config } from './config/index.js'
+import { registerCeAgentModels, type CeAgentModels } from './models/agent.js'
+import { AgentHostService } from './services/agent/agent-host.js'
+import type { ModelAdapter } from '@clearideas/agent-runtime'
+import {
+  startAgentTaskWorker,
+  type AgentTaskWorkerHandle,
+} from './workers/agent-task-worker.js'
 
 const currentFile = fileURLToPath(import.meta.url)
 export const ceAppRoot = path.resolve(path.dirname(currentFile), '..')
@@ -63,14 +71,16 @@ export interface CeRuntimeOptions {
   emailProvider?: EmailProvider
   httpsRequired?: boolean
   startWorkers?: boolean
+  agentModelAdapter?: ModelAdapter
 }
 
 export interface CeRuntime {
   app: express.Express
   auth: any
-  models: ReturnType<typeof registerCoreModels>
+  models: ReturnType<typeof registerCoreModels> & CeAgentModels
   providers: CoreProviders
   search: ReturnType<typeof createSiteSearchIndexManager>
+  agentHost: AgentHostService
   storageRoot: string
   searchRoot: string
   close: () => Promise<void>
@@ -101,7 +111,7 @@ export async function createCeRuntime(options: CeRuntimeOptions = {}): Promise<C
   if (mongoose.connection.readyState !== 0) await mongoose.disconnect()
   await mongoose.connect(mongo.uri, mongo.options)
 
-  const models = registerCoreModels(mongoose)
+  const models = { ...registerCoreModels(mongoose), ...registerCeAgentModels(mongoose) }
   const mongoClient = mongoose.connection.getClient()
   const db = mongoClient.db(mongoose.connection.name)
   const emailProvider = options.emailProvider ?? (await createCeEmailProvider({ templateRoot }))
@@ -172,6 +182,13 @@ export async function createCeRuntime(options: CeRuntimeOptions = {}): Promise<C
   }
   registerCoreProviders(providers)
   const search = createSiteSearchIndexManager({ root: searchRoot, storage: storageProvider })
+  const agentContext = {
+    auth,
+    models,
+    providers: getCoreProviders(),
+    search,
+  }
+  const agentHost = new AgentHostService(agentContext, options.agentModelAdapter)
   const app = createCeApp({
     auth,
     models,
@@ -179,15 +196,18 @@ export async function createCeRuntime(options: CeRuntimeOptions = {}): Promise<C
     search,
     webRoot,
     httpsRequired: options.httpsRequired,
+    agentHost,
   })
 
   let notificationWorker: NotificationWorkerHandle | undefined
+  let agentTaskWorker: AgentTaskWorkerHandle | undefined
   if (options.startWorkers !== false) {
     notificationWorker = startNotificationWorker({
       models,
       providers: getCoreProviders(),
       appBaseUrl: appUrl,
     })
+    agentTaskWorker = startAgentTaskWorker({ models, agentHost })
   }
 
   return {
@@ -196,10 +216,12 @@ export async function createCeRuntime(options: CeRuntimeOptions = {}): Promise<C
     models,
     providers,
     search,
+    agentHost,
     storageRoot,
     searchRoot,
     close: async () => {
       notificationWorker?.stop()
+      agentTaskWorker?.stop()
       await mongoose.disconnect()
     },
   }
@@ -212,6 +234,7 @@ export function createCeApp(input: {
   search: ReturnType<typeof createSiteSearchIndexManager>
   webRoot: string
   httpsRequired?: boolean
+  agentHost: AgentHostService
 }) {
   const app = express()
   app.set('trust proxy', resolveTrustProxy())
@@ -255,6 +278,7 @@ export function createCeApp(input: {
     models: input.models,
     providers: input.providers,
     search: input.search,
+    agentHost: input.agentHost,
   }
   app.use('/api/auth', buildAuthRoutes(ctx))
   app.use('/api', buildCoreRoutes(ctx))
@@ -263,6 +287,7 @@ export function createCeApp(input: {
   app.use('/api', buildAnalyticsRoutes(ctx))
   app.use('/api', buildNotificationRoutes(ctx))
   app.use('/api', buildSiteChatRoutes(ctx))
+  app.use('/api', buildAgentRoutes(ctx, input.agentHost))
   app.use('/api', buildMcpRoutes(ctx))
   app.get('/api/app-config', (_req, res) => {
     res.json({ docsEnabled: config.app.docsEnabled() })

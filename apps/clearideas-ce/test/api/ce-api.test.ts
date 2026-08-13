@@ -366,6 +366,24 @@ describe('Clear Ideas CE API integration', () => {
     }).expect(403)
   })
 
+  it('does not send a code until the email has been invited', async () => {
+    const address = 'pending-login@clearideas.local'
+    const pendingAgent = supertest.agent(ctx.runtime.app)
+    const sendResponse = await pendingAgent.post('/api/auth/code/send').send({ email: address })
+    expect(sendResponse.status, JSON.stringify(sendResponse.body)).toBe(403)
+    expect(sendResponse.body.error).toMatch(/not been invited/i)
+    expect(ctx.email.lastCode(address)).toBeUndefined()
+
+    await createStandaloneUser(address, 'Pending Login')
+    await pendingAgent.post('/api/auth/code/send').send({ email: address }).expect(200)
+    const code = ctx.email.lastCode(address)
+    expect(code).toBeTruthy()
+    await pendingAgent
+      .post('/api/auth/code/verify')
+      .send({ email: address, code, name: 'Pending Login' })
+      .expect(200)
+  })
+
   it('enforces HTTPS only when explicitly required', async () => {
     await agent.get('/api/health').expect(200)
     const secureRuntime = await createTestCeRuntime()

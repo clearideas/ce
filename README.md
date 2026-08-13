@@ -92,7 +92,7 @@ For those capabilities, use hosted Clear Ideas. See [clearideas.com](https://cle
 | External collaboration | Basic | Team/client-ready |
 | Search and file preview | Local search and previews | Managed and expanded |
 | AI chat | Bring your own provider key | Included/managed by plan |
-| Repeatable AI workflows | Not included | First-class hosted capability |
+| Agents | Lightweight prompt agents and schedules | Visual builder and expanded execution features |
 | Document signing | Not included | Available in hosted editions |
 | Admin and policy controls | Basic | Advanced |
 | Support | Community | Product support |
@@ -295,6 +295,8 @@ Community Edition includes built-in Express rate limiting. Defaults are conserva
 | `CLEARIDEAS_ANALYTICS_RATE_LIMIT_LIMIT` | `300` |
 | `CLEARIDEAS_ACTIVITY_RATE_LIMIT_WINDOW_MS` | `900000` |
 | `CLEARIDEAS_ACTIVITY_RATE_LIMIT_LIMIT` | `600` |
+| `CLEARIDEAS_AGENT_RATE_LIMIT_WINDOW_MS` | `900000` |
+| `CLEARIDEAS_AGENT_RATE_LIMIT_LIMIT` | `120` |
 
 If you place the app behind a proxy, keep `X-Forwarded-For` forwarding intact so per-client limits are meaningful.
 
@@ -326,6 +328,18 @@ AI_CHAT_MODEL=openai:gpt-5.6-luna
 AI_CHAT_MODELS=openai:gpt-5.6-luna
 OPENAI_API_KEY=<key>
 ```
+
+Lightweight agents use `@clearideas/agent-runtime` 0.4.1 and the same provider keys. Configure a separate model or fall back to the chat model:
+
+```env
+AI_AGENT_MODEL=openai:gpt-5.6-luna
+AGENT_SCHEDULER_ENABLED=true
+AGENT_SCHEDULER_POLL_INTERVAL_MS=10000
+```
+
+CE agents support portable prompt manifests, variables, conditions, read-only Site tools, durable run history, and once/daily/weekly/monthly schedules. The scheduled-task worker runs inside the app server. See the bundled **Agents** guide for the supported manifest surface and deployment notes.
+
+For the portable manifest format and Agent Runtime concepts, see the [Clear Ideas Agent Runtime documentation](https://agent-runtime.clearideas.com/). CE supports a deliberately smaller subset of that format; the bundled guide is the source of truth for CE-specific limits.
 
 ## Operations
 

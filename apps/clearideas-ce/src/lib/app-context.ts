@@ -6,6 +6,11 @@ export interface AppModels {
   UserGroupModel: any
   AccessKeyModel: any
   ActivityModel: any
+  SessionModel: any
+  AgentModel: any
+  AgentRunModel: any
+  AgentScheduleModel: any
+  AgentTaskModel: any
 }
 
 export interface CeAppContext {
@@ -13,4 +18,5 @@ export interface CeAppContext {
   models: AppModels
   providers: any
   search?: any
+  agentHost?: any
 }
