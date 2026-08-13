@@ -52,7 +52,7 @@ export class McpController {
     if (request.method === 'initialize') {
       res.json(toMcpJsonRpcResponse(req.body, {
         protocolVersion: '2024-11-05',
-        serverInfo: { name: 'clearideas-ce', version: '0.1.1' },
+        serverInfo: { name: 'clearideas-ce', version: '0.2.0' },
         capabilities: { tools: {} },
       }))
       return

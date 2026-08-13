@@ -1,4 +1,16 @@
 export {
+  agentCreateSchema,
+  agentIdParamSchema,
+  agentRunCreateSchema,
+  agentRunIdParamSchema,
+  agentRunsQuerySchema,
+  agentScheduleCreateSchema,
+  agentScheduleIdParamSchema,
+  agentScheduleUpdateSchema,
+  agentUpdateSchema,
+} from '@clearideas/contracts-core'
+
+export {
   accessKeyCreateSchema,
   accessKeyIdParamSchema,
   accessKeyUpdateSchema,

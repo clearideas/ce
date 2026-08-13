@@ -1,5 +1,10 @@
 import {
   AccessKeyCreateRequestSchema,
+  AgentCreateRequestSchema,
+  AgentRunCreateRequestSchema,
+  AgentScheduleCreateRequestSchema,
+  AgentScheduleUpdateRequestSchema,
+  AgentUpdateRequestSchema,
   AccountPatchRequestSchema,
   AnalyticsFilterRequestSchema,
   AuthCodeSendRequestSchema,
@@ -17,7 +22,7 @@ import {
   UserGroupCreateRequestSchema,
   UserGroupUsersAddRequestSchema,
 } from '@clearideas/contracts-core'
-import type { AccessKey, Account, FileItem, HealthStatus, NotificationSettings, Session, Site, User, UserGroup } from '../types/domain'
+import type { AccessKey, Account, Agent, AgentRun, AgentSchedule, AgentScheduleDefinition, FileItem, HealthStatus, NotificationSettings, Session, Site, User, UserGroup } from '../types/domain'
 import type { AnalyticsFilter, AnalyticsRowsResponse } from '../stores/analytics.store'
 import { fetchPrivate } from './fetchPrivate'
 
@@ -234,4 +239,103 @@ export const ceApi = {
       bodySchema: NotificationSendRequestSchema,
       body: body(NotificationSendRequestSchema, input, 'Send notification'),
     }),
+  agents: () => api<{ agents: Agent[]; runtimeConfigured: boolean }>('/agents'),
+  agent: (agentId: string) =>
+    api<{ agent: Agent; runtimeConfigured: boolean }>(`/agents/${agentId}`),
+  createAgent: (manifest: unknown) =>
+    api<{ agent: Agent }>('/agents', {
+      method: 'POST',
+      bodySchema: AgentCreateRequestSchema,
+      body: body(AgentCreateRequestSchema, { manifest }, 'Create agent'),
+    }),
+  updateAgent: (agentId: string, manifest: unknown) =>
+    api<{ agent: Agent }>(`/agents/${agentId}`, {
+      method: 'PATCH',
+      bodySchema: AgentUpdateRequestSchema,
+      body: body(AgentUpdateRequestSchema, { manifest }, 'Update agent'),
+    }),
+  deleteAgent: (agentId: string) => api<void>(`/agents/${agentId}`, { method: 'DELETE' }),
+  agentRuns: (agentId?: string) =>
+    api<{ runs: AgentRun[] }>(`/agent-runs${agentId ? `?agentId=${encodeURIComponent(agentId)}` : ''}`),
+  agentRun: (runId: string) =>
+    api<{ run: AgentRun }>(`/agent-runs/${encodeURIComponent(runId)}`),
+  agentSchedules: (agentId: string) =>
+    api<{ schedules: AgentSchedule[] }>(`/agents/${agentId}/schedules`),
+  createAgentSchedule: (
+    agentId: string,
+    input: {
+      definition: AgentScheduleDefinition
+      variables: Array<{ key: string; value: unknown }>
+      siteId?: string
+      enabled: boolean
+    },
+  ) =>
+    api<{ schedule: AgentSchedule }>(`/agents/${agentId}/schedules`, {
+      method: 'POST',
+      bodySchema: AgentScheduleCreateRequestSchema,
+      body: body(AgentScheduleCreateRequestSchema, input, 'Create agent schedule'),
+    }),
+  updateAgentSchedule: (
+    scheduleId: string,
+    input: {
+      definition: AgentScheduleDefinition
+      variables: Array<{ key: string; value: unknown }>
+      siteId?: string
+      enabled: boolean
+    },
+  ) =>
+    api<{ schedule: AgentSchedule }>(`/agent-schedules/${scheduleId}`, {
+      method: 'PATCH',
+      bodySchema: AgentScheduleUpdateRequestSchema,
+      body: body(AgentScheduleUpdateRequestSchema, input, 'Update agent schedule'),
+    }),
+  deleteAgentSchedule: (scheduleId: string) =>
+    api<void>(`/agent-schedules/${scheduleId}`, { method: 'DELETE' }),
+}
+
+export async function streamAgentRun(
+  path: string,
+  input: unknown,
+  onMessage: (message: any) => void,
+) {
+  const payload = validateRequest(AgentRunCreateRequestSchema, input, 'Run agent')
+  return streamAgentResponse(path, payload, onMessage)
+}
+
+export async function streamAgentResume(
+  runId: string,
+  onMessage: (message: any) => void,
+) {
+  const payload = validateRequest(EmptyObjectRequestSchema, {}, 'Resume agent')
+  return streamAgentResponse(`/agent-runs/${encodeURIComponent(runId)}/resume`, payload, onMessage)
+}
+
+async function streamAgentResponse(
+  path: string,
+  payload: unknown,
+  onMessage: (message: any) => void,
+) {
+  const response = await fetch(toApiPath(path), {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) {
+    const responseBody = await response.text()
+    throw new Error(responseBody || response.statusText)
+  }
+  if (!response.body) throw new Error('The agent response did not include a stream.')
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let pending = ''
+  while (true) {
+    const { value, done } = await reader.read()
+    pending += decoder.decode(value, { stream: !done })
+    const lines = pending.split('\n')
+    pending = lines.pop() ?? ''
+    for (const line of lines) if (line.trim()) onMessage(JSON.parse(line))
+    if (done) break
+  }
+  if (pending.trim()) onMessage(JSON.parse(pending))
 }

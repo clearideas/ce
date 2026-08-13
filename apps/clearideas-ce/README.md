@@ -47,6 +47,11 @@ Minimal variables:
   - `AI_CHAT_MODEL` in `provider:model` format, for example `openai:gpt-5.6-luna` or `anthropic:claude-sonnet-5`
   - `AI_CHAT_MODELS` optional comma-separated allow-list; defaults to `AI_CHAT_MODEL`
   - `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` for the selected provider
+- Optional agents:
+  - `AI_AGENT_MODEL` in `provider:model` format; falls back to `AI_CHAT_MODEL`
+  - `AGENT_SCHEDULER_ENABLED` (defaults to `true`) enables the embedded scheduled-task worker
+  - `AGENT_SCHEDULER_POLL_INTERVAL_MS` controls how often due tasks are claimed
+  - The worker uses the same process as the web server and needs the provider key selected by `AI_AGENT_MODEL`
 - Mongo using one of:
   - `MONGODB_URI`
   - or Atlas split vars (`MONGODB_HOST`, `MONGODB_DATABASE_NAME`, `MONGODB_AUTH_MECHANISM`, auth credentials)
@@ -90,7 +95,10 @@ Default URL: `http://localhost:4100`
 - Analytics-lite reports
 - Basic notification send/template endpoints
 - Non-persisted site-scoped AI chat using AI SDK and the local CE MCP tools when `AI_CHAT_MODEL` is configured
+- Portable prompt agents powered by `@clearideas/agent-runtime` 0.4.1, with manual runs, durable history, read-only Site tools, and simple schedules
 - SPA fallback for non-API routes
+
+Agent manifests and runtime concepts are documented at [agent-runtime.clearideas.com](https://agent-runtime.clearideas.com/). CE intentionally supports the smaller manifest surface described in its bundled **Agents** guide.
 
 ## Frontend
 

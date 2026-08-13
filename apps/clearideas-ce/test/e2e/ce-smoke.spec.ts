@@ -1,15 +1,35 @@
 import { expect, test } from '@playwright/test'
 import http from 'node:http'
 import path from 'node:path'
+import type { ModelAdapter, ModelRequest, ModelResult } from '@clearideas/agent-runtime'
 import { createTestCeRuntime, type TestCeRuntime } from '../harness/runtime.js'
 
 let ctx: TestCeRuntime
 let server: http.Server
 let baseURL: string
 
+class FakeModelAdapter implements ModelAdapter {
+  async generate(_request: ModelRequest): Promise<ModelResult> {
+    return {
+      output: 'A concise browser-tested agent answer.',
+      transcript: [
+        {
+          id: 'fake-e2e-message',
+          type: 'message',
+          role: 'assistant',
+          content: [{ type: 'text', text: 'A concise browser-tested agent answer.' }],
+          createdAt: new Date().toISOString(),
+          model: 'test/fake',
+        },
+      ],
+      finishReason: 'stop',
+    }
+  }
+}
+
 test.beforeAll(async () => {
   const webRoot = path.resolve(import.meta.dirname, '../../web')
-  ctx = await createTestCeRuntime({ webRoot })
+  ctx = await createTestCeRuntime({ webRoot, agentModelAdapter: new FakeModelAdapter() })
   server = ctx.runtime.app.listen(0, '127.0.0.1')
   await new Promise<void>(resolve => server.once('listening', resolve))
   const address = server.address()
@@ -70,6 +90,42 @@ test('critical CE browser smoke flow', async ({ page }) => {
   await expect(page.getByText('SITE AI').first()).toBeVisible()
   await page.goto(`${baseURL}/docs`)
   await expect(page.getByRole('heading', { name: 'Getting Started' })).toBeVisible()
+})
+
+test('creates, runs, inspects, and schedules an agent in the UI', async ({ page }) => {
+  await signIn(page, 'smoke@clearideas.local')
+  await page.goto(`${baseURL}/agents`)
+  await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible()
+
+  const manifest = {
+    schemaVersion: '1.0',
+    name: 'Browser test agent',
+    description: 'Exercises the CE agent UI.',
+    model: { ref: 'default' },
+    variables: [
+      { key: 'question', type: 'string', requiresOverride: true, description: 'Question to answer.' },
+    ],
+    steps: [
+      { id: 'answer', type: 'prompt', prompt: '{{ question }}', includeInFinalOutput: true },
+    ],
+  }
+  await page.getByLabel('Agent manifest (JSON)').fill(JSON.stringify(manifest, null, 2))
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await expect(page.getByText('Browser test agent', { exact: true }).first()).toBeVisible()
+
+  await page.getByLabel('question').fill('What is covered?')
+  await page.getByRole('button', { name: 'Run agent' }).click()
+  await expect(page.getByText('A concise browser-tested agent answer.').first()).toBeVisible()
+  await expect(page.getByRole('cell', { name: 'completed' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'View' }).click()
+  await expect(page.getByText('Run details')).toBeVisible()
+  await expect(page.getByText('A concise browser-tested agent answer.').last()).toBeVisible()
+  await page.getByRole('button', { name: 'Close run details' }).click()
+
+  await page.getByRole('button', { name: 'Create schedule' }).click()
+  await expect(page.getByText('daily', { exact: true })).toBeVisible()
+  await expect(page.getByText(/^Next:/)).toBeVisible()
 })
 
 async function signIn(page: any, email: string) {

@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import AnalyticsView from '../views/AnalyticsView.vue'
+import AgentsView from '../views/AgentsView.vue'
 import DocsView from '../views/DocsView.vue'
 import LoginView from '../views/LoginView.vue'
 import FileView from '../views/FileView.vue'
@@ -21,6 +22,7 @@ export const router = createRouter({
     { path: '/site/:siteId/:folderId/:siteTab(content|ai|users|settings)/:siteSettingsTab?', name: 'site-folder-tab', component: SiteView },
     { path: '/site/:siteId/:folderId?', name: 'site', component: SiteView },
     { path: '/users', name: 'users', component: UsersView },
+    { path: '/agents', name: 'agents', component: AgentsView },
     { path: '/analytics', name: 'analytics', redirect: '/analytics/dashboard' },
     { path: '/analytics/:category(dashboard|most-accessed|content-activity|most-active|usage-times)', name: 'analytics-category', component: AnalyticsView },
     { path: '/docs/:slug(.*)*', name: 'docs-page', component: DocsView },

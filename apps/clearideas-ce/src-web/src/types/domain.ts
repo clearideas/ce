@@ -137,6 +137,71 @@ export type AccessKey = {
   lastUsedAt?: string | null
 }
 
+export type AgentManifest = {
+  schemaVersion: '1.0'
+  id?: string
+  name: string
+  description?: string
+  model?: { ref: 'default' }
+  variables?: Array<{
+    key: string
+    type: 'string' | 'number' | 'boolean' | 'object' | 'array' | 'json'
+    value?: unknown
+    requiresOverride?: boolean
+    description?: string
+  }>
+  steps: Array<Record<string, unknown> & { id: string; type: 'prompt' }>
+  limits?: Record<string, number>
+  metadata?: Record<string, unknown>
+}
+
+export type Agent = {
+  id: string
+  name: string
+  description: string
+  manifest: AgentManifest
+  revision: number
+  createdBy: string
+  createdAt: string
+  updatedAt: string
+}
+
+export type AgentRun = {
+  runId: string
+  agentId: string
+  agentRevision: number
+  siteId?: string | null
+  source: 'manual' | 'scheduled'
+  scheduleId?: string | null
+  status: 'created' | 'running' | 'suspended' | 'completed' | 'failed' | 'cancelled'
+  output?: unknown
+  transcript?: Array<Record<string, unknown>>
+  usage?: Record<string, number>
+  error?: { message?: string }
+  createdAt: string
+  updatedAt: string
+}
+
+export type AgentScheduleDefinition =
+  | { kind: 'once'; runAt: string; timeZone: string }
+  | { kind: 'daily'; time: string; timeZone: string }
+  | { kind: 'weekly'; time: string; timeZone: string; daysOfWeek: number[] }
+  | { kind: 'monthly'; time: string; timeZone: string; daysOfMonth: number[] }
+
+export type AgentSchedule = {
+  id: string
+  agentId: string
+  definition: AgentScheduleDefinition
+  variables: Array<{ key: string; value: unknown }>
+  siteId?: string | null
+  enabled: boolean
+  nextRunAt?: string | null
+  lastRunAt?: string | null
+  lastError?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 export type HealthStatus = {
   status: string
   app: string

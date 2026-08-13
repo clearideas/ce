@@ -6,8 +6,11 @@ const args = process.argv.slice(2)
 const targetArg = valueAfter('--target') ?? '.'
 const target = path.resolve(process.cwd(), targetArg)
 const failures = []
+const privateRepositoryName = ['clearideas', 'api'].join('-')
+const privateRepositoryPattern = new RegExp(escapeRegExp(privateRepositoryName), 'i')
 const requiredFiles = [
   'README.md',
+  'CHANGELOG.md',
   'LICENSE',
   'CONTRIBUTING.md',
   'SECURITY.md',
@@ -85,7 +88,7 @@ const forbiddenSourcePatterns = [
 const forbiddenPublicTextPatterns = [
   /\/Users\/[A-Za-z0-9._-]+\//,
   /docs\.clearideas\.com/i,
-  /private-api\/src/i,
+  privateRepositoryPattern,
   /\.env\.development/i,
 ]
 
@@ -125,6 +128,9 @@ for (const root of ['packages/clearideas-core/src', 'apps/clearideas-ce/src', 'a
 
 for (const file of await listFiles(target)) {
   const relative = path.relative(target, file)
+  if (privateRepositoryPattern.test(relative)) {
+    failures.push(`Public export path contains private repository name: ${relative}`)
+  }
   if (isGeneratedPublicPath(relative)) continue
   if (!isPublicTextFile(relative)) continue
   const text = await fs.readFile(file, 'utf8')

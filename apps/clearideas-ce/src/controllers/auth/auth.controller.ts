@@ -1,4 +1,4 @@
-import { BadRequestError, UnauthorizedError } from '@clearideas/core/errors'
+import { BadRequestError, ForbiddenError, UnauthorizedError } from '@clearideas/core/errors'
 import { createDefaultUserAttributes } from '@clearideas/core'
 import { fromNodeHeaders } from 'better-auth/node'
 import type { Request, Response as ExpressResponse } from 'express'
@@ -9,8 +9,11 @@ export class AuthController {
   constructor(private readonly ctx: CeAppContext) {}
 
   sendCode = async (req: Request, res: ExpressResponse) => {
+    const email = String(req.body?.email ?? '').trim().toLowerCase()
+    if (!(await this.emailCanSignIn(email))) {
+      throw new ForbiddenError('This email has not been invited to Clear Ideas.')
+    }
     try {
-      const email = String(req.body?.email ?? '').trim().toLowerCase()
       await this.ctx.auth.api.sendVerificationOTP({
         headers: fromNodeHeaders(req.headers),
         body: { email, type: 'sign-in' },
@@ -26,6 +29,13 @@ export class AuthController {
       const email = String(req.body?.email ?? '').trim().toLowerCase()
       const code = String(req.body?.code ?? '').replace(/\D/g, '')
       const name = String(req.body?.name ?? '').trim() || email.split('@')[0] || 'CE User'
+
+      // Check local admission before Better Auth consumes a valid one-time code.
+      // This lets an operator invite the address and retry the same unexpired code,
+      // and prevents a misleading "Invalid OTP" on the second submission.
+      if (!(await this.emailCanSignIn(email))) {
+        throw new UnauthorizedError('This email has not been invited to Clear Ideas.')
+      }
 
       const authResponse = await this.ctx.auth.api.signInEmailOTP({
         asResponse: true,
@@ -61,6 +71,12 @@ export class AuthController {
   session = async (req: Request, res: ExpressResponse) => {
     const user = await this.ctx.models.UserModel.findById(req.sub!).lean()
     res.json({ user: { id: String(user!._id), email: user!.email, name: user!.displayName ?? user!.email } })
+  }
+
+  private async emailCanSignIn(email: string) {
+    const existingUser = await this.ctx.models.UserModel.findOne({ email }).select('_id').lean()
+    if (existingUser) return true
+    return (await this.ctx.models.UserModel.estimatedDocumentCount()) === 0
   }
 
   private async ensureDomainUser(email: string, name: string) {
