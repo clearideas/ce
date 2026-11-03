@@ -58,14 +58,29 @@ export const McpSaveFileArgsSchema = z.strictObject({
   fileId: nullableObjectIdString.optional(),
 })
 
-export const McpSearchContentArgsSchema = z.strictObject({
-  query: z.string().trim().min(1),
-  siteIds: z.array(objectIdString).optional(),
-  kind: z.enum(['file', 'folder', 'any', '']).optional(),
-  searchType: z.enum(['hybrid', 'full-text', 'completion', '']).optional(),
-  mimeTypes: z.array(z.string()).optional(),
-  limit: z.coerce.number().int().min(1).max(200).optional(),
-})
+export const MCP_MAX_SEARCH_QUERY_LENGTH = 500
+
+export const McpSearchContentArgsSchema = z.preprocess(
+  value => {
+    // Accept `q` as an alias for `query` (used by some MCP clients).
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      const record = value as Record<string, unknown>
+      if (record.query == null && record.q != null) {
+        const { q, ...rest } = record
+        return { ...rest, query: q }
+      }
+    }
+    return value
+  },
+  z.strictObject({
+    query: z.string().trim().min(1, { error: 'q is required' }).max(MCP_MAX_SEARCH_QUERY_LENGTH, { error: 'q is too long' }),
+    siteIds: z.array(objectIdString).max(200).optional(),
+    kind: z.enum(['file', 'folder', 'any', '']).optional(),
+    searchType: z.enum(['hybrid', 'full-text', 'completion', '']).optional(),
+    mimeTypes: z.array(z.string().max(200)).max(50).optional(),
+    limit: z.coerce.number().int().min(1).max(200).optional(),
+  }),
+)
 
 export const McpCreateFolderArgsSchema = z.strictObject({
   siteId: objectIdString,

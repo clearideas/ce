@@ -32,5 +32,5 @@ rsync -a apps/clearideas-ce/data/storage ./backup/storage
 1. Stop the app.
 2. Restore MongoDB.
 3. Restore local storage.
-4. Restore search indexes or let them rebuild through normal usage.
+4. Restore search indexes, or skip them: a site whose index is missing or unreadable is rebuilt automatically from MongoDB and local storage the first time it is searched. To pre-warm every site instead, run `npm run reindex:ce` (or `npm run reindex:ce -- <siteId>` for specific sites).
 5. Start the app and run a smoke test.

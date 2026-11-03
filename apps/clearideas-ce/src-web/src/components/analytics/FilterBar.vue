@@ -27,7 +27,7 @@ const props = withDefaults(defineProps<Props>(), {
   displayLimit: true,
   displaySites: true,
   displayRefresh: true,
-  actions: () => ['viewed', 'file-viewed', 'downloaded', 'uploaded', 'created', 'deleted'],
+  actions: () => ['viewed', 'file-viewed', 'file-downloaded', 'file-uploaded', 'folder-created', 'content-deleted', 'content-searched'],
   limits: () => [10, 25, 50],
   defaultLimit: 10,
   isRefreshing: false,

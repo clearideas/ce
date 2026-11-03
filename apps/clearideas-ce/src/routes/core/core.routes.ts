@@ -62,10 +62,10 @@ export function buildCoreRoutes(ctx: CeAppContext) {
   const requireSiteUploader = buildRequireSiteUploader(ctx.models)
   const requireSiteEditor = buildRequireSiteEditor(ctx.models)
   const requireUploadTargetUploader = buildRequireUploadTargetUploader(ctx.models)
-  const attachReadableSiteIds = buildAttachPermittedSiteIds(ctx.models, config.site.roles.readRoles)
   const requireViewToken = buildFileAccessTokenMiddleware(ctx, 'view')
   const requireDownloadToken = buildFileAccessTokenMiddleware(ctx, 'download')
   const requireUploadToken = buildUploadTokenMiddleware(ctx)
+  const attachReadableSiteIds = buildAttachPermittedSiteIds(ctx.models, config.site.roles.readRoles)
 
   router.get('/health', asyncHandler(controller.health))
   router.get(

@@ -52,6 +52,10 @@ export const useAnalyticsStore = defineStore('analytics', () => {
     return run(() => ceApi.usageTimes(filter))
   }
 
+  async function searchTerms(filter: AnalyticsFilter) {
+    return run(() => ceApi.searchTerms(filter))
+  }
+
   async function monthlyActiveUsers(filter?: Partial<AnalyticsFilter>) {
     return run(async () => {
       currentReport.value = await ceApi.monthlyActiveUsers(filter)
@@ -68,6 +72,7 @@ export const useAnalyticsStore = defineStore('analytics', () => {
     mostActive,
     contentActivity,
     usageTimes,
+    searchTerms,
     monthlyActiveUsers,
   }
 })

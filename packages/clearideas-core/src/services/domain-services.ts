@@ -122,8 +122,21 @@ export function createCoreDomainServices(models: Models, providers: CoreProvider
     async deleteSite(siteId: string) {
       const site = await models.SiteModel.findById(siteId)
       if (!site) throw new NotFoundError('Site not found')
+      const files = await models.ContentModel.find({ site: site._id, kind: 'File' })
+        .select('key extractedTextKey')
+        .lean()
+      const keysToDelete: string[] = [
+        ...new Set<string>(
+          files
+            .flatMap((file: any): string[] => [String(file.key ?? ''), String(file.extractedTextKey ?? '')])
+            .filter(Boolean),
+        ),
+      ]
       await models.ContentModel.deleteMany({ site: site._id })
       await models.SiteModel.deleteOne({ _id: site._id })
+      if (keysToDelete.length > 0) {
+        await providers.storage.deleteObjects({ keys: keysToDelete }).catch(() => undefined)
+      }
     },
 
     async getSite(input: { siteId: string; userId: string; ownerRole: string }) {
@@ -204,7 +217,7 @@ export function createCoreDomainServices(models: Models, providers: CoreProvider
       return contentService.searchFilesByName(input)
     },
 
-    async searchFilesByNameAcrossSites(input: { userId: string; name: string; limit?: number }) {
+    async searchFilesByNameAcrossSites(input: { userId: string; name: string; limit?: number; siteIds?: string[] }) {
       return contentService.searchFilesByNameAcrossSites(input)
     },
 

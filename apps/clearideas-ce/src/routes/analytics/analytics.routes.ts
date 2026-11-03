@@ -69,6 +69,23 @@ export function buildAnalyticsRoutes(ctx: CeAppContext) {
     asyncHandler(controller.postContentActivity),
   )
   router.post(
+    '/analytics/search-terms',
+    attachAuthContext,
+    requireAuthContext,
+    validateBody(analyticsFilterSchema),
+    attachAdminSiteIds,
+    asyncHandler(controller.postSearchTerms),
+  )
+  router.post(
+    '/site/:siteId/analytics/search-terms',
+    attachAuthContext,
+    requireAuthContext,
+    validateParams(siteIdParamSchema),
+    validateBody(analyticsFilterSchema),
+    requireSiteAdmin,
+    asyncHandler(controller.postSearchTerms),
+  )
+  router.post(
     '/analytics/monthly-active-users',
     attachAuthContext,
     requireAuthContext,

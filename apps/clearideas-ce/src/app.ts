@@ -29,6 +29,8 @@ import { buildMcpRoutes } from './routes/mcp/mcp.routes.js'
 import { buildNotificationRoutes } from './routes/notification/notification.routes.js'
 import { buildMongoConfigFromEnv, loadCeEnv } from './scripts/env.js'
 import { createSiteSearchIndexManager } from './services/search-index.js'
+import { createMongoSearchIndexSource } from './services/search-index-source.js'
+import { waitForPdfExtractions } from './services/pdf-text-extraction.js'
 import {
   startNotificationWorker,
   type NotificationWorkerHandle,
@@ -181,7 +183,11 @@ export async function createCeRuntime(options: CeRuntimeOptions = {}): Promise<C
     },
   }
   registerCoreProviders(providers)
-  const search = createSiteSearchIndexManager({ root: searchRoot, storage: storageProvider })
+  const search = createSiteSearchIndexManager({
+    root: searchRoot,
+    storage: storageProvider,
+    source: createMongoSearchIndexSource(models),
+  })
   const agentContext = {
     auth,
     models,
@@ -222,6 +228,8 @@ export async function createCeRuntime(options: CeRuntimeOptions = {}): Promise<C
     close: async () => {
       notificationWorker?.stop()
       agentTaskWorker?.stop()
+      await waitForPdfExtractions()
+      await search.close().catch(error => console.error('[clearideas-ce] search index shutdown failed', error))
       await mongoose.disconnect()
     },
   }
@@ -334,6 +342,25 @@ export function createLocalStorageProvider(storageRoot: string): StorageProvider
     async readObject({ key }) {
       return fs.readFile(safeStoragePath(root, key))
     },
+    async readObjectPrefix({ key, maxBytes }) {
+      const filePath = safeStoragePath(root, key)
+      const limit = Math.max(0, Math.floor(maxBytes))
+      const handle = await fs.open(filePath, 'r')
+      try {
+        const { size } = await handle.stat()
+        const length = Math.min(size, limit)
+        const body = Buffer.alloc(length)
+        let offset = 0
+        while (offset < length) {
+          const { bytesRead } = await handle.read(body, offset, length - offset, offset)
+          if (bytesRead === 0) break
+          offset += bytesRead
+        }
+        return { body: offset < length ? body.subarray(0, offset) : body, truncated: size > limit }
+      } finally {
+        await handle.close()
+      }
+    },
     async deleteObjects({ keys }) {
       await Promise.all(keys.map(key => fs.rm(safeStoragePath(root, key), { force: true })))
     },
@@ -359,7 +386,7 @@ function isSafeStorageKey(key: string): boolean {
     )
 }
 
-function resolveAppPath(value: string): string {
+export function resolveAppPath(value: string): string {
   if (path.isAbsolute(value)) return value
   if (value.startsWith('apps/') || value.startsWith('packages/'))
     return path.resolve(repoRoot, value)

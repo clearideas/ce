@@ -201,7 +201,7 @@ function escapeRegExp(value) {
 }
 
 function isPublicTextFile(relativePath) {
-  if (relativePath === 'scripts/check-ce-release-readiness.mjs') return false
+  if (relativePath === path.join('scripts', 'check-ce-release-readiness.mjs')) return false
   return [
     '.md',
     '.json',

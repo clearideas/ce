@@ -30,6 +30,11 @@ export interface StorageProvider {
   createUploadTarget(input: { fileName: string; contentType?: string }): Promise<UploadTarget>
   writeObject(input: { key: string; body: Buffer; contentType?: string }): Promise<void>
   readObject(input: { key: string }): Promise<Buffer>
+  /**
+   * Optional bounded read: returns at most `maxBytes` from the start of the object.
+   * Providers that do not implement it fall back to `readObject` plus truncation.
+   */
+  readObjectPrefix?(input: { key: string; maxBytes: number }): Promise<{ body: Buffer; truncated: boolean }>
   deleteObjects(input: { keys: string[] }): Promise<void>
   getDownloadUrl?(input: { key: string; expiresInSeconds?: number }): Promise<string>
 }

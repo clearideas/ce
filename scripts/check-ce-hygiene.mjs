@@ -37,8 +37,8 @@ async function checkNoUnusedTypeScript() {
   for (const project of projects) {
     if (!await exists(path.join(root, project))) continue
     const result = spawnSync(
-      'npx',
-      ['tsc', '-p', project, '--noEmit', '--noUnusedLocals', '--noUnusedParameters', '--pretty', 'false'],
+      process.execPath,
+      [path.join(root, 'node_modules/typescript/bin/tsc'), '-p', project, '--noEmit', '--noUnusedLocals', '--noUnusedParameters', '--pretty', 'false'],
       { cwd: root, encoding: 'utf8', shell: false },
     )
     if (result.status !== 0) {

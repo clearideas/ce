@@ -4,7 +4,13 @@ import { Types } from 'mongoose'
 export function normalizeStringArray(value: unknown): string[] {
   if (Array.isArray(value)) return value.map(item => String(item).trim()).filter(Boolean)
   if (typeof value === 'string' && value.trim()) return [value.trim()]
+  // Validated route params arrive as ObjectId instances, not strings.
+  if (isObjectIdLike(value)) return [String(value)]
   return []
+}
+
+function isObjectIdLike(value: unknown): boolean {
+  return Boolean(value) && typeof value === 'object' && typeof (value as { toHexString?: unknown }).toHexString === 'function'
 }
 
 export function normalizeTimeZone(value: unknown, fallback = 'UTC'): string {

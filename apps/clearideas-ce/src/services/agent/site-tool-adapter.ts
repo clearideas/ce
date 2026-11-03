@@ -8,6 +8,7 @@ import {
   type ToolResult,
 } from '@clearideas/agent-runtime'
 import {
+  createActivityLogger,
   createCoreDomainServices,
   isPdfContent,
   isTextBasedContent,
@@ -21,8 +22,9 @@ import { BadRequestError } from '@clearideas/core/errors'
 import type { CeAppContext } from '../../lib/app-context.js'
 import { assertSiteReadAccess } from '../../middleware/access-control.js'
 import { config } from '../../config/index.js'
-import { extractPdfTextForFile } from '../pdf-text-extraction.js'
-import { hydrateSearchResultsFromSource } from '../search-result-hydration.js'
+import { extractPdfTextForFile, shouldAttemptPdfExtraction } from '../pdf-text-extraction.js'
+import { searchContent } from '../content-search.js'
+import { logSearchActivity } from '../search-activity.js'
 
 const toolDefinitions: AgentTool[] = [
   {
@@ -73,12 +75,14 @@ const toolDefinitions: AgentTool[] = [
 
 export class CeSiteToolAdapter implements ToolAdapter {
   private readonly domain
+  private readonly activity
 
   constructor(
     private readonly ctx: CeAppContext,
     private readonly access: { accountId: string; userId: string; siteId: string },
   ) {
     this.domain = createCoreDomainServices(ctx.models as any, ctx.providers)
+    this.activity = createActivityLogger(activity => this.ctx.models.ActivityModel.create(activity))
   }
 
   async listTools(): Promise<AgentTool[]> {
@@ -160,17 +164,23 @@ export class CeSiteToolAdapter implements ToolAdapter {
       }
       case 'search_content': {
         const { query } = await validateSchema(llmSearchContentArgsSchema, input)
-        let files = this.ctx.search
-          ? await this.ctx.search.searchSite({ siteId: this.access.siteId, q: query, limit: 50 })
-          : await this.domain.searchFilesByName({ siteId: this.access.siteId, name: query, limit: 50 })
-        if (this.ctx.search) {
-          files = await hydrateSearchResultsFromSource({
-            models: this.ctx.models,
-            q: query,
-            results: files,
-            search: this.ctx.search,
-          })
-        }
+        const { results: files, matchedBySite } = await searchContent({
+          models: this.ctx.models,
+          domain: this.domain,
+          search: this.ctx.search,
+          q: query,
+          siteIds: [String(this.access.siteId)],
+          limit: 50,
+        })
+        await logSearchActivity({
+          activity: this.activity,
+          user: this.access.userId,
+          q: query,
+          scope: 'site',
+          source: 'ce-agent',
+          siteId: String(this.access.siteId),
+          matchedBySite,
+        })
         return { results: files }
       }
       case 'retrieve_file_content': {
@@ -181,7 +191,7 @@ export class CeSiteToolAdapter implements ToolAdapter {
         let file = await this.getFile(String(contentId))
         const isText = isTextBasedContent(file.contentType, file.name)
         let hasExtractedText = hasPdfText(file)
-        if (!isText && isPdfContent(file.contentType, file.name) && !hasExtractedText) {
+        if (!isText && isPdfContent(file.contentType, file.name) && !hasExtractedText && shouldAttemptPdfExtraction(file)) {
           const extracted = await extractPdfTextForFile({
             models: this.ctx.models,
             storage: this.ctx.providers.storage,
@@ -245,7 +255,8 @@ function formatContent(content: any) {
 function hasPdfText(file: any) {
   return (
     isPdfContent(file.contentType, file.name) &&
-    file.extractionStatus === config.content.extractionStatus.complete &&
+    (file.extractionStatus === config.content.extractionStatus.complete ||
+      file.extractionStatus === config.content.extractionStatus.limited) &&
     Boolean(file.extractedTextKey || file.extractedText)
   )
 }
