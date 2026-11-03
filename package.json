@@ -43,17 +43,17 @@
     "check:ce-release": "node scripts/check-ce-release-readiness.mjs --target ."
   },
   "overrides": {
-    "@hono/node-server": "2.0.12",
-    "hono": "4.13.2",
+    "@hono/node-server": "2.1.6",
+    "hono": "4.13.16",
     "esbuild": "$esbuild",
     "zod": "^4.4.3",
     "convict": "6.2.5",
     "qs": "6.15.2",
     "tar": ">=7.5.7",
-    "fast-uri": "3.1.5",
+    "fast-uri": "3.1.9",
     "fast-xml-parser": "5.7.3",
-    "minimatch": "10.2.5",
-    "brace-expansion": "5.0.9",
+    "minimatch": "11.0.4",
+    "brace-expansion": "5.0.12",
     "koa": "3.2.1",
     "basic-ftp": "5.3.1",
     "express-rate-limit": "8.5.1",
@@ -81,7 +81,7 @@
       "uuid": "11.1.1"
     },
     "rollup": "4.60.3",
-    "undici": "7.29.0"
+    "undici": "7.30.1"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
