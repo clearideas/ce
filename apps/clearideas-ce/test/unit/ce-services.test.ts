@@ -3,7 +3,11 @@ import os from 'node:os'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { createLocalStorageProvider } from '../../src/app.js'
-import { extractPdfTextForFile } from '../../src/services/pdf-text-extraction.js'
+import {
+  extractPdfTextForFile,
+  extractTextFromPdfBuffer,
+  shouldAttemptPdfExtraction,
+} from '../../src/services/pdf-text-extraction.js'
 import { hydrateSearchResultsFromSource } from '../../src/services/search-result-hydration.js'
 
 describe('CE service helpers', () => {
@@ -24,9 +28,8 @@ describe('CE service helpers', () => {
     }
   })
 
-  it('hydrates search results from source data and removes stale index entries', async () => {
+  it('hydrates search results from source data, drops stale or out-of-scope entries, and never re-indexes on read', async () => {
     const removed: any[] = []
-    const indexed: any[] = []
     const site = {
       _id: 'site-1',
       name: 'Test Site',
@@ -41,6 +44,7 @@ describe('CE service helpers', () => {
         key: 'notes.md',
         contentType: 'text/markdown',
         size: 12,
+        status: 'active',
         uploadedAt: new Date('2026-01-01T00:00:00Z'),
         updatedAt: new Date('2026-01-02T00:00:00Z'),
         kind: 'File',
@@ -55,60 +59,84 @@ describe('CE service helpers', () => {
         contentType: 'application/pdf',
         extractionStatus: 'complete',
         extractedTextKey: 'shopify.pdf.extracted.txt',
+        status: 'active',
         uploadedAt: new Date('2026-01-03T00:00:00Z'),
+        kind: 'File',
+      },
+      {
+        _id: 'file-other-site',
+        site: 'site-2',
+        parentType: 'Site',
+        name: 'secret.txt',
+        key: 'secret.txt',
+        contentType: 'text/plain',
+        status: 'active',
         kind: 'File',
       },
     ]
 
+    const contentQueries: any[] = []
     const models = {
       SiteModel: {
         find: () => ({
-          lean: async () => [site],
+          select: () => ({ lean: async () => [site] }),
         }),
       },
       ContentModel: {
-        find: (query: any) => ({
-          lean: async () => {
+        find: (query: any) => {
+          contentQueries.push(query)
+          const run = async () => {
             if (query.kind === 'Folder') return [folder]
             const ids = new Set((query._id?.$in ?? []).map(String))
-            return sourceFiles.filter(file => ids.has(String(file._id)))
-          },
-        }),
+            const allowedSites = query.site?.$in ? new Set(query.site.$in.map(String)) : null
+            return sourceFiles.filter(file =>
+              ids.has(String(file._id)) &&
+              (!allowedSites || allowedSites.has(String(file.site))) &&
+              (!query.status || file.status === query.status),
+            )
+          }
+          return { lean: run, select: () => ({ lean: run }) }
+        },
       },
     } as any
 
     const hydrated = await hydrateSearchResultsFromSource({
       models,
-      q: '@contentType: application/pdf shopify',
+      siteIds: ['site-1'],
       results: [
         { id: 'file-2', siteId: 'site-1', snippet: 'Shopify GMV' },
         { id: 'missing', siteId: 'site-1', snippet: 'stale' },
-        { id: 'file-1', siteId: 'site-1', snippet: 'does not match filter' },
+        // A full-text hit that does not literally contain the query must still be kept.
+        { id: 'file-1', siteId: 'site-1', snippet: 'fuzzy match' },
+        // An index entry pointing at content that now lives in another site must be dropped and cleaned up.
+        { id: 'file-other-site', siteId: 'site-1', snippet: 'leak?' },
       ],
       search: {
         async removeContent(siteId, contentIds) {
           removed.push({ siteId, contentIds })
         },
-        async indexFile(file) {
-          indexed.push(file)
-        },
       },
     })
 
-    expect(hydrated).toHaveLength(1)
+    expect(hydrated.map(result => result.id)).toEqual(['file-2', 'file-1'])
     expect(hydrated[0]).toMatchObject({
       id: 'file-2',
       folderId: 'folder-1',
+      folderName: 'Reports',
+      siteName: 'Test Site',
       textAvailable: true,
       snippet: 'Shopify GMV',
     })
-    expect(removed).toEqual([{ siteId: 'site-1', contentIds: ['missing'] }])
-    expect(indexed[0]).toMatchObject({ id: 'file-1', siteId: 'site-1', name: 'notes.md' })
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(removed).toEqual([{ siteId: 'site-1', contentIds: ['missing', 'file-other-site'] }])
+    const fileQuery = contentQueries.find(query => query.kind === 'File')
+    expect(fileQuery).toMatchObject({ status: 'active', site: { $in: ['site-1'] } })
   })
 
   it('extracts text from an uploaded PDF with the supported PDF.js runtime', async () => {
     const writes: Array<{ key: string; body: Buffer; contentType: string }> = []
     const updates: any[] = []
+    const enqueued: any[] = []
     const file = {
       _id: 'file-1',
       site: 'site-1',
@@ -121,15 +149,11 @@ describe('CE service helpers', () => {
     }
     const models = {
       ContentModel: {
+        findOne: () => ({ select: () => ({ lean: async () => ({ size: file.size }) }) }),
         findOneAndUpdate: (_query: any, update: any) => {
           updates.push(update)
           return { lean: async () => ({ ...file, ...update.$set }) }
         },
-      },
-      SiteModel: {
-        findById: () => ({
-          select: () => ({ lean: async () => ({ _id: 'site-1', name: 'Test Site' }) }),
-        }),
       },
     } as any
 
@@ -139,22 +163,105 @@ describe('CE service helpers', () => {
         readObject: async () => testPdfBuffer(),
         writeObject: async (input: any) => writes.push(input),
       } as any,
+      search: { enqueueIndexContent: (siteId: string, contentId: string) => enqueued.push({ siteId, contentId }) },
       fileKey: file.key,
       contentType: file.contentType,
     })
 
     expect(extracted).toMatchObject({
       id: file._id,
+      siteId: 'site-1',
       extractionStatus: 'complete',
-      extractedText: expect.stringContaining('Sample report revenue increased in 2023.'),
+      extractedTextKey: 'sample-report.pdf.extracted.txt',
     })
-    expect(updates[0].$set.extractedText).toContain('Sample report revenue increased in 2023.')
+    // Extracted text is stored as a companion object, never on the database record.
+    expect(updates[0].$set).not.toHaveProperty('extractedText')
+    expect(updates[0].$unset).toHaveProperty('extractedText')
     expect(writes).toEqual([
       expect.objectContaining({
         key: 'sample-report.pdf.extracted.txt',
         contentType: 'text/plain; charset=utf-8',
       }),
     ])
+    expect(writes[0].body.toString('utf8')).toContain('Sample report revenue increased in 2023.')
+    expect(enqueued).toEqual([{ siteId: 'site-1', contentId: 'file-1' }])
+  })
+
+  it('marks oversized PDFs unsupported without reading them and still schedules indexing', async () => {
+    const reads: string[] = []
+    const updates: any[] = []
+    const enqueued: any[] = []
+    const models = {
+      ContentModel: {
+        findOne: () => ({ select: () => ({ lean: async () => ({ size: 10 * 1024 * 1024 * 1024 }) }) }),
+        findOneAndUpdate: (_query: any, update: any) => {
+          updates.push(update)
+          return { lean: async () => ({ _id: 'file-big', site: 'site-1', key: 'big.pdf', ...update.$set }) }
+        },
+      },
+    } as any
+    const extracted = await extractPdfTextForFile({
+      models,
+      storage: {
+        readObject: async (input: any) => {
+          reads.push(input.key)
+          return Buffer.alloc(0)
+        },
+        writeObject: async () => undefined,
+      } as any,
+      search: { enqueueIndexContent: (siteId: string, contentId: string) => enqueued.push({ siteId, contentId }) },
+      fileKey: 'big.pdf',
+      contentType: 'application/pdf',
+    })
+    expect(extracted).toMatchObject({ extractionStatus: 'unsupported' })
+    expect(reads).toEqual([])
+    expect(enqueued).toEqual([{ siteId: 'site-1', contentId: 'file-big' }])
+  })
+
+  it('records failed extractions and still schedules indexing so the file stays searchable by name', async () => {
+    const updates: any[] = []
+    const enqueued: any[] = []
+    const models = {
+      ContentModel: {
+        findOne: () => ({ select: () => ({ lean: async () => ({ size: 12 }) }) }),
+        findOneAndUpdate: (_query: any, update: any) => {
+          updates.push(update)
+          return { lean: async () => ({ _id: 'file-bad', site: 'site-1', key: 'bad.pdf', ...update.$set }) }
+        },
+      },
+    } as any
+    await expect(extractPdfTextForFile({
+      models,
+      storage: {
+        readObject: async () => Buffer.from('definitely not a pdf'),
+        writeObject: async () => undefined,
+      } as any,
+      search: { enqueueIndexContent: (siteId: string, contentId: string) => enqueued.push({ siteId, contentId }) },
+      fileKey: 'bad.pdf',
+      contentType: 'application/pdf',
+    })).rejects.toBeTruthy()
+    expect(updates.at(-1).$set.extractionStatus).toBe('failed')
+    expect(enqueued).toEqual([{ siteId: 'site-1', contentId: 'file-bad' }])
+  })
+
+  it('limits page extraction and enforces a timeout', async () => {
+    const limited = await extractTextFromPdfBuffer(testPdfBuffer(), { maxBytes: 1024 * 1024, maxPages: 1, timeoutMs: 30_000 })
+    expect(limited.status).toBe('complete')
+    expect(limited.pages).toBe(1)
+
+    await expect(
+      extractTextFromPdfBuffer(testPdfBuffer(), { maxBytes: 1024 * 1024, maxPages: 1, timeoutMs: 1 }),
+    ).rejects.toThrow(/timed out/)
+  })
+
+  it('decides when on-demand PDF extraction should be retried', () => {
+    const now = new Date('2026-03-01T12:00:00Z')
+    expect(shouldAttemptPdfExtraction({}, now)).toBe(true)
+    expect(shouldAttemptPdfExtraction({ extractionStatus: 'pending' }, now)).toBe(true)
+    expect(shouldAttemptPdfExtraction({ extractionStatus: 'unsupported' }, now)).toBe(false)
+    expect(shouldAttemptPdfExtraction({ extractionStatus: 'complete' }, now)).toBe(false)
+    expect(shouldAttemptPdfExtraction({ extractionStatus: 'failed', extractedTextUpdatedAt: new Date('2026-03-01T11:59:00Z') }, now)).toBe(false)
+    expect(shouldAttemptPdfExtraction({ extractionStatus: 'failed', extractedTextUpdatedAt: new Date('2026-03-01T09:00:00Z') }, now)).toBe(true)
   })
 })
 

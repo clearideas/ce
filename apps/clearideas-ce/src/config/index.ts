@@ -52,28 +52,38 @@ export const config = {
     archiveExtraction: coreArchiveExtraction,
   },
   analytics: {
-    defaultActions: ['viewed', 'file-viewed', 'file-downloaded', 'file-uploaded', 'folder-created', 'content-deleted'],
+    defaultActions: ['viewed', 'file-viewed', 'file-downloaded', 'file-uploaded', 'folder-created', 'content-deleted', 'content-searched'],
     defaultLimit: 20,
     dashboardLimit: 5,
   },
   search: {
     fields: ['name', 'contentType', 'text'],
-    storeFields: [
-      'id',
-      'siteId',
-      'siteName',
-      'folderId',
-      'folderName',
-      'name',
-      'key',
-      'contentType',
-      'size',
-      'uploadedAt',
-      'updatedAt',
-      'extractionStatus',
-    ],
+    /** Multi-term queries require every term to match (AND). */
+    combineWith: 'AND' as const,
+    /** Minimum term length before fuzzy matching is applied; shorter terms match exactly/prefix only. */
+    fuzzyMinTermLength: 5,
+    fuzzy: 0.2,
+    boost: { name: 4, contentType: 2, text: 1 },
     idleMs: () => numberFromEnv('SEARCH_INDEX_IDLE_MS', 5 * 60 * 1000, { min: 10_000 }),
     maxLoadedSites: () => numberFromEnv('SEARCH_INDEX_MAX_LOADED_SITES', 25, { min: 1 }),
+    /** Delay before a dirty site index is persisted; changes within the window are coalesced. */
+    flushDelayMs: () => numberFromEnv('SEARCH_INDEX_FLUSH_DELAY_MS', 2_000, { min: 0 }),
+    /** Maximum bytes of text indexed (and used for snippets) per document. */
+    maxTextBytes: () => numberFromEnv('SEARCH_INDEX_MAX_TEXT_BYTES', 2 * 1024 * 1024, { min: 1024 }),
+    /** Number of background indexing tasks processed concurrently. */
+    indexConcurrency: () => numberFromEnv('SEARCH_INDEX_CONCURRENCY', 2, { min: 1 }),
+  },
+  extraction: {
+    /** PDFs larger than this are not text-extracted (status: unsupported). */
+    pdfMaxBytes: () => numberFromEnv('PDF_EXTRACTION_MAX_BYTES', 50 * 1024 * 1024, { min: 1024 }),
+    /** Only the first N pages are extracted; longer PDFs are marked `limited`. */
+    pdfMaxPages: () => numberFromEnv('PDF_EXTRACTION_MAX_PAGES', 500, { min: 1 }),
+    /** Extraction exceeding this is aborted and marked `failed`. */
+    pdfTimeoutMs: () => numberFromEnv('PDF_EXTRACTION_TIMEOUT_MS', 60_000, { min: 1_000 }),
+    /** Number of PDF extractions processed concurrently. */
+    pdfConcurrency: () => numberFromEnv('PDF_EXTRACTION_CONCURRENCY', 1, { min: 1 }),
+    /** Minimum age of a `failed` extraction before it is retried on demand. */
+    retryFailedAfterMs: () => numberFromEnv('PDF_EXTRACTION_RETRY_FAILED_AFTER_MS', 60 * 60 * 1000, { min: 0 }),
   },
   app: {
     docsEnabled: () => booleanFromEnv('CLEARIDEAS_DOCS_ENABLED', true),

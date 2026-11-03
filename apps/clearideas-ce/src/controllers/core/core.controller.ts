@@ -14,7 +14,6 @@ import {
   collectDescendantContentIds,
   buildLoginUrl as buildCoreLoginUrl,
   encodeContentDisposition,
-  toSearchFile,
 } from '@clearideas/core'
 import { createCoreDomainServices } from '@clearideas/core'
 import { getSiteResponse, getSitesResponse } from '@clearideas/core/services/site-endpoints'
@@ -26,7 +25,8 @@ import { config } from '../../config/index.js'
 import type { CeAppContext } from '../../lib/app-context.js'
 import { createFileAccessToken, createUploadToken, fileAccessTokenSecret, type FileAccessPurpose, uploadSigningSecret } from '../../middleware/file-access-token.js'
 import { queuePdfTextExtraction } from '../../services/pdf-text-extraction.js'
-import { hydrateSearchResultsFromSource } from '../../services/search-result-hydration.js'
+import { searchContent, type ContentSearchInput } from '../../services/content-search.js'
+import { logSearchActivity } from '../../services/search-activity.js'
 
 export class CoreController {
   private readonly domain
@@ -428,6 +428,9 @@ export class CoreController {
     if (previousVisibility !== config.site.visibility.public && updatedSite.visibility === config.site.visibility.public) {
       await this.sendSiteInviteCodes(req, updatedSite)
     }
+    if (req.body.name && String(updatedSite.name ?? '') !== String(beforeSite.name ?? '')) {
+      await this.ctx.search?.updateSiteName(siteId, String(updatedSite.name ?? '')).catch(() => undefined)
+    }
     const visibilityAction = req.body.visibility === config.site.visibility.public ? 'site-made-public' : req.body.visibility === config.site.visibility.private ? 'site-made-private' : 'site-updated'
     await this.activity.safe({
       user: req.sub,
@@ -474,6 +477,7 @@ export class CoreController {
       load: () => site,
       remove: () => this.domain.deleteSite(siteId),
     })
+    await this.ctx.search?.removeSite(siteId).catch(() => undefined)
     await this.activity.safe({
       user: req.sub,
       action: 'site-deleted',
@@ -547,8 +551,11 @@ export class CoreController {
       load: () => this.domain.getSite({ siteId, userId: String(req.sub!), ownerRole: config.site.role.owner }),
       update: () => this.domain.updateContent({ siteId, contentId, name: req.body.name }),
     })
-    const file = await this.getSearchFileByContentId(siteId, contentId).catch(() => null)
-    if (file) await this.ctx.search?.indexFile(file).catch(() => undefined)
+    if ((content as any).kind === 'Folder') {
+      await this.ctx.search?.updateFolderName(siteId, contentId, String((content as any).name ?? '')).catch(() => undefined)
+    } else {
+      this.ctx.search?.enqueueIndexContent(siteId, contentId)
+    }
     await this.activity.safe({
       user: req.sub,
       action: 'content-updated',
@@ -681,20 +688,8 @@ export class CoreController {
     })
     const file = await this.domain.getFileByKey(fileKey).catch(() => null)
     if (file) {
-      if (!isPdfContent(file.contentType, file.name)) await this.ctx.search?.indexFile({
-        id: file.id,
-        siteId: String(file.site),
-        siteName: file.siteName,
-        folderId: file.folderId,
-        folderName: file.folderName,
-        name: file.name,
-        key: file.key,
-        contentType: file.contentType,
-        size: file.size,
-        uploadedAt: file.uploadedAt,
-        updatedAt: file.updatedAt,
-        extractionStatus: file.extractionStatus,
-      }).catch(() => undefined)
+      // PDFs are indexed once text extraction completes; everything else is indexed in the background now.
+      if (!isPdfContent(file.contentType, file.name)) this.ctx.search?.enqueueIndexContent(String(siteId), String(file.id))
       await this.activity.safe({
         user: userId,
         action: 'file-uploaded',
@@ -756,63 +751,41 @@ export class CoreController {
   searchSite = async (req: Request, res: Response) => {
     const siteId = String(req.params.siteId)
     const q = String(req.body.q ?? '')
-    let files = await this.domain.searchFilesByName({ siteId, name: q })
-    if (this.ctx.search) files = mergeSearchResults(files, await this.ctx.search.searchSite({ siteId, q }))
-    if (this.ctx.search) files = await hydrateSearchResultsFromSource({ models: this.ctx.models, q, results: files, search: this.ctx.search })
-    await this.activity.safe({
-      user: req.sub,
-      action: 'content-searched',
-      target: siteId,
-      onModel: 'Site',
-      attributes: { q, scope: 'site', resultCount: files.length, source: 'ce-search' },
-    })
-    res.json({ results: files })
+    const outcome = await this.search({ q, siteIds: [siteId] })
+    await logSearchActivity({ activity: this.activity, user: req.sub, q, scope: 'site', source: 'ce-search', siteId, matchedBySite: outcome.matchedBySite })
+    res.json({ results: outcome.results })
   }
 
   searchSiteFolder = async (req: Request, res: Response) => {
     const siteId = String(req.params.siteId)
     const folderId = String(req.params.id)
     const q = String(req.body.q ?? '')
-    let files = await this.domain.searchFilesByName({ siteId, folderId, name: q })
-    if (this.ctx.search) files = mergeSearchResults(files, await this.ctx.search.searchSite({ siteId, folderId, q }))
-    if (this.ctx.search) files = await hydrateSearchResultsFromSource({ models: this.ctx.models, q, results: files, search: this.ctx.search })
-    await this.activity.safe({
-      user: req.sub,
-      action: 'content-searched',
-      target: folderId,
-      onModel: 'Content',
-      parent: siteId,
-      parentOnModel: 'Site',
-      attributes: { q, scope: 'folder', resultCount: files.length, source: 'ce-search' },
-    })
-    res.json({ results: files })
+    const outcome = await this.search({ q, siteIds: [siteId], folderId })
+    await logSearchActivity({ activity: this.activity, user: req.sub, q, scope: 'folder', source: 'ce-search', siteId, folderId, matchedBySite: outcome.matchedBySite })
+    res.json({ results: outcome.results })
   }
 
   searchAll = async (req: Request, res: Response) => {
     const q = String(req.body.q ?? '')
-    let files = await this.domain.searchFilesByNameAcrossSites({ userId: String(req.sub!), name: q })
-    if (this.ctx.search) {
-      const sites = await this.domain.listSites({
-        userId: String(req.sub!),
-        publicVisibility: config.site.publicVisibility,
-        adminRoles: config.site.roles.adminRoles,
-        ownerRole: config.site.role.owner,
-        accepted: true,
-      })
-      files = mergeSearchResults(files, await this.ctx.search.searchAcrossSites({
-        sites: sites.map((site: any) => ({ id: String(site._id), name: String(site.name ?? '') })),
-        q,
-      }))
-      files = await hydrateSearchResultsFromSource({ models: this.ctx.models, q, results: files, search: this.ctx.search })
-    }
-    await this.activity.safe({
-      user: req.sub,
-      action: 'content-searched',
-      target: req.sub,
-      onModel: 'User',
-      attributes: { q, scope: 'all', resultCount: files.length, source: 'ce-search' },
+    // Sites the user owns or is an active member of with a read role (attached by middleware).
+    const siteIds = [...new Set((req.permittedSiteIds ?? []).map(String))]
+    const sites = siteIds.length
+      ? await this.ctx.models.SiteModel.find({ _id: { $in: siteIds } }).select('_id name').lean()
+      : []
+    const outcome = await this.search({
+      q,
+      siteIds,
+      siteNames: new Map(sites.map((site: any) => [String(site._id), String(site.name ?? '')])),
+      userId: String(req.sub!),
     })
-    res.json({ results: files })
+    // Attributed only to the sites that matched, so no administrator learns about searches
+    // that concerned other sites.
+    await logSearchActivity({ activity: this.activity, user: req.sub, q, scope: 'all', source: 'ce-search', matchedBySite: outcome.matchedBySite })
+    res.json({ results: outcome.results })
+  }
+
+  private search(input: Omit<ContentSearchInput, 'models' | 'domain' | 'search'>) {
+    return searchContent({ models: this.ctx.models, domain: this.domain, search: this.ctx.search, ...input })
   }
 
   private async collectSearchContentIds(siteId: string, contentId: string) {
@@ -821,25 +794,9 @@ export class CoreController {
     return [contentId, ...(await collectDescendantContentIds(this.ctx.models.ContentModel, contentId))]
   }
 
-  private async getSearchFileByContentId(siteId: string, contentId: string) {
-    const file = await this.domain.getFile({ siteId, fileId: contentId }).catch(() => null)
-    return file ? toSearchFile(file) : null
-  }
 }
 
 function buildLoginUrl(email: string, siteId?: string, code?: string): string {
   const baseUrl = process.env.APP_URL ?? process.env.BETTER_AUTH_URL ?? `http://${process.env.HOST ?? '127.0.0.1'}:${process.env.PORT ?? 4100}`
   return buildCoreLoginUrl({ baseUrl, email, siteId, code })
-}
-
-function mergeSearchResults(...groups: any[][]) {
-  const byId = new Map<string, any>()
-  for (const group of groups) {
-    for (const result of group) {
-      const id = String(result?.id ?? result?._id ?? '')
-      if (!id || byId.has(id)) continue
-      byId.set(id, result)
-    }
-  }
-  return [...byId.values()]
 }

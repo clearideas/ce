@@ -12,6 +12,7 @@ import type { Request, Response } from 'express'
 import { Types } from 'mongoose'
 import { config } from '../../config/index.js'
 import type { CeAppContext } from '../../lib/app-context.js'
+import { SEARCH_ACTIVITY_ACTION } from '../../services/search-activity.js'
 
 type AnalyticsFilter = {
   sites: string[]
@@ -91,6 +92,19 @@ export class AnalyticsController {
     res.json({ rows: rows.map((row: any) => ({ action: String(row._id), name: humanizeAction(String(row._id)), count: row.count })) })
   }
 
+  /**
+   * Search terms used in the administered site(s), aggregated by normalised term.
+   *
+   * Only searches attributed to those sites are included: scoped searches of the site, and
+   * multi-site searches that matched content in the site. Searches that matched elsewhere (or
+   * nowhere) are never attributed here, so no administrator sees terms concerning other sites.
+   */
+  postSearchTerms = async (req: Request, res: Response) => {
+    const filter = await this.resolveFilter(req, { defaultStartDaysAgo: 30 })
+    const rows = await this.searchTerms(filter)
+    res.json({ rows })
+  }
+
   postMonthlyActiveUsers = async (req: Request, res: Response) => {
     const filter = await this.resolveFilter(req, { defaultStartDaysAgo: 30 })
     const rows = await this.ctx.models.ActivityModel.aggregate([
@@ -132,7 +146,12 @@ export class AnalyticsController {
   }
 
   private async resolveFilter(req: Request, options: { defaultStartDaysAgo?: number; defaultLimit?: number } = {}): Promise<AnalyticsFilter> {
-    const requestedSites = normalizeStringArray(req.body?.sites ?? req.query?.sites ?? req.body?.siteIds ?? req.query?.siteIds ?? req.body?.siteId ?? req.query?.siteId ?? req.params.siteId)
+    // A site-scoped route (/site/:siteId/analytics/...) must only ever report on that site; the
+    // validated param is an ObjectId instance, so normalise it explicitly.
+    const routeSiteId = req.params?.siteId != null ? String(req.params.siteId) : ''
+    const requestedSites = routeSiteId
+      ? [routeSiteId]
+      : normalizeStringArray(req.body?.sites ?? req.query?.sites ?? req.body?.siteIds ?? req.query?.siteIds ?? req.body?.siteId ?? req.query?.siteId)
     const sites = await this.permittedSiteIds({
       userId: String(req.sub!),
       accountId: String(req.accountId ?? ''),
@@ -191,6 +210,65 @@ export class AnalyticsController {
         siteIds: input.requestedSites,
       },
     )
+  }
+
+  private async searchTerms(filter: AnalyticsFilter) {
+    if (filter.sites.length === 0) return []
+    const match = this.activityMatch({ ...filter, actions: [SEARCH_ACTIVITY_ACTION] })
+    const rows = await this.ctx.models.ActivityModel.aggregate([
+      { $match: match },
+      {
+        $project: {
+          user: 1,
+          createdAt: 1,
+          term: { $toLower: { $trim: { input: { $toString: { $ifNull: ['$attributes.q', ''] } } } } },
+          resultCount: { $ifNull: ['$attributes.resultCount', 0] },
+          source: { $toString: { $ifNull: ['$attributes.source', 'unknown'] } },
+        },
+      },
+      { $match: { term: { $ne: '' } } },
+      {
+        $group: {
+          _id: '$term',
+          count: { $sum: 1 },
+          users: { $addToSet: '$user' },
+          lastSearchedAt: { $max: '$createdAt' },
+          zeroResultCount: { $sum: { $cond: [{ $lte: ['$resultCount', 0] }, 1, 0] } },
+          sources: { $push: '$source' },
+        },
+      },
+      { $sort: { count: -1, lastSearchedAt: -1 } },
+      // Fetch a little more than requested so near-duplicate terms (inner whitespace) can be merged.
+      { $limit: Math.min(filter.limit * 2, 400) },
+    ])
+
+    type SearchTermEntry = { term: string; count: number; users: Set<string>; lastSearchedAt: Date; zeroResultCount: number; sources: Record<string, number> }
+    const merged = new Map<string, SearchTermEntry>()
+    for (const row of rows) {
+      const term = String(row._id).replace(/\s+/g, ' ')
+      const entry: SearchTermEntry = merged.get(term) ?? { term, count: 0, users: new Set<string>(), lastSearchedAt: row.lastSearchedAt, zeroResultCount: 0, sources: {} }
+      entry.count += row.count
+      for (const user of row.users ?? []) if (user != null) entry.users.add(String(user))
+      if (row.lastSearchedAt > entry.lastSearchedAt) entry.lastSearchedAt = row.lastSearchedAt
+      entry.zeroResultCount += row.zeroResultCount
+      for (const source of row.sources ?? []) {
+        const key = String(source)
+        entry.sources[key] = (entry.sources[key] ?? 0) + 1
+      }
+      merged.set(term, entry)
+    }
+    return [...merged.values()]
+      .sort((a, b) => b.count - a.count || new Date(b.lastSearchedAt).getTime() - new Date(a.lastSearchedAt).getTime())
+      .slice(0, filter.limit)
+      .map(entry => ({
+        term: entry.term,
+        name: entry.term,
+        count: entry.count,
+        userCount: entry.users.size,
+        zeroResultCount: entry.zeroResultCount,
+        lastSearchedAt: entry.lastSearchedAt,
+        sources: entry.sources,
+      }))
   }
 
   private async usersById(ids: unknown[]) {

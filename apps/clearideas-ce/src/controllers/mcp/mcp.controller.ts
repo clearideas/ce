@@ -6,10 +6,11 @@ import {
   isMcpEnabledSite,
   isTextBasedContent,
   getCoreMcpToolRequiredScope,
+  mcpSearchContentArgsSchema,
   normalizeMcpRequest,
   normalizeCoreMcpToolName,
-  parseMcpStringArray,
   resolveSiteRole,
+  validateSchema,
   serializeFile,
   serializeFolder,
   sliceTextContent,
@@ -21,7 +22,8 @@ import type { Request, Response } from 'express'
 import { config } from '../../config/index.js'
 import type { CeAppContext } from '../../lib/app-context.js'
 import { queuePdfTextExtraction } from '../../services/pdf-text-extraction.js'
-import { hydrateSearchResultsFromSource } from '../../services/search-result-hydration.js'
+import { searchContent } from '../../services/content-search.js'
+import { logSearchActivity } from '../../services/search-activity.js'
 
 export class McpController {
   private readonly domain
@@ -319,37 +321,32 @@ export class McpController {
     }
 
     if (tool === 'search_content') {
-      const query = String(args.q ?? args.query ?? '').trim()
-      if (!query) throw new BadRequestError('q is required')
+      const searchArgs = await validateSchema(mcpSearchContentArgsSchema, args ?? {})
+      const query = searchArgs.query
+      const limit = searchArgs.limit ?? 50
       const actor = await this.getMcpActor(req)
-      const allowedSiteIds = await this.getMcpEnabledSiteIds(req, parseMcpStringArray(args.siteIds))
-      const allowedSiteIdSet = new Set(allowedSiteIds)
-      let files = this.ctx.search
-        ? await this.ctx.search.searchAcrossSites({
-            sites: await this.ctx.models.SiteModel.find({ _id: { $in: allowedSiteIds } }).select('_id name').lean()
-              .then((sites: any[]) => sites.map(site => ({ id: String(site._id), name: String(site.name ?? '') }))),
-            q: query,
-            limit: 50,
-          })
-        : await this.domain.searchFilesByNameAcrossSites({
-            userId: String(actor.account.owner),
-            name: query,
-            limit: 50,
-          }).then(results => results.filter(file => allowedSiteIdSet.has(String(file.siteId))))
-      if (this.ctx.search) {
-        files = await hydrateSearchResultsFromSource({
-          models: this.ctx.models,
-          q: query,
-          results: files,
-          search: this.ctx.search,
-        })
-      }
-      await this.activity.safe({
+      const allowedSiteIds = await this.getMcpEnabledSiteIds(req, searchArgs.siteIds)
+      const sites = allowedSiteIds.length > 0
+        ? await this.ctx.models.SiteModel.find({ _id: { $in: allowedSiteIds } }).select('_id name').lean()
+        : []
+      const { results: files, matchedBySite } = await searchContent({
+        models: this.ctx.models,
+        domain: this.domain,
+        search: this.ctx.search,
+        q: query,
+        siteIds: allowedSiteIds,
+        siteNames: new Map(sites.map((site: any) => [String(site._id), String(site.name ?? '')])),
+        userId: String(actor.account.owner),
+        limit,
+      })
+      await logSearchActivity({
+        activity: this.activity,
         user: actor.account.owner,
-        action: 'mcp-search-content',
-        target: actor.account.owner,
-        onModel: 'User',
-        attributes: { accessKeyId: String(req.accessKey?._id ?? ''), q: query, resultCount: files.length, source: 'ce-mcp' },
+        q: query,
+        scope: 'all',
+        source: 'ce-mcp',
+        matchedBySite,
+        accessKeyId: String(req.accessKey?._id ?? ''),
       })
       res.json(toMcpJsonRpcResponse(req.body, {
         results: files.map((x: any) => ({

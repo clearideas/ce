@@ -1,5 +1,6 @@
 import { BadRequestError, ForbiddenError } from '@clearideas/core/errors'
 import {
+  createActivityLogger,
   isContentTextAvailable,
   isPdfContent,
   isTextBasedContent,
@@ -31,16 +32,19 @@ import {
   getLastUserText,
   isInstructionLeakAttempt,
 } from '../../lib/instruction-leak-guard.js'
-import { extractPdfTextForFile } from '../../services/pdf-text-extraction.js'
-import { hydrateSearchResultsFromSource } from '../../services/search-result-hydration.js'
+import { extractPdfTextForFile, shouldAttemptPdfExtraction } from '../../services/pdf-text-extraction.js'
+import { searchContent } from '../../services/content-search.js'
+import { logSearchActivity } from '../../services/search-activity.js'
 
 const aiTool = tool as any
 
 export class SiteChatController {
   private readonly domain
+  private readonly activity
 
   constructor(private readonly ctx: CeAppContext) {
     this.domain = createCoreDomainServices(ctx.models, ctx.providers)
+    this.activity = createActivityLogger(activity => this.ctx.models.ActivityModel.create(activity))
   }
 
   models = async (_req: Request, res: Response) => {
@@ -60,7 +64,7 @@ export class SiteChatController {
     if (!isSiteAiChatEnabled(site)) throw new ForbiddenError('AI chat is not enabled for this site')
 
     const selectedModel = getConfiguredChatModel(typeof req.body?.model === 'string' ? req.body.model : undefined)
-    const tools = this.buildSiteChatTools(site, siteId)
+    const tools = this.buildSiteChatTools(site, siteId, String(req.sub!))
     if (isInstructionLeakAttempt(getLastUserText(messages as any))) {
       const stream = createUIMessageStream({
         execute: ({ writer }) => {
@@ -92,7 +96,7 @@ export class SiteChatController {
     })
   }
 
-  private buildSiteChatTools(site: any, siteId: string) {
+  private buildSiteChatTools(site: any, siteId: string, userId?: string) {
     return {
       list_content: aiTool({
         description: 'List folders and files in the current Clear Ideas site. This corresponds to clearideas.list_content.',
@@ -165,17 +169,15 @@ export class SiteChatController {
         }),
         execute: async (input: unknown) => executeSiteChatTool('search_content', { siteId, input }, async () => {
           const { query } = await validateSchema(llmSearchContentArgsSchema, input)
-          let files = this.ctx.search
-            ? await this.ctx.search.searchSite({ siteId, q: query, limit: 50 })
-            : await this.domain.searchFilesByName({ siteId, name: query, limit: 50 })
-          if (this.ctx.search) {
-            files = await hydrateSearchResultsFromSource({
-              models: this.ctx.models,
-              q: query,
-              results: files,
-              search: this.ctx.search,
-            })
-          }
+          const { results: files, matchedBySite } = await searchContent({
+            models: this.ctx.models,
+            domain: this.domain,
+            search: this.ctx.search,
+            q: query,
+            siteIds: [siteId],
+            limit: 50,
+          })
+          await logSearchActivity({ activity: this.activity, user: userId, q: query, scope: 'site', source: 'ce-chat', siteId, matchedBySite })
           return {
             results: files.map((x: any) => ({
               id: x.id,
@@ -213,7 +215,7 @@ export class SiteChatController {
           let file = await this.getSourceFile({ siteId, fileId: contentIdString })
           const isText = isTextBasedContent(file.contentType, file.name)
           let hasExtractedText = hasPdfText(file)
-          if (!isText && isPdfContent(file.contentType, file.name) && !hasExtractedText) {
+          if (!isText && isPdfContent(file.contentType, file.name) && !hasExtractedText && shouldAttemptPdfExtraction(file)) {
             const extracted = await extractPdfTextForFile({
               models: this.ctx.models as any,
               storage: this.ctx.providers.storage,
@@ -374,7 +376,8 @@ function formatFolder(folder: any, site: any) {
 
 function hasPdfText(file: any) {
   return isPdfContent(file.contentType, file.name) &&
-    file.extractionStatus === config.content.extractionStatus.complete &&
+    (file.extractionStatus === config.content.extractionStatus.complete ||
+      file.extractionStatus === config.content.extractionStatus.limited) &&
     Boolean(file.extractedTextKey || file.extractedText)
 }
 

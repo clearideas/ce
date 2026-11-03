@@ -12,6 +12,7 @@
     "bootstrap": "tsx src/scripts/bootstrap.ts",
     "seed": "tsx src/scripts/seed.ts",
     "smoke": "tsx src/scripts/smoke.ts",
+    "reindex": "tsx src/scripts/reindex.ts",
     "test": "npm run test:unit && npm run test:api && npm run test:web",
     "test:unit": "vitest run --config vitest.unit.config.ts",
     "test:api": "vitest run --config vitest.api.config.ts",

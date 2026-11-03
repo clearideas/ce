@@ -101,7 +101,30 @@ STORAGE_ROOT=apps/clearideas-ce/data/storage
 SEARCH_INDEX_ROOT=apps/clearideas-ce/data/search
 ```
 
-Back up both directories with MongoDB. File metadata lives in MongoDB; object bytes and extracted text live in local storage.
+Back up both directories with MongoDB. File metadata lives in MongoDB; object bytes and extracted text live in local storage. The search index is a rebuildable cache of those two (see [Search and Extraction](search-extraction.md)).
+
+```env
+SEARCH_INDEX_IDLE_MS=300000
+SEARCH_INDEX_MAX_LOADED_SITES=25
+SEARCH_INDEX_FLUSH_DELAY_MS=2000
+SEARCH_INDEX_MAX_TEXT_BYTES=2097152
+SEARCH_INDEX_CONCURRENCY=2
+```
+
+- `SEARCH_INDEX_IDLE_MS` / `SEARCH_INDEX_MAX_LOADED_SITES` bound how many site indexes stay in memory.
+- `SEARCH_INDEX_FLUSH_DELAY_MS` coalesces index writes: changes within the window are persisted together, atomically.
+- `SEARCH_INDEX_MAX_TEXT_BYTES` caps how much text per file is indexed and used for snippets.
+- `SEARCH_INDEX_CONCURRENCY` bounds background indexing work.
+
+```env
+PDF_EXTRACTION_MAX_BYTES=52428800
+PDF_EXTRACTION_MAX_PAGES=500
+PDF_EXTRACTION_TIMEOUT_MS=60000
+PDF_EXTRACTION_CONCURRENCY=1
+PDF_EXTRACTION_RETRY_FAILED_AFTER_MS=3600000
+```
+
+PDF text extraction skips files above `PDF_EXTRACTION_MAX_BYTES` (status `unsupported`), extracts at most `PDF_EXTRACTION_MAX_PAGES` pages (status `limited` when truncated), aborts after `PDF_EXTRACTION_TIMEOUT_MS` (status `failed`), and processes `PDF_EXTRACTION_CONCURRENCY` files at a time. Failed extractions are retried on demand only after `PDF_EXTRACTION_RETRY_FAILED_AFTER_MS`.
 
 ## Auth Codes
 

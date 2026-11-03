@@ -204,6 +204,12 @@ export const ceApi = {
       bodySchema: AnalyticsFilterRequestSchema,
       body: body(AnalyticsFilterRequestSchema, filter, 'Content activity analytics'),
     }),
+  searchTerms: (filter: AnalyticsFilter) =>
+    api<AnalyticsRowsResponse>('/analytics/search-terms', {
+      method: 'POST',
+      bodySchema: AnalyticsFilterRequestSchema,
+      body: body(AnalyticsFilterRequestSchema, filter, 'Search terms analytics'),
+    }),
   usageTimes: (filter: AnalyticsFilter) =>
     api<AnalyticsRowsResponse>('/analytics/usage-times', {
       method: 'POST',

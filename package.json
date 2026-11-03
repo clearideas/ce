@@ -27,6 +27,7 @@
     "bootstrap:ce": "npm run -w @clearideas/ce bootstrap",
     "seed:ce": "npm run -w @clearideas/ce seed",
     "smoke:ce": "npm run -w @clearideas/ce smoke",
+    "reindex:ce": "npm run -w @clearideas/ce reindex --",
     "test:ce": "npm run test:ce:unit && npm run test:ce:api && npm run test:ce:web",
     "test:ce:unit": "vitest run --config apps/clearideas-ce/vitest.unit.config.ts",
     "test:ce:api": "vitest run --config apps/clearideas-ce/vitest.api.config.ts",

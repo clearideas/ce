@@ -1,4 +1,4 @@
-import { hasSiteRole, postActivityBase, serializeActivity } from '@clearideas/core'
+import { hasSiteRole, postActivityBase } from '@clearideas/core'
 import { ForbiddenError } from '@clearideas/core/errors'
 import type { Request, Response } from 'express'
 import { config } from '../../config/index.js'
@@ -6,36 +6,6 @@ import type { CeAppContext } from '../../lib/app-context.js'
 
 export class ActivityController {
   constructor(private readonly ctx: CeAppContext) {}
-
-  getAll = async (req: Request, res: Response) => {
-    const activities = await this.ctx.models.ActivityModel.find({ user: req.sub })
-      .sort({ createdAt: -1 })
-      .limit(100)
-      .lean()
-    res.json(activities.map((x: any) => serializeActivity(x, { includeId: true, stringifyIds: true, includeTimestamps: true })))
-  }
-
-  getActivitiesForSite = async (req: Request, res: Response) => {
-    const rows = await this.ctx.models.ActivityModel.find({
-      parent: req.params.siteId,
-      parentOnModel: 'Site',
-    })
-      .sort({ createdAt: -1 })
-      .limit(100)
-      .lean()
-    res.json(rows.map((x: any) => serializeActivity(x, { includeId: true, stringifyIds: true, includeTimestamps: true })))
-  }
-
-  getActivitiesForFile = async (req: Request, res: Response) => {
-    const rows = await this.ctx.models.ActivityModel.find({
-      target: req.params.id,
-      onModel: 'Content',
-    })
-      .sort({ createdAt: -1 })
-      .limit(100)
-      .lean()
-    res.json(rows.map((x: any) => serializeActivity(x, { includeId: true, stringifyIds: true, includeTimestamps: true })))
-  }
 
   postActivity = async (req: Request, res: Response) => {
     await this.authorizeActivityTarget(req)

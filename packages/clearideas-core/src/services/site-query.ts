@@ -1,4 +1,5 @@
 import { coreAcceptedFilter, coreSiteRoles, type CoreAcceptedFilterValue } from './config.js'
+import { findActiveSiteMember } from './site-permissions.js'
 
 export type AcceptedFilter = CoreAcceptedFilterValue | boolean
 
@@ -31,10 +32,7 @@ export function resolveCurrentUserRole(
   const siteOwner = String((site as any)?.owner?._id ?? (site as any)?.owner ?? '')
   if (siteOwner && siteOwner === accountId) return ownerRole
 
-  const memberRole = (site.members ?? []).find(member => {
-    const memberUser = String((member as any)?.userId ?? (member as any)?.user ?? '')
-    return memberUser === userId
-  })?.role
+  const memberRole = findActiveSiteMember(site, userId)?.role
 
   return memberRole ?? defaultRole
 }
@@ -55,6 +53,8 @@ export interface PermittedSitesInput {
   siteIds?: string[]
   suppressedSiteIds?: string[]
   activeStatus?: string
+  /** Reference time used to evaluate membership expiry (defaults to now). */
+  now?: Date
 }
 
 export interface PermittedSiteIdDependencies {
@@ -110,6 +110,8 @@ export function buildPermittedSitesQuery(input: PermittedSitesInput): Record<str
         $elemMatch: {
           user: input.userId,
           role: { $in: memberRoles },
+          declinedAt: null,
+          $or: [{ expiresAt: null }, { expiresAt: { $gt: input.now ?? new Date() } }],
         },
       },
     })

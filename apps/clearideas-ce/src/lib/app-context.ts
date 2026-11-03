@@ -13,10 +13,12 @@ export interface AppModels {
   AgentTaskModel: any
 }
 
+import type { SiteSearchIndexManager } from '../services/search-index.js'
+
 export interface CeAppContext {
   auth: any
   models: AppModels
   providers: any
-  search?: any
+  search?: SiteSearchIndexManager
   agentHost?: any
 }

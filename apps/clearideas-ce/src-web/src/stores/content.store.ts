@@ -275,10 +275,15 @@ export const useContentStore = defineStore('content', () => {
     }
   }
 
+  let searchSequence = 0
+
   async function search(siteId?: string, q = searchQuery.value) {
+    // Only the most recent request may update the results; slower, older responses are ignored.
+    const sequence = ++searchSequence
     isSearching.value = true
     try {
       const data = siteId ? await ceApi.searchSite(siteId, q) : await ceApi.searchAll(q)
+      if (sequence !== searchSequence) return searchResults.value
       searchResults.value = data.results ?? data.contents ?? []
       searchScope.value = siteId
         ? {
@@ -289,8 +294,14 @@ export const useContentStore = defineStore('content', () => {
         : { type: 'all', label: 'all sites' }
       showSearchResults.value = true
       return searchResults.value
+    } catch (error: any) {
+      if (sequence === searchSequence) {
+        searchResults.value = []
+        alert.add({ message: error?.message || 'Search failed.', type: 'error', timeout: 5000 })
+      }
+      return searchResults.value
     } finally {
-      isSearching.value = false
+      if (sequence === searchSequence) isSearching.value = false
     }
   }
 

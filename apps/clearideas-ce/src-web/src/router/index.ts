@@ -24,7 +24,7 @@ export const router = createRouter({
     { path: '/users', name: 'users', component: UsersView },
     { path: '/agents', name: 'agents', component: AgentsView },
     { path: '/analytics', name: 'analytics', redirect: '/analytics/dashboard' },
-    { path: '/analytics/:category(dashboard|most-accessed|content-activity|most-active|usage-times)', name: 'analytics-category', component: AnalyticsView },
+    { path: '/analytics/:category(dashboard|most-accessed|content-activity|search-terms|most-active|usage-times)', name: 'analytics-category', component: AnalyticsView },
     { path: '/docs/:slug(.*)*', name: 'docs-page', component: DocsView },
     { path: '/settings/:section?', name: 'settings', component: SettingsView },
     { path: '/:pathMatch(.*)*', redirect: '/sites' },

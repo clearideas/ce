@@ -5,6 +5,7 @@ import { createDefaultUserAttributes } from '@clearideas/core'
 import { processPendingNotifications } from '../../src/workers/notification-worker.js'
 import { createTestCeRuntime, signIn, type TestCeRuntime } from '../harness/runtime.js'
 import { SiteChatController } from '../../src/controllers/chat/site-chat.controller.js'
+import { waitForPdfExtractions } from '../../src/services/pdf-text-extraction.js'
 
 describe('Clear Ideas CE API integration', () => {
   let ctx: TestCeRuntime
@@ -102,19 +103,11 @@ describe('Clear Ideas CE API integration', () => {
       size: 42,
       attributes: {},
     })
-    await ctx.runtime.search.indexFile({
-      id: pdfFile.id,
-      siteId: site.id,
-      siteName: site.name,
-      name: pdfFile.name,
-      key: pdfFile.key,
-      contentType: pdfFile.contentType,
-      size: pdfFile.size,
-      uploadedAt: pdfFile.uploadedAt,
-      updatedAt: pdfFile.updatedAt,
-      extractedText: 'Full-year 2023 GMV: $235.9 billion. Q1 2024 GMV: $60.9 billion.',
-      extractionStatus: 'complete',
-    })
+    // The seeded record has no stored object yet; store one so it can be indexed like a real file.
+    await ctx.runtime.providers.storage.writeObject({ key: 'seed-welcome.txt', body: Buffer.from('Welcome to Clear Ideas Community Edition.\n') })
+    // PDF text is extracted and indexed in the background; wait for both before asserting on search.
+    await waitForPdfExtractions()
+    await ctx.runtime.search.settle()
     await ctx.runtime.search.indexFile({
       id: mdFile.id,
       siteId: site.id,
@@ -130,6 +123,7 @@ describe('Clear Ideas CE API integration', () => {
       extractedText: 'Shopify GMV grew strongly.',
       extractionStatus: 'complete',
     })
+    await ctx.runtime.search.settle()
 
     await agent.get(`/api/site/${site.id}/file/${jsonFile.id}`).expect(200).expect(({ body }) => {
       expect(body.file.contentType).toBe('application/json')
@@ -224,9 +218,29 @@ describe('Clear Ideas CE API integration', () => {
     const pdfContent = await chatTools.retrieve_file_content.execute({ contentId: pdfFile.id, maxTokens: 4000 })
     expect(pdfContent).not.toHaveProperty('error')
     expect(pdfContent.content).toContain('Sample report revenue increased in 2023.')
-    await expect(ctx.runtime.models.ContentModel.findById(pdfFile.id).select('+extractedText').lean()).resolves.toMatchObject({
+    const extractedPdf = (await ctx.runtime.models.ContentModel.findById(pdfFile.id).select('+extractedText').lean()) as any
+    expect(extractedPdf).toMatchObject({
       extractionStatus: 'complete',
-      extractedText: expect.stringContaining('Sample report revenue increased in 2023.'),
+      extractedTextKey: `${pdfFile.key}.extracted.txt`,
+    })
+    // Extracted text is kept as a companion object, not on the database record.
+    expect(extractedPdf.extractedText).toBeUndefined()
+    const companionText = await ctx.runtime.providers.storage.readObject({ key: String(extractedPdf.extractedTextKey) })
+    expect(companionText.toString('utf8')).toContain('Sample report revenue increased in 2023.')
+    await waitForPdfExtractions()
+    await ctx.runtime.search.settle()
+    await agent.post(`/api/site/${site.id}/search`).send({ q: 'revenue increased' }).expect(200).expect(({ body }) => {
+      const hit = body.results.find((result: any) => result.id === pdfFile.id)
+      expect(hit).toBeTruthy()
+      expect(hit.snippet).toContain('revenue increased')
+    })
+    // Oversized or malformed MCP search arguments are rejected before any work is done.
+    await agent.post('/api/mcp').set('authorization', `Bearer ${key}`).send({
+      tool: 'clearideas.search_content',
+      args: { q: 'x'.repeat(501) },
+    }).expect(400)
+    await callMcp(key, 'clearideas.search_content', { q: 'GMV', siteIds: [site.id] }).expect(({ body }) => {
+      expect(body.result.results.some((result: any) => result.id === mdFile.id || result.id === pdfFile.id)).toBe(true)
     })
 
     const uploader = await agent.post(`/api/site/${site.id}/users`).send({
@@ -316,6 +330,13 @@ describe('Clear Ideas CE API integration', () => {
 
     await outsiderAgent.get(`/api/sites/${site.id}`).expect(403)
     await outsiderAgent.get(`/api/site/${site.id}/file/${file.id}/token`).query({ purpose: 'view' }).expect(403)
+    await outsiderAgent.post(`/api/site/${site.id}/search`).send({ q: 'private' }).expect(403)
+    await outsiderAgent.post(`/api/site/${site.id}/folder/${folder.id}/search`).send({ q: 'private' }).expect(403)
+    await outsiderAgent.post('/api/search').send({ q: 'private' }).expect(200).expect(({ body }) => {
+      expect(body.results.some((result: any) => result.id === file.id)).toBe(false)
+    })
+    await agent.post(`/api/site/${site.id}/search`).send({ q: 'x'.repeat(501) }).expect(400)
+    await agent.post(`/api/site/${site.id}/search`).send({ q: '@constructor:native' }).expect(200)
     await agent.patch(`/api/sites/${site.id}`).send({ attributes: { ai: { enabled: true, chatEnabled: true } } }).expect(200)
     await agent.post(`/api/sites/${site.id}/chat`).send({
       id: 'transport-request',
@@ -354,8 +375,21 @@ describe('Clear Ideas CE API integration', () => {
     const viewerAgent = supertest.agent(ctx.runtime.app)
     await signIn({ agent: viewerAgent, email: ctx.email, address: viewer.email, name: 'Viewer User' })
     await viewerAgent.get(`/api/sites/${site.id}`).expect(200)
+    await viewerAgent.post(`/api/site/${site.id}/search`).send({ q: 'private' }).expect(200).expect(({ body }) => {
+      expect(body.results.some((result: any) => result.id === file.id)).toBe(true)
+    })
     await viewerAgent.get(`/api/site/${site.id}/file/${file.id}/token`).query({ purpose: 'view' }).expect(200)
     await viewerAgent.get(`/api/site/${site.id}/file/${file.id}/token`).query({ purpose: 'download' }).expect(403)
+
+    // Expired memberships no longer grant access to site content or search.
+    await agent.put(`/api/site/${site.id}/user/${viewer.id}`).send({
+      role: 'viewer',
+      expiresAt: new Date(Date.now() - 60_000).toISOString(),
+    }).expect(200)
+    await viewerAgent.post(`/api/site/${site.id}/search`).send({ q: 'private' }).expect(403)
+    await viewerAgent.get(`/api/sites/${site.id}`).expect(403)
+    await agent.put(`/api/site/${site.id}/user/${viewer.id}`).send({ role: 'viewer', expiresAt: '' }).expect(200)
+    await viewerAgent.post(`/api/site/${site.id}/search`).send({ q: 'private' }).expect(200)
     await viewerAgent.delete(`/api/site/${site.id}/content/${folder.id}`).expect(403)
     await viewerAgent.post('/api/files/upload-target').send({
       siteId: site.id,
@@ -364,6 +398,74 @@ describe('Clear Ideas CE API integration', () => {
       contentType: 'text/plain',
       size: 6,
     }).expect(403)
+  })
+
+  it('attributes search terms to administrators only for the sites where the search matched', async () => {
+    // Admin 1 (the default owner agent) administers Site A; Admin 2 administers Site B.
+    const siteA = await createSite('Search Analytics A')
+    await createStandaloneUser('admin2@clearideas.local', 'Admin Two')
+    const admin2Agent = supertest.agent(ctx.runtime.app)
+    await signIn({ agent: admin2Agent, email: ctx.email, address: 'admin2@clearideas.local', name: 'Admin Two' })
+    const siteB = await admin2Agent.post('/api/sites').send({ name: 'Search Analytics B' }).expect(201).then(res => res.body.site as { id: string })
+
+    await uploadFileAs(agent, { siteId: siteA.id, fileName: 'alpha-budget.txt', contentType: 'text/plain', body: Buffer.from('alpha budget figures for the year') })
+    await uploadFileAs(admin2Agent, { siteId: siteB.id, fileName: 'beta-notes.txt', contentType: 'text/plain', body: Buffer.from('beta notes only') })
+    await ctx.runtime.search.settle()
+
+    // A shared user is a member of both sites.
+    const sharedEmail = 'shared-searcher@clearideas.local'
+    await agent.post(`/api/site/${siteA.id}/users`).send({ email: sharedEmail, displayName: 'Shared Searcher', siteRole: 'viewer' }).expect(200)
+    await admin2Agent.post(`/api/site/${siteB.id}/users`).send({ email: sharedEmail, displayName: 'Shared Searcher', siteRole: 'viewer' }).expect(200)
+    const sharedAgent = supertest.agent(ctx.runtime.app)
+    const shared = await signIn({ agent: sharedAgent, email: ctx.email, address: sharedEmail, name: 'Shared Searcher' })
+
+    // Global searches: "alpha" matches only Site A, "beta" only Site B, "zzz-nothing" nowhere.
+    await sharedAgent.post('/api/search').send({ q: 'alpha' }).expect(200).expect(({ body }) => {
+      expect(body.results.map((result: any) => result.name)).toEqual(['alpha-budget.txt'])
+    })
+    await sharedAgent.post('/api/search').send({ q: 'beta' }).expect(200)
+    await sharedAgent.post('/api/search').send({ q: 'zzz-nothing' }).expect(200).expect(({ body }) => {
+      expect(body.results).toEqual([])
+    })
+    // A site-scoped search is attributed to that site even when it finds nothing.
+    await sharedAgent.post(`/api/site/${siteB.id}/search`).send({ q: 'alpha' }).expect(200).expect(({ body }) => {
+      expect(body.results).toEqual([])
+    })
+
+    const terms = (rows: any[]) => rows.map(row => row.term).sort()
+
+    // Admin 1 sees only what matched Site A.
+    await agent.post(`/api/site/${siteA.id}/analytics/search-terms`).send({}).expect(200).expect(({ body }) => {
+      expect(terms(body.rows)).toEqual(['alpha'])
+      expect(body.rows[0]).toMatchObject({ count: 1, userCount: 1, zeroResultCount: 0, sources: { 'ce-search': 1 } })
+    })
+    await agent.post('/api/analytics/search-terms').send({ sites: [siteA.id] }).expect(200).expect(({ body }) => {
+      expect(terms(body.rows)).toEqual(['alpha'])
+    })
+
+    // Admin 2 sees the global "beta" search and the scoped zero-result "alpha" search on Site B, nothing else.
+    await admin2Agent.post(`/api/site/${siteB.id}/analytics/search-terms`).send({}).expect(200).expect(({ body }) => {
+      expect(terms(body.rows)).toEqual(['alpha', 'beta'])
+      const alpha = body.rows.find((row: any) => row.term === 'alpha')
+      expect(alpha).toMatchObject({ count: 1, zeroResultCount: 1 })
+    })
+    // Admin 2 cannot read Site A's report, and a viewer cannot read any site report.
+    await admin2Agent.post(`/api/site/${siteA.id}/analytics/search-terms`).send({}).expect(403)
+    await sharedAgent.post(`/api/site/${siteA.id}/analytics/search-terms`).send({}).expect(403)
+    await sharedAgent.post('/api/analytics/search-terms').send({}).expect(200).expect(({ body }) => {
+      expect(body.rows).toEqual([])
+    })
+
+    // The search that matched nowhere is recorded for audit without any site attribution.
+    const orphan = await ctx.runtime.models.ActivityModel.findOne({ action: 'content-searched', 'attributes.q': 'zzz-nothing' }).lean()
+    expect(orphan).toMatchObject({ user: expect.anything(), onModel: 'User', attributes: expect.objectContaining({ scope: 'all', resultCount: 0, matchedSiteCount: 0 }) })
+    expect(String((orphan as any).user)).toBe(shared.id)
+    expect((orphan as any).parent ?? null).toBeNull()
+    // Searches never appear in another site's analytics, even via the generic content-activity report.
+    await agent.post(`/api/site/${siteA.id}/analytics/most-active`).send({ actions: ['content-searched'] }).expect(200).expect(({ body }) => {
+      expect(body.rows.map((row: any) => row.id)).toEqual([shared.id])
+      expect(body.rows[0].viewCount).toBe(1)
+    })
   })
 
   it('does not send a code until the email has been invited', async () => {
@@ -414,7 +516,11 @@ describe('Clear Ideas CE API integration', () => {
   }
 
   async function uploadFile(input: { siteId: string; folderId?: string; fileName: string; contentType: string; body: Buffer }) {
-    const target = await agent.post('/api/files/upload-target').send({
+    return uploadFileAs(agent, input)
+  }
+
+  async function uploadFileAs(client: SuperTest<Test>, input: { siteId: string; folderId?: string; fileName: string; contentType: string; body: Buffer }) {
+    const target = await client.post('/api/files/upload-target').send({
       siteId: input.siteId,
       folderId: input.folderId,
       fileName: input.fileName,
@@ -423,8 +529,8 @@ describe('Clear Ideas CE API integration', () => {
     }).expect(200).then(res => res.body.target as { url: string; fileId: string; fileKey: string; headers?: Record<string, string> })
     expect(target.url).toBe(`/api/files/upload/${target.fileId}`)
     expect(target.url).not.toContain(target.fileKey)
-    await agent.put(target.url).set({ 'content-type': input.contentType, ...(target.headers ?? {}) }).send(input.body).expect(200)
-    const site = await agent.get(`/api/sites/${input.siteId}`).expect(200).then(res => res.body.site)
+    await client.put(target.url).set({ 'content-type': input.contentType, ...(target.headers ?? {}) }).send(input.body).expect(200)
+    const site = await client.get(`/api/sites/${input.siteId}`).expect(200).then(res => res.body.site)
     const files = [
       ...(site.files ?? []),
       ...(site.folders ?? []).flatMap((folder: any) => folder.files ?? []),

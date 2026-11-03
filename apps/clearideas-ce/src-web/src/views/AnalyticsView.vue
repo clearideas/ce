@@ -7,7 +7,7 @@ import NewSite from '../components/sites/actions/NewSite.vue'
 import { useAnalyticsStore, useProfileStore, type AnalyticsFilter } from '../stores'
 import { useDisplay } from 'vuetify'
 
-type AnalyticsCategory = 'dashboard' | 'most-accessed' | 'content-activity' | 'most-active' | 'usage-times'
+type AnalyticsCategory = 'dashboard' | 'most-accessed' | 'content-activity' | 'search-terms' | 'most-active' | 'usage-times'
 
 const route = useRoute()
 const router = useRouter()
@@ -36,6 +36,7 @@ const menu = [
   { heading: 'Content' },
   { title: 'Most accessed', icon: 'fasl fa-file', category: 'most-accessed' },
   { title: 'Content activity', icon: 'fasl fa-chart-simple', category: 'content-activity' },
+  { title: 'Search terms', icon: 'fasl fa-magnifying-glass', category: 'search-terms' },
   { heading: 'Users' },
   { title: 'Most active', icon: 'fasl fa-users', category: 'most-active' },
   { heading: 'Engagement' },
@@ -45,6 +46,7 @@ const menu = [
 const reportTitle = computed(() => {
   if (category.value === 'most-active') return 'Most active users'
   if (category.value === 'content-activity') return 'Content activity'
+  if (category.value === 'search-terms') return 'Search terms'
   if (category.value === 'usage-times') return 'Usage times'
   return 'Most accessed content'
 })
@@ -52,6 +54,7 @@ const reportTitle = computed(() => {
 const reportSubtitle = computed(() => {
   if (category.value === 'most-active') return 'Users with the most activity in the selected period.'
   if (category.value === 'content-activity') return 'Counts by action across accessible sites.'
+  if (category.value === 'search-terms') return 'What people searched for in the sites you administer. Global searches are attributed only to the sites where they matched.'
   if (category.value === 'usage-times') return 'Activity grouped by hour of day.'
   return 'Content with the most views in the selected period.'
 })
@@ -79,6 +82,7 @@ async function refresh() {
     }
     if (category.value === 'most-active') rows.value = (await analyticsStore.mostActive(analyticsFilter.value)).rows
     else if (category.value === 'content-activity') rows.value = (await analyticsStore.contentActivity(analyticsFilter.value)).rows
+    else if (category.value === 'search-terms') rows.value = (await analyticsStore.searchTerms(analyticsFilter.value)).rows
     else if (category.value === 'usage-times') rows.value = (await analyticsStore.usageTimes(analyticsFilter.value)).rows
     else rows.value = (await analyticsStore.mostAccessed(analyticsFilter.value)).rows
   } catch (err) {
