@@ -3,23 +3,19 @@ import { computed, ref, watch } from 'vue'
 import DaySelect from '../base/DaySelect.vue'
 import IconCheckbox from '../base/IconCheckbox.vue'
 import { getVuetifyItemRaw } from '../../utils/vuetify'
-
-type DayOfWeek = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday'
-type ScheduleFrequency = 'immediate' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'never'
+import {
+  DEFAULT_MONTHLY_EXPRESSION,
+  normalizeSchedule,
+  type DayOfWeek,
+  type NotificationSchedule,
+  type ScheduleFrequency,
+} from '../../utils/schedule'
 
 interface ScheduleFrequencyProps {
   title: string
   value: ScheduleFrequency
   subtitle: string
   prependIcon: string
-}
-
-export interface NotificationSchedule {
-  frequency: ScheduleFrequency
-  hours: [string, string]
-  days: DayOfWeek[]
-  daysOfMonth?: number[]
-  daysOfMonthExpression?: string[]
 }
 
 interface Props {
@@ -34,10 +30,6 @@ interface Props {
   compact?: boolean
 }
 
-const DAY_OF_MONTH_OPTIONS = Array.from({ length: 31 }, (_, i) => i + 1)
-const MONTH_ORDINAL_OPTIONS = ['1st', '2nd', '3rd', '4th', '5th', 'last']
-const DAY_OF_WEEK_OPTIONS: DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-
 const props = withDefaults(defineProps<Props>(), {
   showImmediate: true,
   showHourly: true,
@@ -48,19 +40,36 @@ const props = withDefaults(defineProps<Props>(), {
   disabled: false,
   compact: false,
 })
-
 const schedule = defineModel<NotificationSchedule>({
-  type: Object,
-  default: {
+  default: (): NotificationSchedule => ({
     frequency: 'daily',
     hours: ['09:00', '17:00'],
     days: [],
-  },
+  }),
 })
+const DAY_OF_MONTH_OPTIONS = Array.from({ length: 31 }, (_, i) => i + 1)
+const MONTH_ORDINAL_OPTIONS = ['1st', '2nd', '3rd', '4th', '5th', 'last']
+const DAY_OF_WEEK_OPTIONS: DayOfWeek[] = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+]
 
-const ordinalExpression = ref('1st')
-const daysOfWeekExpression = ref<DayOfWeek>(DAY_OF_WEEK_OPTIONS[0])
-const daysOfMonthExpressionEnabled = ref(true)
+// Start from the saved rule ("2nd Tuesday"), not the defaults, so opening the page never rewrites it.
+const [savedOrdinal, savedWeekday] = (
+  schedule.value.daysOfMonthExpression?.[0] ?? DEFAULT_MONTHLY_EXPRESSION
+).split(' ')
+const ordinalExpression = ref(MONTH_ORDINAL_OPTIONS.includes(savedOrdinal) ? savedOrdinal : '1st')
+const daysOfWeekExpression = ref<DayOfWeek>(
+  DAY_OF_WEEK_OPTIONS.includes(savedWeekday as DayOfWeek)
+    ? (savedWeekday as DayOfWeek)
+    : DAY_OF_WEEK_OPTIONS[0],
+)
+const daysOfMonthExpressionEnabled = ref(!(schedule.value.daysOfMonth?.length ?? 0))
 const daysOfMonthExpressionDisabled = computed(() => !daysOfMonthExpressionEnabled.value)
 
 const scheduleFrequencies = computed(() => [
@@ -68,37 +77,37 @@ const scheduleFrequencies = computed(() => [
     title: 'Immediate',
     value: 'immediate',
     subtitle: `${props.title} are sent as events happen, within the selected hours.`,
-    prependIcon: 'fasl fa-bell',
+    prependIcon: 'fas fa-bell',
   },
   {
     title: 'Hourly',
     value: 'hourly',
     subtitle: `${props.title} are grouped hourly within the selected hours.`,
-    prependIcon: 'fasl fa-clock',
+    prependIcon: 'fas fa-clock',
   },
   {
     title: 'Daily',
     value: 'daily',
     subtitle: `${props.title} are sent once per day.`,
-    prependIcon: 'fasl fa-calendar-day',
+    prependIcon: 'fas fa-calendar-day',
   },
   {
     title: 'Weekly',
     value: 'weekly',
     subtitle: `${props.title} are sent on the selected days.`,
-    prependIcon: 'fasl fa-calendar-week',
+    prependIcon: 'fas fa-calendar-week',
   },
   {
     title: 'Monthly',
     value: 'monthly',
     subtitle: `${props.title} are sent monthly.`,
-    prependIcon: 'fasl fa-calendar',
+    prependIcon: 'fas fa-calendar',
   },
   {
     title: 'Never',
     value: 'never',
     subtitle: `${props.title} are disabled.`,
-    prependIcon: 'fasl fa-bell-slash',
+    prependIcon: 'fas fa-bell-slash',
   },
 ])
 
@@ -128,30 +137,13 @@ function toggleDayOfMonthExpression(type: 'enabled' | 'disabled') {
   }
 }
 
+// Keep the value consistent with the fields shown for its frequency (the owning form snapshots the
+// same canonical value, so this never marks it dirty by itself).
 watch(
   () => schedule.value.frequency,
   () => {
-    if (schedule.value.frequency === 'monthly') {
-      if (schedule.value.daysOfMonth && schedule.value.daysOfMonth.length > 0) {
-        toggleDayOfMonthExpression('disabled')
-      } else {
-        updateDayOfMonthExpression()
-      }
-    }
-    if (schedule.value.frequency === 'weekly') {
-      schedule.value = {
-        ...schedule.value,
-        days: Array.isArray(schedule.value.days) && schedule.value.days.length > 0 ? schedule.value.days : ['Monday'],
-        daysOfMonth: [],
-        daysOfMonthExpression: [],
-      }
-    }
-    if (schedule.value.frequency === 'daily') {
-      schedule.value = { ...schedule.value, days: [], daysOfMonth: [], daysOfMonthExpression: [] }
-    }
-    if ((schedule.value.frequency === 'immediate' || schedule.value.frequency === 'hourly') && !Array.isArray(schedule.value.days)) {
-      schedule.value.days = ['Monday']
-    }
+    const next = normalizeSchedule(schedule.value)
+    if (JSON.stringify(next) !== JSON.stringify(schedule.value)) schedule.value = next
   },
   { immediate: true },
 )
@@ -186,8 +178,12 @@ function getScheduleFrequency(item: unknown): ScheduleFrequencyProps {
         />
       </template>
     </VSelect>
-    <div v-if="['hourly', 'immediate'].includes(schedule.frequency)"><p class="text-body-2">Between the following times</p></div>
-    <div v-if="['daily', 'weekly', 'monthly'].includes(schedule.frequency)"><p class="text-body-2">At</p></div>
+    <div v-if="['hourly', 'immediate'].includes(schedule.frequency)">
+      <p class="text-body-2">Between the following times</p>
+    </div>
+    <div v-if="['daily', 'weekly', 'monthly'].includes(schedule.frequency)">
+      <p class="text-body-2">At</p>
+    </div>
     <VTextField
       v-if="!['never'].includes(schedule.frequency)"
       v-model="schedule.hours[0]"
@@ -208,7 +204,9 @@ function getScheduleFrequency(item: unknown): ScheduleFrequencyProps {
       max-width="500"
       :disabled="props.disabled"
     />
-    <div v-if="['hourly', 'immediate'].includes(schedule.frequency)"><p class="text-body-2">On the following days</p></div>
+    <div v-if="['hourly', 'immediate'].includes(schedule.frequency)">
+      <p class="text-body-2">On the following days</p>
+    </div>
     <div v-if="['weekly'].includes(schedule.frequency)"><p class="text-body-2">On the following days</p></div>
     <DaySelect
       v-if="!['never', 'monthly', 'daily'].includes(schedule.frequency)"
@@ -223,10 +221,14 @@ function getScheduleFrequency(item: unknown): ScheduleFrequencyProps {
       <div class="d-flex flex-row">
         <IconCheckbox
           :model-value="daysOfMonthExpressionDisabled"
+          aria-label="Use specific days of the month"
           class="mb-4"
-          @update:model-value="(value: boolean | string[] | undefined) => toggleDayOfMonthExpression(value ? 'disabled' : 'enabled')"
           width="50"
           :disabled="props.disabled"
+          @update:model-value="
+            (value: boolean | string[] | undefined) =>
+              toggleDayOfMonthExpression(value ? 'disabled' : 'enabled')
+          "
         />
         <VCombobox
           v-model="schedule.daysOfMonth"
@@ -242,9 +244,33 @@ function getScheduleFrequency(item: unknown): ScheduleFrequencyProps {
       </div>
       <p class="text-body-2">Or on the following day of the month</p>
       <div class="d-flex flex-row">
-        <IconCheckbox v-model="daysOfMonthExpressionEnabled" class="mb-4" @update:model-value="toggleDayOfMonthExpression('enabled')" width="50" :disabled="props.disabled" />
-        <VCombobox v-model="ordinalExpression" :items="MONTH_ORDINAL_OPTIONS" class="mb-4" max-width="180" :disabled="props.disabled || daysOfMonthExpressionDisabled" @update:model-value="updateDayOfMonthExpression" style="margin-right: 20px" />
-        <VCombobox v-model="daysOfWeekExpression" :items="DAY_OF_WEEK_OPTIONS" label="Day of week" class="mb-4" max-width="250" :disabled="props.disabled || daysOfMonthExpressionDisabled" @update:model-value="updateDayOfMonthExpression" />
+        <IconCheckbox
+          v-model="daysOfMonthExpressionEnabled"
+          aria-label="Use a day-of-week rule"
+          class="mb-4"
+          width="50"
+          :disabled="props.disabled"
+          @update:model-value="toggleDayOfMonthExpression('enabled')"
+        />
+        <VCombobox
+          v-model="ordinalExpression"
+          label="Occurrence"
+          :items="MONTH_ORDINAL_OPTIONS"
+          class="mb-4"
+          max-width="180"
+          :disabled="props.disabled || daysOfMonthExpressionDisabled"
+          style="margin-right: 20px"
+          @update:model-value="updateDayOfMonthExpression"
+        />
+        <VCombobox
+          v-model="daysOfWeekExpression"
+          :items="DAY_OF_WEEK_OPTIONS"
+          label="Day of week"
+          class="mb-4"
+          max-width="250"
+          :disabled="props.disabled || daysOfMonthExpressionDisabled"
+          @update:model-value="updateDayOfMonthExpression"
+        />
       </div>
     </div>
   </div>
@@ -256,6 +282,6 @@ function getScheduleFrequency(item: unknown): ScheduleFrequencyProps {
 }
 
 .schedule-control--compact :deep(.v-input.mb-4) {
-  margin-bottom: 8px !important;
+  margin-bottom: 8px;
 }
 </style>

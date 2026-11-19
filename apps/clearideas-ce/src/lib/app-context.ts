@@ -11,6 +11,7 @@ export interface AppModels {
   AgentRunModel: any
   AgentScheduleModel: any
   AgentTaskModel: any
+  ChatConversationModel: any
 }
 
 import type { SiteSearchIndexManager } from '../services/search-index.js'

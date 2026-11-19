@@ -27,6 +27,7 @@ import { createFileAccessToken, createUploadToken, fileAccessTokenSecret, type F
 import { queuePdfTextExtraction } from '../../services/pdf-text-extraction.js'
 import { searchContent, type ContentSearchInput } from '../../services/content-search.js'
 import { logSearchActivity } from '../../services/search-activity.js'
+import { envValue } from '../../lib/env.js'
 
 export class CoreController {
   private readonly domain
@@ -478,6 +479,8 @@ export class CoreController {
       remove: () => this.domain.deleteSite(siteId),
     })
     await this.ctx.search?.removeSite(siteId).catch(() => undefined)
+    // Site AI conversations are about this site only; conversations across sites keep their text.
+    await this.ctx.models.ChatConversationModel.deleteMany({ siteId }).catch(() => undefined)
     await this.activity.safe({
       user: req.sub,
       action: 'site-deleted',
@@ -797,6 +800,6 @@ export class CoreController {
 }
 
 function buildLoginUrl(email: string, siteId?: string, code?: string): string {
-  const baseUrl = process.env.APP_URL ?? process.env.BETTER_AUTH_URL ?? `http://${process.env.HOST ?? '127.0.0.1'}:${process.env.PORT ?? 4100}`
+  const baseUrl = envValue('APP_URL', 'BETTER_AUTH_URL') ?? `http://${process.env.HOST ?? '127.0.0.1'}:${process.env.PORT ?? 4100}`
   return buildCoreLoginUrl({ baseUrl, email, siteId, code })
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import BaseTabs from '../components/base/BaseTabs.vue'
@@ -13,31 +13,39 @@ import User from '../components/users/User.vue'
 import UserActions from '../components/users/actions/UserActions.vue'
 import Settings from '../components/sites/Settings.vue'
 import SiteChat from '../components/sites/SiteChat.vue'
-import { useContentStore, useProfileStore, useSiteStore, useUserStore } from '../stores'
+import { provideContentFilters } from '../composables/useContentFilters'
+import { useContentStore, useSiteStore, useUserStore } from '../stores'
+import PageHeader from '../components/base/PageHeader.vue'
+import { usePreferences } from '../composables/usePreferences'
+import EmptyState from '../components/base/EmptyState.vue'
+import BaseButton from '../components/base/BaseButton.vue'
+import LoadError from '../components/base/LoadError.vue'
+import { FetchPrivateError } from '../api/fetchPrivate'
+import { errorMessage } from '../utils/errors'
 
 const siteStore = useSiteStore()
+const { preferences } = usePreferences()
 const contentStore = useContentStore()
-const profileStore = useProfileStore()
 const userStore = useUserStore()
 const route = useRoute()
 const router = useRouter()
 const loading = ref(true)
+/**
+ * The site could not be opened: `missing` (404/403 — deleted, or you no longer have access) shows a
+ * "not available" state; anything else a retryable error. Never the empty content list.
+ */
+const siteLoadError = ref<{ missing: boolean; message: string } | null>(null)
 const selected = ref<string[]>([])
-const contentSortKey = ref<'rank' | 'name' | 'size' | 'updatedAt'>('rank')
-const contentSortOrder = ref<'asc' | 'desc'>('asc')
-const contentNameFilterType = ref<'contains' | 'startsWith'>('contains')
-const contentNameFilterValue = ref('')
-const contentMimeTypes = ref<string[]>([])
-const contentSizeOperator = ref<'gt' | 'lt'>('gt')
-const contentSizeValue = ref('')
-const contentUpdatedOperator = ref<'before' | 'after'>('after')
-const contentUpdatedDate = ref('')
-const showContentFilters = ref(false)
-const contentHeaderRef = ref<HTMLElement | null>(null)
+// Sort/filter state shared by the toolbar and both content views (list and tiles).
+provideContentFilters()
 const { currentSite } = storeToRefs(siteStore)
 const siteId = computed(() => String(route.params.siteId))
-const canManageSiteUsers = computed(() => ['owner', 'admin'].includes(currentSite.value?.currentUserRole ?? ''))
-const canManageSiteSettings = computed(() => ['owner', 'admin'].includes(currentSite.value?.currentUserRole ?? ''))
+const canManageSiteUsers = computed(() =>
+  ['owner', 'admin'].includes(currentSite.value?.currentUserRole ?? ''),
+)
+const canManageSiteSettings = computed(() =>
+  ['owner', 'admin'].includes(currentSite.value?.currentUserRole ?? ''),
+)
 const currentSiteIsOwned = computed(() => currentSite.value?.owned === true)
 const isSiteAiEnabled = computed(() => currentSite.value?.attributes?.ai?.chatEnabled === true)
 const id = computed<string | undefined>(() => {
@@ -62,20 +70,28 @@ const tabs = computed(() => {
   return [
     {
       title: 'Content',
-      key: 'content',
-      prependIcon: 'fa-files',
+      key: 'content' as const,
+      prependIcon: 'fa-file-lines',
       to: id.value
-        ? { name: 'site-folder-tab', params: { siteId: siteId.value, folderId: id.value, siteTab: 'content' }, query }
+        ? {
+            name: 'site-folder-tab',
+            params: { siteId: siteId.value, folderId: id.value, siteTab: 'content' },
+            query,
+          }
         : { name: 'site-tab', params: { siteId: siteId.value, siteTab: 'content' }, query },
     },
     ...(isSiteAiEnabled.value
       ? [
           {
             title: 'AI',
-            key: 'ai',
-            prependIcon: 'fa-sparkles',
+            key: 'ai' as const,
+            prependIcon: 'fa-wand-magic-sparkles',
             to: id.value
-              ? { name: 'site-folder-tab', params: { siteId: siteId.value, folderId: id.value, siteTab: 'ai' }, query }
+              ? {
+                  name: 'site-folder-tab',
+                  params: { siteId: siteId.value, folderId: id.value, siteTab: 'ai' },
+                  query,
+                }
               : { name: 'site-tab', params: { siteId: siteId.value, siteTab: 'ai' }, query },
           },
         ]
@@ -84,10 +100,14 @@ const tabs = computed(() => {
       ? [
           {
             title: 'Users',
-            key: 'users',
+            key: 'users' as const,
             prependIcon: 'fa-users',
             to: id.value
-              ? { name: 'site-folder-tab', params: { siteId: siteId.value, folderId: id.value, siteTab: 'users' }, query }
+              ? {
+                  name: 'site-folder-tab',
+                  params: { siteId: siteId.value, folderId: id.value, siteTab: 'users' },
+                  query,
+                }
               : { name: 'site-tab', params: { siteId: siteId.value, siteTab: 'users' }, query },
           },
         ]
@@ -96,10 +116,14 @@ const tabs = computed(() => {
       ? [
           {
             title: 'Settings',
-            key: 'settings',
+            key: 'settings' as const,
             prependIcon: 'fa-gear',
             to: id.value
-              ? { name: 'site-folder-tab', params: { siteId: siteId.value, folderId: id.value, siteTab: 'settings' }, query }
+              ? {
+                  name: 'site-folder-tab',
+                  params: { siteId: siteId.value, folderId: id.value, siteTab: 'settings' },
+                  query,
+                }
               : { name: 'site-tab', params: { siteId: siteId.value, siteTab: 'settings' }, query },
           },
         ]
@@ -108,111 +132,111 @@ const tabs = computed(() => {
 })
 async function refreshSiteRouteContext() {
   loading.value = true
-  await siteStore.getSitesIfRequired()
-  await siteStore.setCurrentSite(siteId.value)
-  contentStore.activeFolderId = id.value
-  if (canManageSiteUsers.value) await userStore.getUsers(siteId.value)
-  loading.value = false
+  siteLoadError.value = null
+  try {
+    await siteStore.getSitesIfRequired()
+    await siteStore.setCurrentSite(siteId.value)
+    contentStore.activeFolderId = id.value
+  } catch (error) {
+    const missing = error instanceof FetchPrivateError && [403, 404].includes(error.status)
+    siteLoadError.value = { missing, message: errorMessage(error, 'This site could not be loaded.') }
+    return false
+  } finally {
+    loading.value = false
+  }
+  // The Users tab shows its own load error; a failure here must not break the page.
+  if (canManageSiteUsers.value) await userStore.getSiteUsers(siteId.value).catch(() => undefined)
+  return true
 }
-function resetContentFilters() {
-  contentSortKey.value = 'rank'; contentSortOrder.value = 'asc'; contentNameFilterType.value = 'contains'; contentNameFilterValue.value = ''; contentMimeTypes.value = []; contentSizeOperator.value = 'gt'; contentSizeValue.value = ''; contentUpdatedOperator.value = 'after'; contentUpdatedDate.value = ''
+async function loadRoute() {
+  if (!(await refreshSiteRouteContext())) return
+  const matchedTab = tabs.value.find(tab => tab.key === requestedTab.value)
+  if (matchedTab) {
+    contentStore.activeTab = matchedTab.key
+    return
+  }
+  void router.replace({
+    name: 'site-tab',
+    params: { siteId: siteId.value, siteTab: 'content' },
+    query: route.query,
+  })
 }
-watch(
-  [siteId, id, requestedTab],
-  async () => {
-    await refreshSiteRouteContext()
-    if (tabs.value.some(tab => tab.key === requestedTab.value)) {
-      contentStore.activeTab = requestedTab.value as any
-      return
-    }
-    void router.replace({ name: 'site-tab', params: { siteId: siteId.value, siteTab: 'content' }, query: route.query })
-  },
-  { immediate: true },
-)
-onMounted(refreshSiteRouteContext)
+watch([siteId, id, requestedTab], loadRoute, { immediate: true })
 </script>
 
 <template>
-  <div class="site-view" :class="{ 'table-active': contentStore.activeTab === 'content' && !profileStore.tileView, 'tiles-active': contentStore.activeTab === 'content' && profileStore.tileView, 'settings-active': contentStore.activeTab === 'settings' }">
-    <div class="site-overview">
-      <div class="content-title-row site-breadcrumbs-row">
-        <Breadcrumbs
-          :site-id="siteId"
-          :loading="loading"
-          :icon="currentSite?.icon ? `fasl ${currentSite.icon}` : undefined"
-          :avatar="currentSite?.attributes?.media?.icon?.dataUrl"
-        />
-        <div class="site-tags">
-          <Tag :color="currentSite?.visibility === 'public' ? 'success' : 'secondary'" :text="currentSite?.visibility === 'public' ? 'Public' : 'Private'" />
-          <Tag :text="currentSiteIsOwned ? 'Owned' : 'Shared'" />
-          <Tag v-for="tag in currentSite?.tags" :key="tag" :text="tag" size="small" />
-        </div>
-      </div>
-    </div>
-    <div class="content-header site-header" ref="contentHeaderRef">
-      <BaseTabs v-model="contentStore.activeTab" :tabs="tabs" />
-      <ContentActions
-        v-if="contentStore.activeTab === 'content'"
-        :site-id="siteId"
-        :id="id"
-        v-model:selected="selected"
-        v-model:show-filters="showContentFilters"
-        v-model:sort-key="contentSortKey"
-        v-model:sort-order="contentSortOrder"
-        v-model:name-filter-type="contentNameFilterType"
-        v-model:name-filter-value="contentNameFilterValue"
-        v-model:mime-types="contentMimeTypes"
-        v-model:size-operator="contentSizeOperator"
-        v-model:size-value="contentSizeValue"
-        v-model:updated-operator="contentUpdatedOperator"
-        v-model:updated-date="contentUpdatedDate"
-      />
-      <UserActions v-if="contentStore.activeTab === 'users'" :site-id="siteId" />
-    </div>
-    <UploadStatus class="site-upload-status" :always-display="false" :show-text="false" :height="8" />
-    <div class="site-body">
-      <div v-if="contentStore.activeTab === 'content' && !profileStore.tileView" class="site-pane">
-        <ContentList
-          :site-id="siteId"
-          :id="id"
-          display="default"
-          :site-name="siteStore.currentSite?.name ?? ''"
-          v-model:selected="selected"
-          v-model:sort-key="contentSortKey"
-          v-model:sort-order="contentSortOrder"
-          v-model:name-filter-type="contentNameFilterType"
-          v-model:name-filter-value="contentNameFilterValue"
-          v-model:mime-types="contentMimeTypes"
-          v-model:size-operator="contentSizeOperator"
-          v-model:size-value="contentSizeValue"
-          v-model:updated-operator="contentUpdatedOperator"
-          v-model:updated-date="contentUpdatedDate"
-        />
-      </div>
-      <div v-if="contentStore.activeTab === 'content' && profileStore.tileView" class="site-pane">
-        <div class="site-tiles-shell">
-          <ContentTiles
+  <div
+    class="site-view"
+    :class="{
+      'table-active': contentStore.activeTab === 'content' && !preferences.tileView,
+      'tiles-active': contentStore.activeTab === 'content' && preferences.tileView,
+      'settings-active': contentStore.activeTab === 'settings',
+    }"
+  >
+    <template v-if="siteLoadError">
+      <PageHeader title="Site not available" />
+      <EmptyState
+        v-if="siteLoadError.missing"
+        icon="fas fa-folder-open"
+        title="This site is not available"
+        text="It may have been deleted, or you no longer have access to it."
+      >
+        <template #actions>
+          <BaseButton text="Back to sites" intent="primary" :to="{ name: 'sites' }" />
+        </template>
+      </EmptyState>
+      <LoadError v-else :message="siteLoadError.message" @retry="loadRoute" />
+    </template>
+    <template v-else>
+      <PageHeader :title="currentSite?.name ?? 'Site'" />
+      <div class="site-overview">
+        <div class="content-title-row site-breadcrumbs-row">
+          <Breadcrumbs
             :site-id="siteId"
-            :id="id"
-            display="default"
-            :site-name="siteStore.currentSite?.name ?? ''"
-            v-model:selected="selected"
-            v-model:sort-key="contentSortKey"
-            v-model:sort-order="contentSortOrder"
-            v-model:name-filter-type="contentNameFilterType"
-            v-model:name-filter-value="contentNameFilterValue"
-            v-model:mime-types="contentMimeTypes"
-            v-model:size-operator="contentSizeOperator"
-            v-model:size-value="contentSizeValue"
-            v-model:updated-operator="contentUpdatedOperator"
-            v-model:updated-date="contentUpdatedDate"
+            :trail="contentStore.folderAncestors"
+            :loading="loading"
+            :icon="currentSite?.icon ? `fas ${currentSite.icon}` : undefined"
+            :avatar="currentSite?.attributes?.media?.icon?.dataUrl"
           />
+          <div class="site-tags">
+            <Tag
+              :color="currentSite?.visibility === 'public' ? 'success' : 'secondary'"
+              :text="currentSite?.visibility === 'public' ? 'Public' : 'Private'"
+            />
+            <Tag :text="currentSiteIsOwned ? 'Owned' : 'Shared'" />
+            <Tag v-for="tag in currentSite?.tags" :key="tag" :text="tag" size="small" />
+          </div>
         </div>
       </div>
-      <User v-if="contentStore.activeTab === 'users'" :site-id="siteId" />
-      <div v-if="contentStore.activeTab === 'settings' && canManageSiteSettings" class="site-pane"><Settings :site-id="siteId" :requested-tab="requestedSettingsTab" /></div>
-      <div v-if="contentStore.activeTab === 'ai' && isSiteAiEnabled" class="site-pane"><SiteChat :site-id="siteId" /></div>
-    </div>
+      <div class="content-header site-header">
+        <BaseTabs v-model="contentStore.activeTab" :tabs="tabs" />
+        <ContentActions
+          v-if="contentStore.activeTab === 'content'"
+          :id="id"
+          v-model:selected="selected"
+          :site-id="siteId"
+        />
+        <UserActions v-if="contentStore.activeTab === 'users'" :site-id="siteId" />
+      </div>
+      <UploadStatus class="site-upload-status" :always-display="false" :show-text="false" :height="8" />
+      <div class="site-body">
+        <div v-if="contentStore.activeTab === 'content' && !preferences.tileView" class="site-pane">
+          <ContentList :id="id" v-model:selected="selected" :site-id="siteId" />
+        </div>
+        <div v-if="contentStore.activeTab === 'content' && preferences.tileView" class="site-pane">
+          <div class="site-tiles-shell page-bleed">
+            <ContentTiles :id="id" v-model:selected="selected" :site-id="siteId" />
+          </div>
+        </div>
+        <User v-if="contentStore.activeTab === 'users'" :site-id="siteId" />
+        <div v-if="contentStore.activeTab === 'settings' && canManageSiteSettings" class="site-pane">
+          <Settings :site-id="siteId" :requested-tab="requestedSettingsTab" />
+        </div>
+        <div v-if="contentStore.activeTab === 'ai' && isSiteAiEnabled" class="site-pane">
+          <SiteChat :site-id="siteId" />
+        </div>
+      </div>
+    </template>
   </div>
 </template>
 
@@ -242,7 +266,7 @@ onMounted(refreshSiteRouteContext)
 }
 
 .site-overview {
-  padding: 8px 0 8px;
+  padding: 8px 0;
   margin-bottom: 10px;
 }
 
@@ -298,12 +322,6 @@ onMounted(refreshSiteRouteContext)
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  width: calc(100% + 16px);
-  margin-left: -8px;
-  margin-right: -8px;
-  padding-left: 8px;
-  padding-right: 8px;
-  box-sizing: border-box;
 }
 
 .site-view.tiles-active :deep(.content-tiles) {

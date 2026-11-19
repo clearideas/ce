@@ -38,6 +38,10 @@ export function validateCeAgentManifest(input: unknown): AgentManifest {
   if (parsed.connections?.length) {
     throw new BadRequestError('Connections are not supported by this edition.')
   }
+  // Agent runtime 0.6 workspaces run tools in a per-run sandbox; CE offers only its Site tools.
+  if (parsed.workspaces?.length) {
+    throw new BadRequestError('Workspaces are not supported by this edition.')
+  }
 
   assertDefaultModel(parsed.model, 'Agent')
   for (const step of parsed.steps) assertSupportedStep(step)

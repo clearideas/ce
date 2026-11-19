@@ -2,11 +2,13 @@
 import { computed, ref } from 'vue'
 import BaseButton from '../../base/BaseButton.vue'
 import UserGroupDialog from './UserGroupDialog.vue'
+import type { ButtonIntent } from '../../../types/ui'
 
 interface Props {
   showAsMenu?: boolean
   text?: string
   variant?: 'text' | 'flat' | 'elevated' | 'tonal' | 'outlined' | 'plain'
+  intent?: ButtonIntent
   color?: string
   size?: 'x-small' | 'small' | 'default' | 'large' | 'x-large'
   density?: 'default' | 'comfortable' | 'compact'
@@ -18,13 +20,12 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  intent: 'secondary',
   showAsMenu: false,
-  color: 'primary',
-  variant: 'text',
   slim: true,
   size: 'default',
   density: 'comfortable',
-  prependIcon: 'fasl fa-user-group',
+  prependIcon: 'fas fa-user-group',
   text: '',
   rounded: true,
   dialog: undefined,
@@ -53,6 +54,7 @@ function openDialog() {
     :text="props.text || 'New group'"
     :color="props.color"
     :variant="props.variant"
+    :intent="props.intent"
     density="default"
     :size="props.size"
     :prepend-icon="props.prependIcon"
@@ -71,9 +73,5 @@ function openDialog() {
     <VListItemTitle>{{ props.text || 'New group' }}</VListItemTitle>
   </VListItem>
 
-  <UserGroupDialog
-    v-if="!props.renderUiOnly && props.dialog === undefined"
-    v-model:is-dialog-visible="dialogModel"
-    :is-new="true"
-  />
+  <UserGroupDialog v-if="!props.renderUiOnly && props.dialog === undefined" v-model="dialogModel" />
 </template>

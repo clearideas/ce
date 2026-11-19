@@ -61,7 +61,14 @@ describe('core site query helpers', () => {
   })
 
   it('builds permitted site queries for MCP/search/analytics scoping', async () => {
-    expect(buildPermittedSitesQuery({ accountId: 'account-1', userId: 'user-1', roles: ['owner', 'viewer'], siteIds: ['site-1'] })).toMatchObject({
+    expect(
+      buildPermittedSitesQuery({
+        accountId: 'account-1',
+        userId: 'user-1',
+        roles: ['owner', 'viewer'],
+        siteIds: ['site-1'],
+      }),
+    ).toMatchObject({
       _id: { $in: ['site-1'] },
     })
 

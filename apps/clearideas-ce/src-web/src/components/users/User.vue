@@ -12,10 +12,18 @@ import ContentListItem from '../content/ContentListItem.vue'
 import NewUser from './actions/NewUser.vue'
 import UserItemMenu from './menuItems/UserItemMenu.vue'
 import { useProfileStore, useSiteStore, useUserStore } from '../../stores'
+import type { User } from '../../types/domain'
+import { SITE_ROLES, type SiteRoleOption } from '../../config/roles'
+import { ICONS } from '../../icons'
+import EmptyState from '../base/EmptyState.vue'
+import LoadError from '../base/LoadError.vue'
+import { errorMessage } from '../../utils/errors'
+import { usePreferences } from '../../composables/usePreferences'
 
 const props = defineProps<{ siteId?: string }>()
 
 const userStore = useUserStore()
+const { preferences } = usePreferences()
 const siteStore = useSiteStore()
 const profileStore = useProfileStore()
 const { mobile } = useDisplay()
@@ -24,7 +32,7 @@ const page = ref(1)
 const expanded = ref<string[]>([])
 const activeRoleMenuUserId = ref<string | null>(null)
 const hasSite = computed(() => !!props.siteId)
-const users = computed(() => hasSite.value ? userStore.siteUsers : userStore.users)
+const users = computed(() => (hasSite.value ? userStore.siteUsers : userStore.users))
 const items = computed(() => {
   if (hasSite.value) void userStore.siteUsersLastUpdated
   else void userStore.usersLastUpdated
@@ -32,17 +40,16 @@ const items = computed(() => {
 })
 const loading = computed(() => !!userStore.loadingSiteUsers || !!userStore.loadingUsers)
 
-const roleOptions = [
-  { title: 'Owner', subtitle: 'Full control', value: 'owner', icon: 'fasl fa-crown' },
-  { title: 'Admin', subtitle: 'Manage users and content', value: 'admin', icon: 'fasl fa-user-shield' },
-  { title: 'Editor', subtitle: 'Upload and manage content', value: 'editor', icon: 'fasl fa-pen-to-square' },
-  { title: 'Uploader', subtitle: 'Upload content', value: 'uploader', icon: 'fasl fa-upload' },
-  { title: 'Downloader', subtitle: 'Download content', value: 'downloader', icon: 'fasl fa-download' },
-  { title: 'Viewer', subtitle: 'View and download content', value: 'viewer', icon: 'fasl fa-eye' },
-  { title: 'Disabled', subtitle: 'No access', value: 'disabled', icon: 'fasl fa-user-slash' },
-]
+const roleOptions = SITE_ROLES
 
-const headers = computed<any[]>(() => [
+type UserHeader = {
+  title: string
+  key: string
+  mobileHide?: boolean
+  hidden?: boolean
+  hiddenWithSite?: boolean
+}
+const headers = computed<UserHeader[]>(() => [
   { title: 'Name', key: 'displayName' },
   { title: 'Role', key: 'sites[0].role', mobileHide: false, hidden: true, hiddenWithSite: false },
   { title: 'Last active', key: 'lastActive', mobileHide: true },
@@ -50,40 +57,56 @@ const headers = computed<any[]>(() => [
 
 const computedHeaders = computed(() => {
   const activeHeaders = hasSite.value
-    ? headers.value.filter(header => !header.hiddenWithSite && !(header.hidden && header.hiddenWithSite !== false))
+    ? headers.value.filter(
+        header => !header.hiddenWithSite && !(header.hidden && header.hiddenWithSite !== false),
+      )
     : headers.value.filter(header => !header.hidden)
   return mobile.value ? activeHeaders.filter(header => !header.mobileHide) : activeHeaders
 })
 
-function userStatusToString(status: string) {
+function userStatusToString(status?: string) {
   return String(status || 'active').replaceAll('-', ' ')
 }
 
-function isNonActiveUser(item: any) {
+function isNonActiveUser(item: Pick<User, 'status'>) {
   return String(item.status ?? 'active') !== 'active'
 }
 
-function isCurrentUser(item: any) {
+function isCurrentUser(item: Pick<User, 'id' | 'email'>) {
   return (
     (!!profileStore.user?.id && String(item.id) === String(profileStore.user.id)) ||
-    (!!profileStore.user?.email && String(item.email).toLowerCase() === String(profileStore.user.email).toLowerCase())
+    (!!profileStore.user?.email &&
+      String(item.email).toLowerCase() === String(profileStore.user.email).toLowerCase())
   )
 }
 
-function getUserStatusChipColor(status: string) {
+function getUserStatusChipColor(status?: string) {
   return String(status).includes('bounced') ? 'error' : undefined
 }
 
-function getUserStatusChipIcon(status: string) {
-  return String(status).includes('bounced') ? 'fass fa-circle-exclamation' : 'fass fa-circle-envelope'
+function getUserStatusChipIcon(status?: string) {
+  return String(status).includes('bounced') ? 'fas fa-circle-exclamation' : 'fas fa-envelope'
 }
 
-function getUserSiteRole(item: any) {
+function getUserSiteRole(item: Pick<User, 'sites' | 'roles'>) {
   return item.sites?.[0]?.role ?? item.roles?.[0] ?? 'member'
 }
 
 function getRoleDescription(role: string) {
   return roleOptions.find(roleOption => roleOption.value === role)
+}
+
+function getUserSiteExpiry(item: Pick<User, 'sites'>): Date | null {
+  const expiresAt = item.sites?.[0]?.expiresAt
+  return expiresAt ? new Date(expiresAt) : null
+}
+
+type RoleOption = SiteRoleOption
+
+/** VSelect `item` slot scope differs between Vuetify majors (raw item vs. ListItem with `.raw`). */
+function toRoleOption(item: unknown): RoleOption {
+  const candidate = item && typeof item === 'object' && 'raw' in item ? (item as { raw: unknown }).raw : item
+  return candidate as RoleOption
 }
 
 function isEditableRole(role: string) {
@@ -94,7 +117,7 @@ function getReadOnlyRoleTooltip(role: string) {
   return role === 'owner' ? 'Site owner cannot be changed here.' : 'Role cannot be changed.'
 }
 
-function getLastActive(item: any) {
+function getLastActive(item: Pick<User, 'lastActive'>) {
   return item.lastActive ? DateTime.fromISO(item.lastActive).toRelative() : ''
 }
 
@@ -120,9 +143,17 @@ async function updateSiteUser(_id: string, _role: string, _expiresAt: Date | nul
   if (props.siteId) await userStore.updateSiteUser(props.siteId, _id, _role, _expiresAt)
 }
 
+/** Why the list could not be loaded (shown instead of "No users"); '' when it loaded. */
+const loadError = ref('')
+
 async function loadUsers() {
-  if (hasSite.value) await userStore.getSiteUsers(props.siteId!)
-  else await Promise.all([userStore.getUsers(), siteStore.getSitesIfRequired()])
+  loadError.value = ''
+  try {
+    if (hasSite.value) await userStore.getSiteUsers(props.siteId!)
+    else await Promise.all([userStore.getUsers(), siteStore.getSitesIfRequired()])
+  } catch (error) {
+    loadError.value = errorMessage(error, 'Users could not be loaded.')
+  }
 }
 
 watch(() => props.siteId, loadUsers)
@@ -133,7 +164,7 @@ onMounted(loadUsers)
   <div class="data-table-wrapper">
     <VDataTable
       v-model:page="page"
-      v-model:items-per-page="profileStore.userPageSize"
+      v-model:items-per-page="preferences.userPageSize"
       v-model:expanded="expanded"
       density="comfortable"
       :items="hasSite ? userStore.siteUsers : userStore.users"
@@ -146,6 +177,8 @@ onMounted(loadUsers)
       :show-expand="!hasSite"
       class="h-100"
     >
+      <!-- The expand column toggles each user's site list; its header needs a name too. -->
+      <template #header.data-table-expand><span class="d-sr-only">Sites</span></template>
       <template #item.displayName="{ item }">
         <ContentListItem>
           <template #prepend>
@@ -155,13 +188,7 @@ onMounted(loadUsers)
             <div class="d-flex flex-column flex-sm-row align-sm-center">
               <span>{{ item.displayName ?? item.email }}</span>
               <div class="d-flex flex-wrap ga-1 mt-1 mt-sm-0 ms-sm-2">
-                <VChip
-                  v-if="isCurrentUser(item)"
-                  text="You"
-                  color="primary"
-                  size="x-small"
-                  variant="tonal"
-                />
+                <VChip v-if="isCurrentUser(item)" text="You" color="primary" size="x-small" variant="tonal" />
                 <VChip
                   v-if="isNonActiveUser(item)"
                   :text="userStatusToString(item.status)"
@@ -172,16 +199,12 @@ onMounted(loadUsers)
               </div>
             </div>
           </template>
-          <template #subtitle v-if="!!item.displayName">{{ item.email }}</template>
+          <template v-if="!!item.displayName" #subtitle>{{ item.email }}</template>
           <template #append>
             <div class="d-flex flex-row ga-1">
               <div class="info-icons">
                 <div class="info-icon">
-                  <UserItemMenu
-                    :item="item"
-                    :site-id="props.siteId"
-                    :role="item.sites?.[0]?.role"
-                  />
+                  <UserItemMenu :item="item" :site-id="props.siteId" :role="item.sites?.[0]?.role" />
                 </div>
               </div>
             </div>
@@ -201,23 +224,24 @@ onMounted(loadUsers)
               cursor="pointer"
             >
               <VSelect
-                v-model="item.sites[0].role"
+                :model-value="getUserSiteRole(item)"
+                :aria-label="`Role for ${item.displayName ?? item.email}`"
                 :items="roleOptions"
                 density="compact"
                 variant="plain"
                 hide-details
                 class="compact-inline-selector__select user-role-selector-dropdown"
-                menu-icon="fasl fa-chevron-down"
+                menu-icon="fas fa-chevron-down"
                 :menu-props="{ contentClass: 'compact-inline-selector-menu' }"
-                @update:model-value="updateSiteUser(item.id, $event, item.sites[0].expiresAt)"
+                @update:model-value="updateSiteUser(item.id, $event, getUserSiteExpiry(item))"
                 @update:menu="activeRoleMenuUserId = $event ? item.id : null"
               >
                 <template #item="{ props: slotProps, item: slotItem }">
                   <div class="data-table-item" v-bind="slotProps">
                     <ContentListItem
-                      :text="slotItem.raw.title"
-                      :subtitle="slotItem.raw.subtitle"
-                      :prepend-icon="slotItem.raw.icon"
+                      :text="toRoleOption(slotItem).title"
+                      :subtitle="toRoleOption(slotItem).subtitle"
+                      :prepend-icon="toRoleOption(slotItem).icon"
                     />
                   </div>
                 </template>
@@ -235,13 +259,28 @@ onMounted(loadUsers)
           </div>
         </div>
       </template>
+      <template #item.data-table-expand="{ props: expandProps, item, internalItem, isExpanded }">
+        <!-- Vuetify's expand toggle is an unnamed icon button; name it for the row it belongs to. -->
+        <VBtn
+          v-bind="expandProps"
+          :aria-label="`${isExpanded(internalItem) ? 'Hide' : 'Show'} sites for ${item.displayName ?? item.email}`"
+          :aria-expanded="isExpanded(internalItem)"
+        />
+      </template>
       <template #expanded-row="{ columns, item }">
         <tr class="data-table-item expanded-row">
           <td :colspan="columns.length" class="pb-4">
             <div class="d-flex flex-wrap ga-2 mx-2">
               <SiteSelectTags
                 class="mb-1"
-                :items="(item.sites ?? []).map((site: any) => ({ id: site.siteId, title: site.name, role: site.role, expiresAt: site.expiresAt }))"
+                :items="
+                  (item.sites ?? []).map(site => ({
+                    id: site.siteId,
+                    title: site.name,
+                    role: site.role,
+                    expiresAt: site.expiresAt,
+                  }))
+                "
                 show-all
               />
             </div>
@@ -250,7 +289,11 @@ onMounted(loadUsers)
       </template>
       <template #item.status="{ item }">
         <div class="d-flex flex-row mx-2 ga-2">
-          <Tag :text="userStatusToString(item.status)" :color="item.status === 'active' ? 'success' : undefined" size="small" />
+          <Tag
+            :text="userStatusToString(item.status)"
+            :color="item.status === 'active' ? 'success' : undefined"
+            size="small"
+          />
         </div>
       </template>
       <template #item.lastActive="{ item }">
@@ -263,34 +306,25 @@ onMounted(loadUsers)
       </template>
       <template #bottom />
       <template #no-data>
-        <VEmptyState title="No users" justify="center" class="flex-grow-1">
-          <template #media>
-            <VIcon icon="fasds fa-users" color="info" />
-          </template>
-          <template #text>
-            <p v-if="hasSite" class="text-medium-emphasis">Add users to collaborate in this site.</p>
-            <p v-else class="text-medium-emphasis">Add users to collaborate across your sites.</p>
-          </template>
+        <LoadError v-if="loadError" :message="loadError" @retry="loadUsers" />
+        <EmptyState
+          v-else
+          :icon="ICONS.users"
+          title="No users"
+          :text="
+            hasSite ? 'Add users to collaborate in this site.' : 'Add users to collaborate across your sites.'
+          "
+        >
           <template #actions>
-            <NewUser
-              :site-id="props.siteId"
-              :show-sites="!hasSite"
-              :show-as-menu="false"
-              text="Add user"
-              variant="flat"
-              rounded
-              size="large"
-              color="info"
-              density="default"
-            />
+            <NewUser :site-id="props.siteId" :show-sites="!hasSite" :show-as-menu="false" text="Add user" />
           </template>
-        </VEmptyState>
+        </EmptyState>
       </template>
     </VDataTable>
   </div>
   <TableFooter
     v-model:page="page"
-    v-model:items-per-page="profileStore.userPageSize"
+    v-model:items-per-page="preferences.userPageSize"
     :items="items"
     item-label="Users"
   />
@@ -308,16 +342,16 @@ onMounted(loadUsers)
 .data-table-wrapper :deep(.v-data-table-rows-loading),
 .data-table-wrapper :deep(.v-data-table-rows-loading td),
 .data-table-wrapper :deep(.v-data-table-rows-loading .v-data-table__td) {
-  vertical-align: top !important;
+  vertical-align: top;
 }
 
 .data-table-wrapper :deep(.v-data-table-rows-loading > td),
 .data-table-wrapper :deep(.v-data-table-rows-loading .v-data-table__td) {
-  padding: 0 !important;
+  padding: 0;
 }
 
 .data-table-wrapper :deep(.v-data-table-rows-loading .content-list-loading-state) {
-  margin: 0 !important;
+  margin: 0;
 }
 
 .role-selector-container {

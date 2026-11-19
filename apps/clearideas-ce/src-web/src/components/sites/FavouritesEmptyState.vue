@@ -1,5 +1,12 @@
+<script setup lang="ts">
+import EmptyState from '../base/EmptyState.vue'
+import { ICONS } from '../../icons'
+</script>
+
 <template>
-  <VEmptyState title="No favourite sites" text="Favourite sites will appear here.">
-    <template #media><VIcon icon="fasl fa-star" color="warning" /></template>
-  </VEmptyState>
+  <EmptyState
+    :icon="ICONS.favourite"
+    title="No favourite sites"
+    text="Use the star on a site to pin it here and to the navigation sidebar."
+  />
 </template>

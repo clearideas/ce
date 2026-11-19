@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import type { VForm } from 'vuetify/components'
-import BaseButton from '../../base/BaseButton.vue'
 import BaseDialog from '../../base/BaseDialog.vue'
 import ContentListItem from '../../content/ContentListItem.vue'
 import { useSiteStore, useUserStore } from '../../../stores'
+import { ASSIGNABLE_SITE_ROLES } from '../../../config/roles'
+import { getVuetifyItemRaw } from '../../../utils/vuetify'
 
 interface Props {
   siteId?: string
@@ -19,7 +20,7 @@ const props = withDefaults(defineProps<Props>(), {
   title: undefined,
 })
 
-const isDialogVisible = defineModel<boolean>('isDialogVisible', { required: true })
+const isDialogVisible = defineModel<boolean>({ required: true })
 const userStore = useUserStore()
 const siteStore = useSiteStore()
 const refForm = ref<VForm>()
@@ -29,47 +30,22 @@ const selectedSites = ref<string[]>([])
 const role = ref('viewer')
 const isLoading = ref(false)
 const dialogTitle = computed(() => props.title || 'Add user')
-const filteredSites = computed(() => siteStore.sites.filter(site => site.currentUserRole === 'owner' || site.currentUserRole === 'admin'))
-const selectedSitesLabel = computed(() => selectedSites.value.length > 0 ? `${selectedSites.value.length} sites selected` : 'Select sites')
-const roleOptions = [
-  {
-    title: 'Admin',
-    subtitle: 'Can manage all site settings and users',
-    value: 'admin',
-    icon: 'fasl fa-user-shield',
-  },
-  {
-    title: 'Editor',
-    subtitle: 'Can manage all site content',
-    value: 'editor',
-    icon: 'fasl fa-pencil',
-  },
-  {
-    title: 'Uploader',
-    subtitle: 'Can upload content',
-    value: 'uploader',
-    icon: 'fasl fa-upload',
-  },
-  {
-    title: 'Downloader',
-    subtitle: 'Can view and download content',
-    value: 'downloader',
-    icon: 'fasl fa-arrow-down',
-  },
-  {
-    title: 'Viewer',
-    subtitle: 'Can view content',
-    value: 'viewer',
-    icon: 'fasl fa-eye',
-  },
-  {
-    title: 'Disabled',
-    subtitle: 'Cannot access site',
-    value: 'disabled',
-    icon: 'fasl fa-ban',
-  },
-]
-const selectedRoleLabel = computed(() => roleOptions.find(option => option.value === role.value)?.title ?? 'Select role')
+const filteredSites = computed(() =>
+  siteStore.sites.filter(site => site.currentUserRole === 'owner' || site.currentUserRole === 'admin'),
+)
+const siteOptions = computed(() =>
+  filteredSites.value.map(site => ({
+    title: site.name,
+    value: site.id,
+    icon: (site.icon && `fas ${site.icon}`) || 'fas fa-folder-open',
+  })),
+)
+const selectedSitesLabel = computed(() =>
+  selectedSites.value.length > 0 ? `${selectedSites.value.length} sites selected` : 'Select sites',
+)
+const roleOptions = ASSIGNABLE_SITE_ROLES
+const siteOption = (item: unknown) => getVuetifyItemRaw<{ title: string; value: string; icon: string }>(item)
+const roleOption = (item: unknown) => getVuetifyItemRaw<(typeof ASSIGNABLE_SITE_ROLES)[number]>(item)
 
 function resetForm() {
   email.value = ''
@@ -82,12 +58,6 @@ function resetForm() {
 function handleCancel() {
   isDialogVisible.value = false
   resetForm()
-}
-
-function toggleSite(siteId: string) {
-  selectedSites.value = selectedSites.value.includes(siteId)
-    ? selectedSites.value.filter(id => id !== siteId)
-    : [...selectedSites.value, siteId]
 }
 
 watch(isDialogVisible, async value => {
@@ -116,8 +86,17 @@ async function addUser() {
 </script>
 
 <template>
-  <BaseDialog v-model="isDialogVisible" width="500" :title="dialogTitle">
-    <VForm ref="refForm" @submit.prevent="addUser">
+  <BaseDialog
+    v-model="isDialogVisible"
+    width="500"
+    :title="dialogTitle"
+    form="user-form"
+    confirm-text="Add user"
+    :confirm-disabled="!email"
+    :loading="isLoading"
+    @cancel="handleCancel"
+  >
+    <VForm id="user-form" ref="refForm" @submit.prevent="addUser">
       <VCardText>
         <div class="d-flex flex-column ga-4">
           <VTextField
@@ -127,104 +106,55 @@ async function addUser() {
             autofocus
             :rules="[(value: string) => /.+@.+\..+/.test(String(value || '')) || 'Valid email is required']"
           />
-          <VTextField
-            v-model="displayName"
-            label="Name"
-            maxlength="100"
-          />
-          <div v-if="props.showSites && !props.siteId">
-            <VMenu location="bottom start" :close-on-content-click="false">
-              <template #activator="{ props: menuProps }">
-                <VTextField
-                  :model-value="selectedSitesLabel"
-                  readonly
-                  label="Sites"
-                  density="comfortable"
-                  v-bind="menuProps"
-                  :rules="[() => selectedSites.length > 0 || 'At least one site is required']"
-                >
-                  <template #prepend-inner>
-                    <VIcon icon="fasl fa-building" color="secondary" />
-                  </template>
-                  <template #append-inner>
-                    <VIcon icon="fasl fa-chevron-down" color="secondary" />
-                  </template>
-                </VTextField>
-              </template>
-              <VList density="compact" max-width="400" max-height="300">
-                <VListItem
-                  v-for="site in filteredSites"
-                  :key="site.id"
-                  :active="selectedSites.includes(site.id)"
-                  @click.stop="toggleSite(site.id)"
-                >
-                  <ContentListItem
-                    :text="site.name"
-                    :prepend-icon="(site.icon && `fasl ${site.icon}`) || 'fasl fa-folder-open'"
-                  />
-                  <template #append>
-                    <VIcon v-if="selectedSites.includes(site.id)" icon="fasl fa-check" color="primary" size="14" />
-                  </template>
-                </VListItem>
-              </VList>
-            </VMenu>
-          </div>
-          <div>
-            <VMenu location="bottom start">
-              <template #activator="{ props: menuProps }">
-                <VTextField
-                  :model-value="selectedRoleLabel"
-                  readonly
-                  label="Role"
-                  density="comfortable"
-                  v-bind="menuProps"
-                  :rules="[() => !!role || 'Role is required']"
-                >
-                  <template #prepend-inner>
-                    <VIcon :icon="roleOptions.find(option => option.value === role)?.icon || 'fasl fa-user'" color="secondary" />
-                  </template>
-                  <template #append-inner>
-                    <VIcon icon="fasl fa-chevron-down" color="secondary" />
-                  </template>
-                </VTextField>
-              </template>
-              <VList density="compact" max-width="400" max-height="300">
-                <VListItem
-                  v-for="roleOption in roleOptions"
-                  :key="roleOption.value"
-                  :active="role === roleOption.value"
-                  @click="role = roleOption.value"
-                >
-                  <template #prepend>
-                    <VIcon :icon="roleOption.icon" class="fs-14" color="secondary" />
-                  </template>
-                  <div class="d-flex flex-column">
-                    <span class="font-weight-medium">{{ roleOption.title }}</span>
-                    <span class="text-body-2 text-medium-emphasis">{{ roleOption.subtitle }}</span>
-                  </div>
-                  <template #append>
-                    <VIcon v-if="role === roleOption.value" icon="fasl fa-check" color="primary" size="14" />
-                  </template>
-                </VListItem>
-              </VList>
-            </VMenu>
-          </div>
+          <VTextField v-model="displayName" label="Name" maxlength="100" />
+          <VSelect
+            v-if="props.showSites && !props.siteId"
+            v-model="selectedSites"
+            :items="siteOptions"
+            label="Sites"
+            placeholder="Select sites"
+            persistent-placeholder
+            density="comfortable"
+            multiple
+            menu-icon="fas fa-chevron-down"
+            :rules="[() => selectedSites.length > 0 || 'At least one site is required']"
+          >
+            <template #prepend-inner><VIcon icon="fas fa-building" color="secondary" /></template>
+            <template #selection="{ index }">
+              <span v-if="index === 0">{{ selectedSitesLabel }}</span>
+            </template>
+            <template #item="{ props: itemProps, item }">
+              <VListItem v-bind="itemProps" :title="undefined">
+                <ContentListItem :text="siteOption(item).title" :prepend-icon="siteOption(item).icon" />
+              </VListItem>
+            </template>
+          </VSelect>
+          <VSelect
+            v-model="role"
+            :items="roleOptions"
+            item-title="title"
+            item-value="value"
+            label="Role"
+            density="comfortable"
+            menu-icon="fas fa-chevron-down"
+            :rules="[() => !!role || 'Role is required']"
+          >
+            <template #prepend-inner>
+              <VIcon
+                :icon="roleOptions.find(option => option.value === role)?.icon || 'fas fa-user'"
+                color="secondary"
+              />
+            </template>
+            <template #item="{ props: itemProps, item }">
+              <VListItem
+                v-bind="itemProps"
+                :subtitle="roleOption(item).subtitle"
+                :prepend-icon="roleOption(item).icon"
+              />
+            </template>
+          </VSelect>
         </div>
       </VCardText>
-      <VDivider />
-      <VCardActions class="bg-surface-light">
-        <VSpacer />
-        <BaseButton text="Cancel" color="default" variant="flat" type="reset" :slim="false" @click="handleCancel" />
-        <BaseButton
-          text="Add user"
-          color="success"
-          variant="flat"
-          type="submit"
-          :disabled="!email || isLoading"
-          :slim="false"
-          :loading="isLoading"
-        />
-      </VCardActions>
     </VForm>
   </BaseDialog>
 </template>

@@ -24,7 +24,15 @@ jobs:
       - run: npm run check:import-boundaries
       - run: npm run validate:ce-routes
       - run: npm run check:ce-hygiene
-      - run: npm run test:ce
+      - run: npm run check:ce-ui
+      - run: npm run type-check:ce:web
+      - run: npm run lint:ce
+      - run: npm run lint:ce:styles
+      - run: npm run format:ce:check
+      - run: npm run test:ce:unit
+      - run: npm run test:ce:api
+      # Web suite with coverage: fails below the thresholds in vitest.web.config.ts (plan item 4.4).
+      - run: npm run test:ce:web:coverage
       - run: npm run test:ce:e2e
       - run: npm audit --audit-level=high
       - run: docker build -f apps/clearideas-ce/Dockerfile -t clearideas-ce:ci .

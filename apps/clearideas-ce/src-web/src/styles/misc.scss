@@ -1,5 +1,4 @@
 .svg-inline--fa[aria-hidden="true"] {
-  tabindex: -1;
   outline: none;
 }
 
@@ -9,14 +8,8 @@
 }
 
 .wrap-text {
-  white-space: normal !important;
-  overflow-wrap: break-word !important;
-}
-
-.ellipsis {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 
 .v-overlay__scrim {
@@ -24,25 +17,27 @@
   background-color: rgb(var(--v-theme-surface)) !important;
 }
 
-
-
-.divider {
-  display: flex;
-  align-items: center;
-  width: 100%;
+/* Keyboard focus is always visible (WCAG 2.4.7/2.4.11). Mouse focus keeps Vuetify's subtle overlay. */
+:where(a, button, [role="button"], [role="separator"], [tabindex]):focus-visible {
+  outline: 2px solid rgb(var(--v-theme-primary));
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
-.divider::before,
-.divider::after {
-  content: "";
-  flex: 1;
-  border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); /* Change line color or style as needed */
+.v-btn:focus-visible,
+.v-list-item:focus-visible,
+.v-selection-control__input:has(input:focus-visible) {
+  outline: 2px solid rgb(var(--v-theme-primary));
+  outline-offset: 2px;
 }
 
-.divider::before {
-  margin-right: 0.5em; /* Adjust spacing between line and text */
-}
-
-.divider::after {
-  margin-left: 0.5em; /* Adjust spacing between text and line */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

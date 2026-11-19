@@ -48,10 +48,13 @@ describe('CE agent API', () => {
       .expect(201)
       .then(response => response.body.agent.id)
 
-    await ctx.agent.get('/api/agents').expect(200).expect(({ body }) => {
-      expect(body.runtimeConfigured).toBe(true)
-      expect(body.agents).toEqual([expect.objectContaining({ id: agentId, revision: 1 })])
-    })
+    await ctx.agent
+      .get('/api/agents')
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.runtimeConfigured).toBe(true)
+        expect(body.agents).toEqual([expect.objectContaining({ id: agentId, revision: 1 })])
+      })
     await ctx.agent
       .patch(`/api/agents/${agentId}`)
       .send({ manifest: { ...manifest, description: 'Updated' } })
@@ -63,28 +66,49 @@ describe('CE agent API', () => {
       .send({ variables: [{ key: 'question', value: 'What changed?' }] })
       .expect(200)
       .expect('content-type', /ndjson/)
-    const messages = stream.text.trim().split('\n').map(line => JSON.parse(line))
-    expect(messages).toEqual(expect.arrayContaining([
-      expect.objectContaining({ kind: 'accepted' }),
-      expect.objectContaining({ kind: 'result', result: expect.objectContaining({ output: 'A concise agent answer.' }) }),
-    ]))
+    const messages = stream.text
+      .trim()
+      .split('\n')
+      .map(line => JSON.parse(line))
+    expect(messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: 'accepted' }),
+        expect.objectContaining({
+          kind: 'result',
+          result: expect.objectContaining({ output: 'A concise agent answer.' }),
+        }),
+      ]),
+    )
     let completedRunId = ''
-    await ctx.agent.get(`/api/agent-runs?agentId=${agentId}`).expect(200).expect(({ body }) => {
-      expect(body.runs[0]).toMatchObject({ agentId, agentRevision: 2, status: 'completed', output: 'A concise agent answer.' })
-      completedRunId = body.runs[0].runId
-    })
-    await ctx.agent.get(`/api/agent-runs/${completedRunId}`).expect(200).expect(({ body }) => {
-      expect(body.run).toMatchObject({
-        runId: completedRunId,
-        status: 'completed',
-        output: 'A concise agent answer.',
-        transcript: expect.any(Array),
+    await ctx.agent
+      .get(`/api/agent-runs?agentId=${agentId}`)
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.runs[0]).toMatchObject({
+          agentId,
+          agentRevision: 2,
+          status: 'completed',
+          output: 'A concise agent answer.',
+        })
+        completedRunId = body.runs[0].runId
       })
-    })
+    await ctx.agent
+      .get(`/api/agent-runs/${completedRunId}`)
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.run).toMatchObject({
+          runId: completedRunId,
+          status: 'completed',
+          output: 'A concise agent answer.',
+          transcript: expect.any(Array),
+        })
+      })
 
     await ctx.agent
       .post('/api/agents')
-      .send({ manifest: { ...manifest, steps: [{ id: 'bad', type: 'webhook', url: 'https://example.com' }] } })
+      .send({
+        manifest: { ...manifest, steps: [{ id: 'bad', type: 'webhook', url: 'https://example.com' }] },
+      })
       .expect(400)
   })
 
@@ -110,8 +134,13 @@ describe('CE agent API', () => {
     })
     const task = await ctx.runtime.models.AgentTaskModel.findOne({ scheduleId: schedule.id }).lean()
     expect(task).toMatchObject({ status: 'completed', runId: expect.stringMatching(/^run_/) })
-    await ctx.agent.get(`/api/agent-runs?agentId=${agentId}`).expect(200).expect(({ body }) => {
-      expect(body.runs).toEqual(expect.arrayContaining([expect.objectContaining({ source: 'scheduled', status: 'completed' })]))
-    })
+    await ctx.agent
+      .get(`/api/agent-runs?agentId=${agentId}`)
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.runs).toEqual(
+          expect.arrayContaining([expect.objectContaining({ source: 'scheduled', status: 'completed' })]),
+        )
+      })
   })
 })

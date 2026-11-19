@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useContentTypes } from '../../composables/useContentTypes'
+import { siteContentPermissions } from '../../config/roles'
 import { useContentStore, useSiteStore } from '../../stores'
+import EmptyState from '../base/EmptyState.vue'
 import DownloadIcon from '../content/actions/DownloadIcon.vue'
 import AudioEmbed from './AudioEmbed.vue'
 import CodeEmbed from './CodeEmbed.vue'
@@ -19,9 +21,23 @@ interface Props {
 const props = defineProps<Props>()
 const contentStore = useContentStore()
 const siteStore = useSiteStore()
-const { MarkupContentTypes, CodeContentTypes, PDFContentTypes, ImageContentTypes, VideoContentTypes, AudioContentTypes, ViewerContentTypes } = useContentTypes()
-const canDownload = computed(() => contentStore.file?.kind === 'file' && siteStore.currentSite?.currentUserRole !== 'viewer')
-const contentType = computed(() => contentStore.file?.contentType || inferContentTypeFromName(contentStore.file?.name ?? ''))
+const {
+  MarkupContentTypes,
+  CodeContentTypes,
+  PDFContentTypes,
+  ImageContentTypes,
+  VideoContentTypes,
+  AudioContentTypes,
+  ViewerContentTypes,
+} = useContentTypes()
+const canDownload = computed(
+  () =>
+    contentStore.file?.kind === 'file' &&
+    siteContentPermissions(siteStore.currentSite?.currentUserRole).canDownload,
+)
+const contentType = computed(
+  () => contentStore.file?.contentType || inferContentTypeFromName(contentStore.file?.name ?? ''),
+)
 
 function inferContentTypeFromName(name: string) {
   const extension = name.toLowerCase().split('.').pop()
@@ -59,38 +75,98 @@ function inferContentTypeFromName(name: string) {
 <template>
   <div class="file-viewer">
     <div v-if="props.loading" class="viewer-loading d-flex justify-center align-center">
-      <VProgressCircular indeterminate color="primary" size="100" width="8" />
+      <VProgressCircular aria-label="Loading file" indeterminate color="primary" size="100" width="8" />
     </div>
-    <PDFEmbed v-if="PDFContentTypes.includes(contentType)" class="viewer-pane" :id="props.id" :site-id="props.siteId" :content-type="contentType" :name="contentStore.file?.name || ''" :initial-page="props.initialPage" />
-    <ImageEmbed v-if="ImageContentTypes.includes(contentType)" class="viewer-pane" :id="props.id" :site-id="props.siteId" :content-type="contentType" :name="contentStore.file?.name || ''" />
-    <VideoEmbed v-if="VideoContentTypes.includes(contentType)" class="viewer-pane" :id="props.id" :site-id="props.siteId" :content-type="contentType" :name="contentStore.file?.name || ''" />
-    <AudioEmbed v-if="AudioContentTypes.includes(contentType)" class="viewer-pane" :id="props.id" :site-id="props.siteId" :content-type="contentType" :name="contentStore.file?.name || ''" />
-    <HTMLEmbed v-if="MarkupContentTypes.includes(contentType)" class="viewer-pane" :id="props.id" :site-id="props.siteId" :content-type="contentType" :name="contentStore.file?.name || ''" />
-    <CodeEmbed v-if="CodeContentTypes.includes(contentType) && !MarkupContentTypes.includes(contentType)" class="viewer-pane" :id="props.id" :site-id="props.siteId" :content-type="contentType" :name="contentStore.file?.name || ''" />
-    <VEmptyState v-if="!props.loading && !ViewerContentTypes().includes(contentType)" class="viewer-pane" title="No viewer available">
-      <template #text>
-        <p class="text-medium-emphasis">This file type cannot be previewed in the browser.<span v-if="canDownload"> Download it to view locally.</span></p>
-      </template>
-      <template #media><VIcon color="info">fass fa-files</VIcon></template>
-      <template #actions>
+    <PDFEmbed
+      v-if="PDFContentTypes.includes(contentType)"
+      :id="props.id"
+      class="viewer-pane"
+      :site-id="props.siteId"
+      :content-type="contentType"
+      :name="contentStore.file?.name || ''"
+      :initial-page="props.initialPage"
+    />
+    <ImageEmbed
+      v-if="ImageContentTypes.includes(contentType)"
+      :id="props.id"
+      class="viewer-pane"
+      :site-id="props.siteId"
+      :content-type="contentType"
+      :name="contentStore.file?.name || ''"
+    />
+    <VideoEmbed
+      v-if="VideoContentTypes.includes(contentType)"
+      :id="props.id"
+      class="viewer-pane"
+      :site-id="props.siteId"
+      :content-type="contentType"
+      :name="contentStore.file?.name || ''"
+    />
+    <AudioEmbed
+      v-if="AudioContentTypes.includes(contentType)"
+      :id="props.id"
+      class="viewer-pane"
+      :site-id="props.siteId"
+      :content-type="contentType"
+      :name="contentStore.file?.name || ''"
+    />
+    <HTMLEmbed
+      v-if="MarkupContentTypes.includes(contentType)"
+      :id="props.id"
+      class="viewer-pane"
+      :site-id="props.siteId"
+      :content-type="contentType"
+      :name="contentStore.file?.name || ''"
+    />
+    <CodeEmbed
+      v-if="CodeContentTypes.includes(contentType) && !MarkupContentTypes.includes(contentType)"
+      :id="props.id"
+      class="viewer-pane"
+      :site-id="props.siteId"
+      :content-type="contentType"
+      :name="contentStore.file?.name || ''"
+    />
+    <EmptyState
+      v-if="!props.loading && !ViewerContentTypes().includes(contentType)"
+      class="viewer-pane"
+      icon="fas fa-file-lines"
+      title="No viewer available"
+      :text="`This file type cannot be previewed in the browser.${canDownload ? ' Download it to view locally.' : ''}`"
+    >
+      <template v-if="canDownload" #actions>
         <DownloadIcon
-          v-if="canDownload"
           :id="contentStore.file?.id ?? ''"
           :site-id="contentStore.file?.site ?? props.siteId"
           kind="file"
           show-as-button
           variant="flat"
-          color="info"
-          size="large"
+          color="primary"
           text="Download"
         />
       </template>
-    </VEmptyState>
+    </EmptyState>
   </div>
 </template>
 
 <style scoped>
-.file-viewer { height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: visible; margin-top: var(--content-header-body-gap); }
-.viewer-loading { height: 100%; }
-.viewer-pane { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: visible; }
+.file-viewer {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  margin-top: var(--content-header-body-gap);
+}
+
+.viewer-loading {
+  height: 100%;
+}
+
+.viewer-pane {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+}
 </style>

@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import BaseButton from '../../base/BaseButton.vue'
+import { ICONS } from '../../../icons'
 import DeleteSelectedDialog from './DeleteSelectedDialog.vue'
 
 interface Props {
-  selected: string[]
   showAsMenu?: boolean
   dialog?: boolean
   renderUiOnly?: boolean
@@ -16,11 +16,11 @@ const props = withDefaults(defineProps<Props>(), {
   renderUiOnly: false,
 })
 
-const selected = defineModel<string[]>('selected', { default: [] })
-
 const emit = defineEmits<{
   'update:dialog': [value: boolean]
 }>()
+
+const selected = defineModel<string[]>('selected', { default: () => [] })
 
 const internalDialogVisible = ref(false)
 
@@ -47,20 +47,16 @@ function openDeleteConfirm() {
   <template v-if="selected.length > 0">
     <BaseButton
       v-if="!props.showAsMenu"
-      icon="fasl fa-trash"
-      variant="text"
+      :tooltip="deleteTooltip"
+      :icon="ICONS.delete"
+      intent="tertiary"
       :aria-label="deleteTooltip"
-      v-tippy="{
-        placement: 'top',
-        content: deleteTooltip,
-      }"
-      color="primary"
       size="small"
       @click="openDeleteConfirm"
     />
     <VListItem
       v-if="props.showAsMenu"
-      prepend-icon="fasl fa-trash"
+      prepend-icon="fas fa-trash"
       density="compact"
       :title="deleteTooltip"
       @click.stop="openDeleteConfirm"
@@ -68,7 +64,7 @@ function openDeleteConfirm() {
 
     <DeleteSelectedDialog
       v-if="!props.renderUiOnly && props.dialog === undefined"
-      v-model:dialog="dialogModel"
+      v-model="dialogModel"
       v-model:selected="selected"
     />
   </template>

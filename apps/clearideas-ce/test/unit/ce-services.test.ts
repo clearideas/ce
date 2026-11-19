@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { createLocalStorageProvider } from '../../src/app.js'
 import {
   extractPdfTextForFile,
@@ -89,10 +89,11 @@ describe('CE service helpers', () => {
             if (query.kind === 'Folder') return [folder]
             const ids = new Set((query._id?.$in ?? []).map(String))
             const allowedSites = query.site?.$in ? new Set(query.site.$in.map(String)) : null
-            return sourceFiles.filter(file =>
-              ids.has(String(file._id)) &&
-              (!allowedSites || allowedSites.has(String(file.site))) &&
-              (!query.status || file.status === query.status),
+            return sourceFiles.filter(
+              file =>
+                ids.has(String(file._id)) &&
+                (!allowedSites || allowedSites.has(String(file.site))) &&
+                (!query.status || file.status === query.status),
             )
           }
           return { lean: run, select: () => ({ lean: run }) }
@@ -163,7 +164,9 @@ describe('CE service helpers', () => {
         readObject: async () => testPdfBuffer(),
         writeObject: async (input: any) => writes.push(input),
       } as any,
-      search: { enqueueIndexContent: (siteId: string, contentId: string) => enqueued.push({ siteId, contentId }) },
+      search: {
+        enqueueIndexContent: (siteId: string, contentId: string) => enqueued.push({ siteId, contentId }),
+      },
       fileKey: file.key,
       contentType: file.contentType,
     })
@@ -209,7 +212,9 @@ describe('CE service helpers', () => {
         },
         writeObject: async () => undefined,
       } as any,
-      search: { enqueueIndexContent: (siteId: string, contentId: string) => enqueued.push({ siteId, contentId }) },
+      search: {
+        enqueueIndexContent: (siteId: string, contentId: string) => enqueued.push({ siteId, contentId }),
+      },
       fileKey: 'big.pdf',
       contentType: 'application/pdf',
     })
@@ -230,28 +235,45 @@ describe('CE service helpers', () => {
         },
       },
     } as any
-    await expect(extractPdfTextForFile({
-      models,
-      storage: {
-        readObject: async () => Buffer.from('definitely not a pdf'),
-        writeObject: async () => undefined,
-      } as any,
-      search: { enqueueIndexContent: (siteId: string, contentId: string) => enqueued.push({ siteId, contentId }) },
-      fileKey: 'bad.pdf',
-      contentType: 'application/pdf',
-    })).rejects.toBeTruthy()
+    await expect(
+      extractPdfTextForFile({
+        models,
+        storage: {
+          readObject: async () => Buffer.from('definitely not a pdf'),
+          writeObject: async () => undefined,
+        } as any,
+        search: {
+          enqueueIndexContent: (siteId: string, contentId: string) => enqueued.push({ siteId, contentId }),
+        },
+        fileKey: 'bad.pdf',
+        contentType: 'application/pdf',
+      }),
+    ).rejects.toBeTruthy()
     expect(updates.at(-1).$set.extractionStatus).toBe('failed')
     expect(enqueued).toEqual([{ siteId: 'site-1', contentId: 'file-bad' }])
   })
 
   it('limits page extraction and enforces a timeout', async () => {
-    const limited = await extractTextFromPdfBuffer(testPdfBuffer(), { maxBytes: 1024 * 1024, maxPages: 1, timeoutMs: 30_000 })
+    const limited = await extractTextFromPdfBuffer(testPdfBuffer(), {
+      maxBytes: 1024 * 1024,
+      maxPages: 1,
+      timeoutMs: 30_000,
+    })
     expect(limited.status).toBe('complete')
     expect(limited.pages).toBe(1)
 
-    await expect(
-      extractTextFromPdfBuffer(testPdfBuffer(), { maxBytes: 1024 * 1024, maxPages: 1, timeoutMs: 1 }),
-    ).rejects.toThrow(/timed out/)
+    const destroy = vi.fn(async () => undefined)
+    vi.doMock('pdfjs-dist/legacy/build/pdf.mjs', () => ({
+      getDocument: () => ({ promise: new Promise<never>(() => {}), destroy }),
+    }))
+    try {
+      await expect(
+        extractTextFromPdfBuffer(testPdfBuffer(), { maxBytes: 1024 * 1024, maxPages: 1, timeoutMs: 10 }),
+      ).rejects.toThrow(/timed out/)
+      expect(destroy).toHaveBeenCalledOnce()
+    } finally {
+      vi.doUnmock('pdfjs-dist/legacy/build/pdf.mjs')
+    }
   })
 
   it('decides when on-demand PDF extraction should be retried', () => {
@@ -260,8 +282,18 @@ describe('CE service helpers', () => {
     expect(shouldAttemptPdfExtraction({ extractionStatus: 'pending' }, now)).toBe(true)
     expect(shouldAttemptPdfExtraction({ extractionStatus: 'unsupported' }, now)).toBe(false)
     expect(shouldAttemptPdfExtraction({ extractionStatus: 'complete' }, now)).toBe(false)
-    expect(shouldAttemptPdfExtraction({ extractionStatus: 'failed', extractedTextUpdatedAt: new Date('2026-03-01T11:59:00Z') }, now)).toBe(false)
-    expect(shouldAttemptPdfExtraction({ extractionStatus: 'failed', extractedTextUpdatedAt: new Date('2026-03-01T09:00:00Z') }, now)).toBe(true)
+    expect(
+      shouldAttemptPdfExtraction(
+        { extractionStatus: 'failed', extractedTextUpdatedAt: new Date('2026-03-01T11:59:00Z') },
+        now,
+      ),
+    ).toBe(false)
+    expect(
+      shouldAttemptPdfExtraction(
+        { extractionStatus: 'failed', extractedTextUpdatedAt: new Date('2026-03-01T09:00:00Z') },
+        now,
+      ),
+    ).toBe(true)
   })
 })
 

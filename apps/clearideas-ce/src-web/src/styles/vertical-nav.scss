@@ -1,18 +1,38 @@
-.layout-vertical-nav {
-  background: var(--ci-panel-surface) !important;
+// The main navigation drawer's panel. (Section navigations — SideNavLayout — share the list
+// metrics below but sit on the page background.)
+.v-navigation-drawer.layout-vertical-nav {
+  background: var(--ci-panel-surface);
   backdrop-filter: blur(16px);
   border-inline-end: 1px solid rgba(var(--v-border-color), calc(var(--v-border-opacity) * 0.8));
   box-shadow:
-    -8px 0 28px rgba(15, 23, 42, 0.07),
+    var(--ci-shadow-side),
     0 0 0 1px rgba(var(--v-border-color), calc(var(--v-border-opacity) * 0.25));
 
+  &.v-navigation-drawer--temporary {
+    background: rgb(var(--v-theme-surface));
+    backdrop-filter: none;
+    box-shadow: var(--ci-shadow-side);
+  }
+}
+
+@media (max-width: 959px) {
+  .v-navigation-drawer.layout-vertical-nav {
+    background: rgb(var(--v-theme-surface));
+    backdrop-filter: none;
+    box-shadow: var(--ci-shadow-side);
+  }
+}
+
+// Navigation list metrics (drawer and section navigations).
+.layout-vertical-nav,
+.side-nav-layout__list {
   .v-icon--size-default {
     font-size: 1.125rem;
   }
 
   .v-list-item__prepend > .v-icon,
   .v-list-group__header .v-list-item__prepend > .v-icon {
-    font-size: 1.125rem !important;
+    font-size: 1.125rem;
   }
 
   .v-list-item__prepend > .v-icon .svg-inline--fa,
@@ -26,7 +46,7 @@
     margin-block: 2px;
     border-radius: var(--ci-border-radius);
     min-height: 38px;
-    padding-inline: 10px !important;
+    padding-inline: 10px;
     transition:
       background-color 0.2s ease,
       color 0.2s ease,
@@ -47,12 +67,11 @@
 
   .v-list-group__items {
     .v-list-item--nav {
-      padding-inline-start: 8px !important;
+      padding-inline-start: 8px;
     }
   }
 
-  &.v-navigation-drawer--expand-on-hover.v-navigation-drawer--rail:not(.v-navigation-drawer--is-hovering),
-  &.rail-mode-is-on {
+  &.v-navigation-drawer--expand-on-hover.v-navigation-drawer--rail:not(.v-navigation-drawer--is-hovering) {
     .v-list-subheader {
       .v-list-subheader__text {
         opacity: 0;
@@ -66,19 +85,5 @@
         inline-size: 24px;
       }
     }
-  }
-
-  &.v-navigation-drawer--temporary {
-    background: rgb(var(--v-theme-surface)) !important;
-    backdrop-filter: none;
-    box-shadow: -8px 0 28px rgba(15, 23, 42, 0.08);
-  }
-}
-
-@media (max-width: 959px) {
-  .layout-vertical-nav {
-    background: rgb(var(--v-theme-surface)) !important;
-    backdrop-filter: none;
-    box-shadow: -8px 0 28px rgba(15, 23, 42, 0.08);
   }
 }

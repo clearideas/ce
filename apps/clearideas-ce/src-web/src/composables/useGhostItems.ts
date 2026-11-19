@@ -1,9 +1,9 @@
 import { onMounted, onUnmounted, type Ref, ref, watch } from 'vue'
 
 // Simple debounce utility
-function debounce<T extends (...args: any[]) => any>(func: T, delay: number): T {
+function debounce<T extends (...args: never[]) => unknown>(func: T, delay: number): T {
   let timeoutId: ReturnType<typeof setTimeout> | null = null
-  return ((...args: any[]) => {
+  return ((...args: Parameters<T>) => {
     if (timeoutId) clearTimeout(timeoutId)
     timeoutId = setTimeout(() => func(...args), delay)
   }) as T
@@ -53,9 +53,3 @@ export function useGhostItems(options: UseGhostItemsOptions) {
 }
 
 export type { UseGhostItemsOptions }
-
-
-
-
-
-

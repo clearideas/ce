@@ -2,7 +2,9 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { ceApi } from '../api/client'
 import { useAlert } from '../composables/useAlert'
+import { useProfileStore } from './profile.store'
 import type { Site } from '../types/domain'
+import { errorMessage } from '../utils/errors'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value != null && typeof value === 'object' && !Array.isArray(value)
@@ -11,20 +13,24 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function mergeSiteMedia(existing: Site | undefined, incoming: Site): Site {
   const existingMedia = existing?.attributes?.media
   const incomingMedia = incoming.attributes?.media
-  const mergedMedia = incomingMedia === undefined
-    ? existingMedia
-    : incomingMedia === null
-      ? {}
-      : Object.entries(incomingMedia).reduce<Record<string, unknown>>((media, [key, value]) => {
-        if (value == null) {
-          delete media[key]
-          return media
-        }
-        media[key] = {
-          ...(isRecord(value) ? value : {}),
-        }
-        return media
-      }, {})
+  const mergedMedia =
+    incomingMedia === undefined
+      ? existingMedia
+      : incomingMedia === null
+        ? {}
+        : Object.entries(incomingMedia).reduce<NonNullable<NonNullable<Site['attributes']>['media']>>(
+            (media, [key, value]) => {
+              if (value == null) {
+                delete media[key]
+                return media
+              }
+              media[key] = {
+                ...(isRecord(value) ? value : {}),
+              }
+              return media
+            },
+            {},
+          )
 
   return {
     ...existing,
@@ -56,19 +62,35 @@ export const useSiteStore = defineStore('site', () => {
   const sitesWithAttributes = computed(() => sites.value)
   const ownedSitesWithAttributes = computed(() => sites.value.filter(site => site.owned === true))
 
+  /** Why the last site-list load failed (shown instead of the empty state); '' when it succeeded. */
+  const sitesError = ref('')
+
   async function getSites() {
     loadingSites.value = true
     try {
       sites.value = (await ceApi.sites()).sites
+      sitesError.value = ''
       return sites.value
+    } catch (error) {
+      sitesError.value = errorMessage(error, 'Your sites could not be loaded.')
+      throw error
     } finally {
       loadingSites.value = false
     }
   }
 
+  /**
+   * Initial load shared by everyone who needs the list on boot (AppLayout, the Sites view, the
+   * route watchers): concurrent callers get the same request. Explicit refreshes call `getSites()`.
+   */
+  let pendingInitialLoad: Promise<Site[]> | null = null
+
   async function getSitesIfRequired() {
-    if (sites.value.length === 0) return getSites()
-    return sites.value
+    if (sites.value.length > 0) return sites.value
+    pendingInitialLoad ??= getSites().finally(() => {
+      pendingInitialLoad = null
+    })
+    return pendingInitialLoad
   }
 
   async function getSuppressedSites() {
@@ -87,13 +109,24 @@ export const useSiteStore = defineStore('site', () => {
   }
 
   async function setCurrentSite(siteId: string | undefined) {
-    if (sites.value.length === 0) await getSites()
+    await getSitesIfRequired()
     currentSiteId.value = siteId
     if (siteId) await getSite(siteId)
     return currentSite.value
   }
 
-  async function getSite(siteId: string) {
+  /** In-flight detail fetches by site id, so concurrent callers (route watcher, list/tile views) share one request. */
+  const pendingSiteFetches = new Map<string, Promise<Site>>()
+
+  function getSite(siteId: string) {
+    const pending = pendingSiteFetches.get(siteId)
+    if (pending) return pending
+    const request = fetchSite(siteId).finally(() => pendingSiteFetches.delete(siteId))
+    pendingSiteFetches.set(siteId, request)
+    return request
+  }
+
+  async function fetchSite(siteId: string) {
     loadingSites.value = true
     try {
       const response = await ceApi.site(siteId)
@@ -122,7 +155,11 @@ export const useSiteStore = defineStore('site', () => {
       alert.add({ message: `Site "${response.site.name}" created.`, type: 'success', timeout: 3000 })
       return response.site
     } catch (error) {
-      alert.add({ message: error instanceof Error ? error.message : 'Site could not be created.', type: 'error', timeout: 5000 })
+      alert.add({
+        message: error instanceof Error ? error.message : 'Site could not be created.',
+        type: 'error',
+        timeout: 5000,
+      })
       throw error
     }
   }
@@ -140,7 +177,11 @@ export const useSiteStore = defineStore('site', () => {
       else sites.value.push(site)
       siteDetails.value = { ...siteDetails.value, [site.id]: site }
       if (!options.silent) {
-        alert.add({ message: options.successMessage ?? 'Site settings saved.', type: 'success', timeout: 3000 })
+        alert.add({
+          message: options.successMessage ?? 'Site settings saved.',
+          type: 'success',
+          timeout: 3000,
+        })
       }
       return site
     } catch (error) {
@@ -177,7 +218,11 @@ export const useSiteStore = defineStore('site', () => {
       await Promise.all([getSites(), getSuppressedSites()])
       alert.add({ message: 'Site invitation accepted.', type: 'success', timeout: 3000 })
     } catch (error) {
-      alert.add({ message: error instanceof Error ? error.message : 'Site invitation could not be accepted.', type: 'error', timeout: 5000 })
+      alert.add({
+        message: error instanceof Error ? error.message : 'Site invitation could not be accepted.',
+        type: 'error',
+        timeout: 5000,
+      })
       throw error
     }
   }
@@ -188,21 +233,67 @@ export const useSiteStore = defineStore('site', () => {
       await Promise.all([getSites(), getSuppressedSites()])
       alert.add({ message: 'Site invitation declined.', type: 'success', timeout: 3000 })
     } catch (error) {
-      alert.add({ message: error instanceof Error ? error.message : 'Site invitation could not be declined.', type: 'error', timeout: 5000 })
+      alert.add({
+        message: error instanceof Error ? error.message : 'Site invitation could not be declined.',
+        type: 'error',
+        timeout: 5000,
+      })
       throw error
     }
   }
 
+  /** Block (suppress) a site. The success toast offers Undo, which unblocks it again. */
   async function suppressSiteInvitation(siteId: string) {
+    const name = sites.value.find(site => site.id === siteId)?.name ?? 'Site'
     try {
       await ceApi.suppressSiteInvitation(siteId)
       await Promise.all([getSites(), getSuppressedSites()])
-      alert.add({ message: 'Site blocked.', type: 'success', timeout: 3000 })
+      alert.addWithAction(
+        { message: `"${name}" blocked.`, type: 'success', timeout: 8000 },
+        { label: 'Undo', onAction: () => unblockSite(siteId) },
+      )
     } catch (error) {
-      alert.add({ message: error instanceof Error ? error.message : 'Site could not be blocked.', type: 'error', timeout: 5000 })
+      alert.add({
+        message: error instanceof Error ? error.message : 'Site could not be blocked.',
+        type: 'error',
+        timeout: 5000,
+      })
       throw error
     }
   }
 
-  return { sites, siteDetails, sitesWithAttributes, ownedSitesWithAttributes, suppressedSites, currentSiteId, currentSite, activeTab, loadingSites, loadingSuppressedSites, getSites, getSitesIfRequired, getSite, getSuppressedSites, getSuppressedSitesIfRequired, setCurrentSite, createSite, updateCurrentSite, updateSiteMedia, deleteMedia, acceptSiteInvitation, declineSiteInvitation, suppressSiteInvitation }
+  /** Unblock a previously blocked site and refresh both lists. */
+  async function unblockSite(siteId: string) {
+    const profileStore = useProfileStore()
+    await profileStore.toggleSuppressedSites(siteId)
+    await Promise.all([getSites(), getSuppressedSites()])
+  }
+
+  return {
+    sites,
+    siteDetails,
+    sitesWithAttributes,
+    ownedSitesWithAttributes,
+    suppressedSites,
+    currentSiteId,
+    currentSite,
+    activeTab,
+    loadingSites,
+    loadingSuppressedSites,
+    sitesError,
+    getSites,
+    getSitesIfRequired,
+    getSite,
+    getSuppressedSites,
+    getSuppressedSitesIfRequired,
+    setCurrentSite,
+    createSite,
+    updateCurrentSite,
+    updateSiteMedia,
+    deleteMedia,
+    acceptSiteInvitation,
+    declineSiteInvitation,
+    suppressSiteInvitation,
+    unblockSite,
+  }
 })

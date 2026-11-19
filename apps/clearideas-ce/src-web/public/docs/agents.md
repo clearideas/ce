@@ -1,6 +1,6 @@
 # Agents
 
-Clear Ideas CE can run small, portable prompt agents using `@clearideas/agent-runtime` 0.4.1. Open **Agents** in the main navigation to create an agent from the included JSON template, supply variables, choose a Site, and inspect run history.
+Clear Ideas CE can run small, portable prompt agents using `@clearideas/agent-runtime` 0.6.3. Open **Agents** in the main navigation to create an agent from the included JSON template, supply variables, choose a Site, and inspect run history.
 
 See the [Clear Ideas Agent Runtime documentation](https://agent-runtime.clearideas.com/) for the portable manifest format and runtime concepts. CE intentionally supports only the compact subset documented below.
 
@@ -25,7 +25,7 @@ CE intentionally supports a compact subset of the portable manifest:
 - Sequential or limited parallel execution
 - Read-only Site tools: `list_content`, `get_site_metadata`, `get_content_metadata`, `search_content`, and `retrieve_file_content`
 
-Connections and other step types are rejected when the manifest is saved. A Site must be selected when a manifest declares Site tools. Access is checked again during every tool call, including scheduled runs.
+Connections, workspaces and other step types are rejected when the manifest is saved. A Site must be selected when a manifest declares Site tools. Access is checked again during every tool call, including scheduled runs.
 
 ## Schedules
 

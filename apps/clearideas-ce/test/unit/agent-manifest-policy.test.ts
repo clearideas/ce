@@ -31,7 +31,7 @@ describe('CE agent manifest policy', () => {
     ).toThrow(/not supported/i)
   })
 
-  it('rejects unsupported steps, connections, and model selection', () => {
+  it('rejects unsupported steps, connections, workspaces, and model selection', () => {
     expect(() =>
       validateCeAgentManifest({
         schemaVersion: '1.0',
@@ -47,6 +47,14 @@ describe('CE agent manifest policy', () => {
         steps: [{ id: 'ask', type: 'prompt', prompt: 'Ask' }],
       }),
     ).toThrow(/connections/i)
+    expect(() =>
+      validateCeAgentManifest({
+        schemaVersion: '1.0',
+        name: 'Workspace',
+        workspaces: [{ ref: 'docs', mode: 'read' }],
+        steps: [{ id: 'ask', type: 'prompt', prompt: 'Ask' }],
+      }),
+    ).toThrow(/workspaces/i)
     expect(() =>
       validateCeAgentManifest({
         schemaVersion: '1.0',

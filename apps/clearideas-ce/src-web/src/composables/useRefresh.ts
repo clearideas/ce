@@ -3,8 +3,9 @@ import { useContentStore, useProfileStore, useSiteStore, useUserStore } from '..
 async function ignoreOffline(action: () => Promise<void>) {
   try {
     await action()
-  } catch (error: any) {
-    if (!error?.offline) throw error
+  } catch (error) {
+    const offline = Boolean(error && typeof error === 'object' && (error as { offline?: unknown }).offline)
+    if (!offline) throw error
   }
 }
 
@@ -40,7 +41,8 @@ export function useRefresh() {
   const usersRefresh = async (siteId?: string) => {
     await ignoreOffline(async () => {
       await siteStore.getSites()
-      await userStore.getUsers(siteId)
+      if (siteId) await userStore.getSiteUsers(siteId)
+      else await userStore.getUsers()
     })
   }
 

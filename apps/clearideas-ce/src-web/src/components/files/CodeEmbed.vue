@@ -1,10 +1,16 @@
 <script setup lang="ts">
-import hljs from 'highlight.js'
+import { hljs } from '../../utils/highlight'
 import { nextTick, onMounted, ref, watch } from 'vue'
 import { useContentTypes } from '../../composables/useContentTypes'
 import { useContentStore } from '../../stores'
+import EmptyState from '../base/EmptyState.vue'
 
-interface Props { id: string; siteId: string; contentType: string; name: string }
+interface Props {
+  id: string
+  siteId: string
+  contentType: string
+  name: string
+}
 const props = defineProps<Props>()
 const loading = ref(false)
 const contentStore = useContentStore()
@@ -15,14 +21,24 @@ const { CodeContentTypes } = useContentTypes()
 
 function setLanguageClass(contentType: string) {
   const subtype = contentType.split('/')[1] || 'plaintext'
-  languageClass.value = subtype.includes('json') ? 'json' : subtype.includes('javascript') ? 'javascript' : subtype.includes('xml') ? 'xml' : subtype.includes('css') ? 'css' : 'plaintext'
+  languageClass.value = subtype.includes('json')
+    ? 'json'
+    : subtype.includes('javascript')
+      ? 'javascript'
+      : subtype.includes('xml')
+        ? 'xml'
+        : subtype.includes('css')
+          ? 'css'
+          : 'plaintext'
 }
 
 function highlightCode() {
   if (!highlightedCode.value) return
   highlightedCode.value.removeAttribute('data-highlighted')
   if (props.contentType === 'application/json') {
-    try { code.value = JSON.stringify(JSON.parse(code.value), null, 2) } catch {}
+    try {
+      code.value = JSON.stringify(JSON.parse(code.value), null, 2)
+    } catch {}
   }
   highlightedCode.value.textContent = code.value
   hljs.highlightElement(highlightedCode.value)
@@ -54,13 +70,18 @@ watch(code, async () => {
 <template>
   <div class="code-embed pa-4">
     <div v-if="loading" class="code-embed-loading d-flex justify-center align-center">
-      <VProgressCircular indeterminate color="primary" size="100" width="8" />
+      <VProgressCircular aria-label="Loading file" indeterminate color="primary" size="100" width="8" />
     </div>
-    <pre v-if="!loading && CodeContentTypes.includes(props.contentType)" class="code-embed-pre"><code ref="highlightedCode" :class="languageClass" /></pre>
-    <VEmptyState v-if="!loading && !CodeContentTypes.includes(props.contentType)" title="Unsupported file type">
-      <template #text><p class="text-medium-emphasis">This file type cannot be displayed as text.</p></template>
-      <template #media><VIcon color="info" icon="fasl fa-file-code" /></template>
-    </VEmptyState>
+    <pre
+      v-if="!loading && CodeContentTypes.includes(props.contentType)"
+      class="code-embed-pre"
+    ><code ref="highlightedCode" :class="languageClass" /></pre>
+    <EmptyState
+      v-if="!loading && !CodeContentTypes.includes(props.contentType)"
+      icon="fas fa-file-code"
+      title="Unsupported file type"
+      text="This file type cannot be displayed as text."
+    />
   </div>
 </template>
 
@@ -75,7 +96,7 @@ watch(code, async () => {
   color: var(--ci-on-surface);
   border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   border-radius: 8px;
-  box-shadow: 0 8px 28px rgba(15, 23, 42, 0.06);
+  box-shadow: var(--ci-shadow-md);
   box-sizing: border-box;
 }
 

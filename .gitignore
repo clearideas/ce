@@ -1,6 +1,7 @@
 node_modules/
 dist/
-web/
+# Vite build output only (an unanchored `web/` also ignored apps/clearideas-ce/test/web).
+/apps/clearideas-ce/web/
 coverage/
 playwright-report/
 test-results/

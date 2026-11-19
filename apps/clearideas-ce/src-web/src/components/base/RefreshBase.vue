@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import BaseButton from './BaseButton.vue'
+import { ICONS } from '../../icons'
 
 interface Props {
   showAsMenu?: boolean
@@ -11,7 +12,6 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   showAsMenu: false,
-  variant: 'text',
   onRefresh: async () => {},
   loading: false,
   size: 'default',
@@ -28,23 +28,23 @@ const handleRefresh = async () => {
   <BaseButton
     v-if="!props.showAsMenu"
     tooltip="Refresh"
-    tooltip-position="top"
-    icon="fas fa-arrows-rotate"
+    :icon="ICONS.refresh"
     :class="{ 'fa-spin': props.loading }"
+    intent="tertiary"
     :variant="props.variant"
-    color="primary"
     :size="props.size"
     aria-label="Refresh"
     @click="handleRefresh"
   />
-  <VListItem
-    v-if="props.showAsMenu"
-    append-icon="fas fa-arrows-rotate"
-    density="compact"
-    @click="handleRefresh"
-  >
+  <VListItem v-if="props.showAsMenu" :append-icon="ICONS.refresh" density="compact" @click="handleRefresh">
     <slot name="title">
-      <span class="fs-14">Refresh</span>
+      <span class="refresh-base__label">Refresh</span>
     </slot>
   </VListItem>
 </template>
+
+<style scoped>
+.refresh-base__label {
+  font-size: 14px;
+}
+</style>

@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useSiteStore } from '../../stores'
+import { ICONS } from '../../icons'
+import BaseButton from '../base/BaseButton.vue'
 import type { AnalyticsFilter } from '../../stores/analytics.store'
 
 type ActionPreset = {
@@ -27,12 +29,22 @@ const props = withDefaults(defineProps<Props>(), {
   displayLimit: true,
   displaySites: true,
   displayRefresh: true,
-  actions: () => ['viewed', 'file-viewed', 'file-downloaded', 'file-uploaded', 'folder-created', 'content-deleted', 'content-searched'],
+  actions: () => [
+    'viewed',
+    'file-viewed',
+    'file-downloaded',
+    'file-uploaded',
+    'folder-created',
+    'content-deleted',
+    'content-searched',
+  ],
   limits: () => [10, 25, 50],
   defaultLimit: 10,
   isRefreshing: false,
   actionPresets: () => [],
 })
+
+const emit = defineEmits<{ refresh: [] }>()
 
 const filter = defineModel<AnalyticsFilter>('filter', {
   type: Object,
@@ -45,10 +57,8 @@ const filter = defineModel<AnalyticsFilter>('filter', {
   }),
 })
 
-const emit = defineEmits<{ refresh: [] }>()
 const siteStore = useSiteStore()
 const { sites } = storeToRefs(siteStore)
-const showActionsDropdown = ref(false)
 
 const siteItems = computed(() =>
   sites.value
@@ -56,30 +66,28 @@ const siteItems = computed(() =>
     .map(site => ({ title: site.name, value: site.id })),
 )
 const allActionValues = computed(() => props.actions)
-const normalizedSelectedActions = computed(() => (filter.value.actions || []).filter(action => allActionValues.value.includes(action)))
-const areAllActionsSelected = computed(() => allActionValues.value.length > 0 && normalizedSelectedActions.value.length === allActionValues.value.length)
-const selectedPreset = computed(() => props.actionPresets.find(preset => preset.actions.join('|') === normalizedSelectedActions.value.join('|')))
+const normalizedSelectedActions = computed(() =>
+  (filter.value.actions || []).filter(action => allActionValues.value.includes(action)),
+)
+const areAllActionsSelected = computed(
+  () =>
+    allActionValues.value.length > 0 &&
+    normalizedSelectedActions.value.length === allActionValues.value.length,
+)
+const selectedPreset = computed(() =>
+  props.actionPresets.find(preset => preset.actions.join('|') === normalizedSelectedActions.value.join('|')),
+)
 const actionsDisplayText = computed(() => {
-  if (!filter.value.actions || filter.value.actions.length === 0 || areAllActionsSelected.value) return 'All actions'
+  if (!filter.value.actions || filter.value.actions.length === 0 || areAllActionsSelected.value)
+    return 'All actions'
   if (selectedPreset.value) return selectedPreset.value.label
   return `${filter.value.actions.length} actions`
 })
 
-function toggleAction(actionValue: string) {
-  if (!filter.value.actions || filter.value.actions.length === 0 || areAllActionsSelected.value || selectedPreset.value) {
-    filter.value = { ...filter.value, actions: [actionValue] }
-    return
-  }
+const actionItems = computed(() => allActionValues.value.map(value => ({ title: actionLabel(value), value })))
 
-  const index = normalizedSelectedActions.value.indexOf(actionValue)
-  filter.value = {
-    ...filter.value,
-    actions: index > -1 ? normalizedSelectedActions.value.filter(action => action !== actionValue) : [...normalizedSelectedActions.value, actionValue],
-  }
-}
-
-function isActionSelected(actionValue: string) {
-  return normalizedSelectedActions.value.includes(actionValue)
+function setActions(actions: string[]) {
+  filter.value = { ...filter.value, actions }
 }
 
 function selectAllActions() {
@@ -91,32 +99,34 @@ function selectActionPreset(preset: ActionPreset) {
 }
 
 function actionLabel(action: string) {
-  return action.split('-').filter(Boolean).map(part => `${part[0]?.toUpperCase() ?? ''}${part.slice(1)}`).join(' ')
-}
-
-function todayInput() {
-  return new Date().toISOString().slice(0, 10)
-}
-
-function thirtyDaysAgoInput() {
-  const date = new Date()
-  date.setDate(date.getDate() - 30)
-  return date.toISOString().slice(0, 10)
+  return action
+    .split('-')
+    .filter(Boolean)
+    .map(part => `${part[0]?.toUpperCase() ?? ''}${part.slice(1)}`)
+    .join(' ')
 }
 
 onMounted(async () => {
   await siteStore.getSitesIfRequired()
-  if ((filter.value.actions?.length ?? 0) === 0 && props.defaultActions) filter.value.actions = [...props.defaultActions]
+  if ((filter.value.actions?.length ?? 0) === 0 && props.defaultActions)
+    filter.value.actions = [...props.defaultActions]
   if (!filter.value.limit && props.defaultLimit) filter.value.limit = props.defaultLimit
 })
 
-watch(allActionValues, availableActions => {
-  const availableActionSet = new Set(availableActions)
-  const sanitizedActions = (filter.value.actions || []).filter(action => availableActionSet.has(action))
-  if (sanitizedActions.length !== (filter.value.actions || []).length) {
-    filter.value = { ...filter.value, actions: sanitizedActions.length > 0 ? sanitizedActions : [...(props.defaultActions ?? [])] }
-  }
-}, { immediate: true })
+watch(
+  allActionValues,
+  availableActions => {
+    const availableActionSet = new Set(availableActions)
+    const sanitizedActions = (filter.value.actions || []).filter(action => availableActionSet.has(action))
+    if (sanitizedActions.length !== (filter.value.actions || []).length) {
+      filter.value = {
+        ...filter.value,
+        actions: sanitizedActions.length > 0 ? sanitizedActions : [...(props.defaultActions ?? [])],
+      }
+    }
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -125,6 +135,7 @@ watch(allActionValues, availableActions => {
       <div class="filter-control__label">Sites</div>
       <VSelect
         v-model="filter.sites"
+        aria-label="Sites"
         :items="siteItems"
         item-title="title"
         item-value="value"
@@ -143,7 +154,7 @@ watch(allActionValues, availableActions => {
       <div class="filter-control__label">Date range</div>
       <div class="analytics-date-range filter-control__field">
         <VTextField v-model="filter.startDate" type="date" variant="outlined" aria-label="Start date">
-          <template #prepend-inner><VIcon icon="fasl fa-calendar" color="secondary" /></template>
+          <template #prepend-inner><VIcon icon="fas fa-calendar" color="secondary" /></template>
         </VTextField>
         <VTextField v-model="filter.endDate" type="date" variant="outlined" aria-label="End date" />
       </div>
@@ -151,43 +162,70 @@ watch(allActionValues, availableActions => {
 
     <div v-if="props.displayLimit" class="item item--limit filter-control">
       <div class="filter-control__label">Limit</div>
-      <VSelect v-model="filter.limit" variant="outlined" class="filter-control__field" :items="props.limits">
-        <template #prepend-inner><VIcon icon="fasl fa-sort-amount-down" color="secondary" /></template>
+      <VSelect
+        v-model="filter.limit"
+        aria-label="Limit"
+        variant="outlined"
+        class="filter-control__field"
+        :items="props.limits"
+      >
+        <template #prepend-inner><VIcon icon="fas fa-arrow-down-wide-short" color="secondary" /></template>
       </VSelect>
     </div>
 
     <div v-if="displayActions" class="item item--actions filter-control">
       <div class="filter-control__label">Actions</div>
-      <VMenu v-model="showActionsDropdown" location="bottom start">
-        <template #activator="{ props: menuProps }">
-          <VTextField :model-value="actionsDisplayText" readonly variant="outlined" class="filter-control__field" v-bind="menuProps">
-            <template #prepend-inner><VIcon icon="fasl fa-list-check" color="secondary" /></template>
-            <template #append-inner><VIcon icon="fasl fa-chevron-down" color="secondary" /></template>
-          </VTextField>
+      <VSelect
+        :model-value="normalizedSelectedActions"
+        :items="actionItems"
+        multiple
+        aria-label="Actions"
+        placeholder="All actions"
+        persistent-placeholder
+        variant="outlined"
+        class="filter-control__field"
+        menu-icon="fas fa-chevron-down"
+        :menu-props="{ maxHeight: 350, maxWidth: 300 }"
+        @update:model-value="setActions"
+      >
+        <template #prepend-inner><VIcon icon="fas fa-list-check" color="secondary" /></template>
+        <template #selection="{ index }">
+          <span v-if="index === 0">{{ actionsDisplayText }}</span>
         </template>
-
-        <VList density="compact" max-width="300" max-height="350">
-          <VListItem :active="!filter.actions || filter.actions.length === 0 || areAllActionsSelected" @click="selectAllActions">
-            <template #prepend><VIcon icon="fasl fa-circle-check" class="fs-14" color="secondary" /></template>
-            All actions
-          </VListItem>
-          <VListItem v-for="preset in props.actionPresets" :key="preset.label" :active="selectedPreset?.label === preset.label" @click="selectActionPreset(preset)">
-            <template #prepend><VIcon icon="fasl fa-wand-magic-sparkles" class="fs-14" color="secondary" /></template>
-            {{ preset.label }}
-          </VListItem>
-          <VDivider class="my-2" />
-          <VListItem v-for="option in allActionValues" :key="option" :active="isActionSelected(option)" @click="toggleAction(option)">
-            <template #prepend><VIcon icon="fasl fa-bolt" class="fs-14" color="secondary" /></template>
-            {{ actionLabel(option) }}
-            <template #append><VIcon v-if="isActionSelected(option)" icon="fasl fa-check" color="primary" size="14" /></template>
-          </VListItem>
-        </VList>
-      </VMenu>
+        <template #prepend-item>
+          <VListItem
+            :active="normalizedSelectedActions.length === 0 || areAllActionsSelected"
+            prepend-icon="fas fa-circle-check"
+            title="All actions"
+            @click="selectAllActions"
+          />
+          <VListItem
+            v-for="preset in props.actionPresets"
+            :key="preset.label"
+            :active="selectedPreset?.label === preset.label"
+            prepend-icon="fas fa-wand-magic-sparkles"
+            :title="preset.label"
+            @click="selectActionPreset(preset)"
+          />
+          <VDivider aria-hidden="true" class="my-2" />
+        </template>
+      </VSelect>
     </div>
 
     <div v-if="props.displayRefresh" cols="auto" class="item filter-control filter-control--action">
       <div class="filter-control__label filter-control__label--visually-hidden">Refresh</div>
-      <VBtn v-tippy="{ content: 'Refresh', placement: 'top' }" icon="fasl fa-arrows-rotate" :class="{ 'fa-spin': isRefreshing }" variant="text" color="primary" size="small" slim class="filter-refresh-btn" @click="emit('refresh')" />
+      <BaseButton
+        :icon="ICONS.refresh"
+        intent="tertiary"
+        color="primary"
+        size="small"
+        slim
+        tooltip="Refresh"
+        aria-label="Refresh report"
+        :loading="isRefreshing"
+        class="filter-refresh-btn"
+        @click="emit('refresh')"
+      />
     </div>
   </div>
 </template>
@@ -198,7 +236,7 @@ watch(allActionValues, availableActions => {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: 12px 12px;
+  gap: 12px;
   margin-bottom: 30px;
 }
 
@@ -216,24 +254,28 @@ watch(allActionValues, availableActions => {
 .item--sites {
   min-width: 14rem;
   width: fit-content;
+
   --filter-control-max-width: 18rem;
 }
 
 .item--date {
   min-width: 20rem;
   width: fit-content;
+
   --filter-control-max-width: 30rem;
 }
 
 .item--actions {
   min-width: 11rem;
   width: fit-content;
+
   --filter-control-max-width: 14rem;
 }
 
 .item--limit {
   min-width: 7rem;
   width: fit-content;
+
   --filter-control-max-width: 8rem;
 }
 

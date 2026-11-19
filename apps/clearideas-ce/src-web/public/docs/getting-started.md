@@ -112,4 +112,4 @@ The app uses passwordless email codes. Docker Compose uses `FIRST_USER_EMAIL` to
 
 ## What Is Included
 
-Community Edition includes sites, users, roles, folders, file upload/download/viewing, metadata and full-text search, activity logging, simple analytics, email notifications, MCP access keys, and optional site-scoped AI chat.
+Community Edition includes sites, users, roles, folders, file upload/download/viewing, metadata and full-text search, activity logging, simple analytics, email notifications, MCP access keys, and optional AI chat over your sites (**Ask**, and a per-site AI tab).

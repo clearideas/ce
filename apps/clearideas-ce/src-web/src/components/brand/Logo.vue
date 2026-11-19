@@ -69,9 +69,3 @@ const color = computed(() => {
     </g>
   </svg>
 </template>
-
-
-
-
-
-

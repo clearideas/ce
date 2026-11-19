@@ -1,9 +1,7 @@
 import {
   AgentRuntime,
-  createConfiguredModelAdapter,
   JexlConditionEvaluator,
   parseAgentRunManifest,
-  parseAgentRuntimeConfig,
   PromptStepExecutor,
   type AgentManifest,
   type AgentVariableOverride,
@@ -17,6 +15,8 @@ import type { CeAppContext } from '../../lib/app-context.js'
 import { manifestUsesSiteTools, validateCeAgentManifest } from './manifest-policy.js'
 import { MongoAgentRunStore, type AgentRunScope } from './mongo-run-store.js'
 import { CeSiteToolAdapter } from './site-tool-adapter.js'
+import { envValue } from '../../lib/env.js'
+import { createHostModelAdapter } from './host-model.js'
 
 export type AgentHostMessage =
   | { kind: 'accepted'; runId: string }
@@ -163,30 +163,9 @@ export class AgentHostService {
 }
 
 function configuredAgentModel() {
-  return (process.env.AI_AGENT_MODEL ?? process.env.AI_CHAT_MODEL ?? '').trim()
+  return envValue('AI_AGENT_MODEL', 'AI_CHAT_MODEL') ?? ''
 }
 
 function createConfiguredAgentModel(manifest: AgentManifest): ModelAdapter {
-  const configured = configuredAgentModel()
-  const [provider, ...parts] = configured.split(':')
-  const model = parts.join(':')
-  if (!provider || !model) {
-    throw new BadRequestError(
-      'AI_AGENT_MODEL must use provider:model, for example openai:gpt-5.6-luna.',
-    )
-  }
-  try {
-    const runtimeConfig = parseAgentRuntimeConfig({
-      version: '1.0',
-      models: { default: { provider, model } },
-    })
-    const adapter = createConfiguredModelAdapter(manifest, runtimeConfig, { environment: process.env }, {
-      requireProfiles: true,
-      allowManifestOptions: false,
-    })
-    if (!adapter) throw new Error('The agent does not reference a model.')
-    return adapter
-  } catch (error) {
-    throw new BadRequestError(error instanceof Error ? error.message : 'Agent model is invalid.')
-  }
+  return createHostModelAdapter(configuredAgentModel(), manifest, 'AI_AGENT_MODEL')
 }

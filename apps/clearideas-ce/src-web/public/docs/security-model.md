@@ -20,7 +20,7 @@ MCP keys are hashed at rest. Tools enforce key scopes, site enablement, and perm
 
 ## AI Chat
 
-AI chat is optional, site-scoped, and controlled by site settings. Default tests do not call live model providers.
+AI chat is optional and controlled per site. A conversation can only use sites the signed-in user can read that have AI chat turned on (checked on every tool call), and cannot read files outside them even by id. Conversations are stored per user and are private to that user. Questions, answers and the text of files the assistant reads are sent to the configured model provider. Default tests do not call live model providers.
 
 ## Production Checklist
 

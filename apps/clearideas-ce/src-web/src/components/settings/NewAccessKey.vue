@@ -6,6 +6,7 @@ import BaseButton from '../base/BaseButton.vue'
 import BaseDialog from '../base/BaseDialog.vue'
 import IconCheckbox from '../base/IconCheckbox.vue'
 import { useAccessKeyStore } from '../../stores'
+import type { ButtonIntent } from '../../types/ui'
 
 type AccessKeyType = 'mcp'
 type AccessKeyScope = string
@@ -23,15 +24,15 @@ interface Props {
   color?: string
   size?: 'x-small' | 'small' | 'default' | 'large' | 'x-large'
   variant?: 'flat' | 'outlined' | 'elevated' | 'tonal' | 'text' | 'plain'
+  intent?: ButtonIntent
   prependIcon?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  intent: 'primary',
   text: undefined,
-  color: 'primary',
   size: 'small',
-  variant: 'flat',
-  prependIcon: 'fasl fa-plus',
+  prependIcon: 'fas fa-plus',
 })
 
 const emit = defineEmits<{ keyCreated: [] }>()
@@ -60,7 +61,9 @@ const createForm = ref<AccessKeyCreateParams>({
   expiresIn: 365 * 24 * 60 * 60 * 1000,
 })
 
-const isFormValid = computed(() => createForm.value.name.trim() && createForm.value.keyType && createForm.value.scopes.length > 0)
+const isFormValid = computed(
+  () => createForm.value.name.trim() && createForm.value.keyType && createForm.value.scopes.length > 0,
+)
 
 function getAvailableScopes(keyType: AccessKeyType) {
   const availableScopes = keyTypes.value[keyType] || []
@@ -110,31 +113,37 @@ onMounted(() => {
   <BaseButton
     v-bind="props"
     :text="props.text || 'Create access key'"
-    @click="isDialogVisible = true"
     :disabled="creatingKey"
     rounded
+    @click="isDialogVisible = true"
   />
 
   <BaseDialog
     v-model="isDialogVisible"
     max-width="600"
     persistent
-    :title="creatingKey ? '' : 'Create access key'"
-    :show-close="!creatingKey"
+    title="Create access key"
+    form="new-access-key-form"
+    confirm-text="Create key"
+    :confirm-disabled="!isFormValid"
+    :loading="creatingKey"
+    @cancel="closeDialog"
   >
     <div v-if="creatingKey">
       <VList class="py-8" color="primary" elevation="12" rounded="lg">
-        <VListItem prepend-icon="fasl fa-key" :title="`Creating ${createForm.name}`">
+        <VListItem prepend-icon="fas fa-key" :title="`Creating ${createForm.name}`">
           <template #prepend>
             <div class="pe-4"><VIcon color="primary" size="x-large" /></div>
           </template>
-          <template #append><VProgressCircular color="primary" indeterminate width="6" /></template>
+          <template #append
+            ><VProgressCircular aria-label="Creating access key" color="primary" indeterminate width="6"
+          /></template>
         </VListItem>
       </VList>
     </div>
 
     <template v-else>
-      <VForm ref="refForm" @submit.prevent="handleCreateKey">
+      <VForm id="new-access-key-form" ref="refForm" @submit.prevent="handleCreateKey">
         <VCardText>
           <div class="d-flex flex-column ga-4">
             <VTextField
@@ -162,9 +171,7 @@ onMounted(() => {
             <VSelect
               v-model="createForm.keyType"
               label="Key type"
-              :items="[
-                { value: 'mcp', title: 'MCP' },
-              ]"
+              :items="[{ value: 'mcp', title: 'MCP' }]"
               :rules="[value => !!value || 'Key type is required']"
               variant="outlined"
               density="compact"
@@ -174,12 +181,23 @@ onMounted(() => {
 
             <div>
               <div class="mb-2">
-                <label class="text-subtitle-2">Permissions <span class="text-error text-caption">(required)</span></label>
+                <span id="access-key-permissions-label" class="text-subtitle-2">
+                  Permissions <span class="text-error text-caption">(required)</span>
+                </span>
               </div>
 
-              <div class="scope-options">
-                <div v-for="scope in getAvailableScopes(createForm.keyType)" :key="scope.value" class="scope-option mb-2">
-                  <IconCheckbox v-model="createForm.scopes" :id="scope.value" :label="scope.label" :size="16" />
+              <div class="scope-options" role="group" aria-labelledby="access-key-permissions-label">
+                <div
+                  v-for="scope in getAvailableScopes(createForm.keyType)"
+                  :key="scope.value"
+                  class="scope-option mb-2"
+                >
+                  <IconCheckbox
+                    :id="scope.value"
+                    v-model="createForm.scopes"
+                    :label="scope.label"
+                    :size="16"
+                  />
                   <div class="text-caption text-medium-emphasis ml-6">{{ scope.description }}</div>
                 </div>
               </div>
@@ -202,14 +220,6 @@ onMounted(() => {
             />
           </div>
         </VCardText>
-
-        <VDivider />
-
-        <VCardActions class="bg-surface-light">
-          <VSpacer />
-          <BaseButton text="Cancel" color="default" variant="flat" rounded @click="closeDialog" />
-          <BaseButton text="Create key" color="primary" variant="flat" rounded type="submit" :disabled="!isFormValid" />
-        </VCardActions>
       </VForm>
     </template>
   </BaseDialog>

@@ -22,7 +22,7 @@ import { buildAccessKeyRoutes } from './routes/access-key/access-key.routes.js'
 import { buildActivityRoutes } from './routes/activity/activity.routes.js'
 import { buildAnalyticsRoutes } from './routes/analytics/analytics.routes.js'
 import { buildAuthRoutes } from './routes/auth/auth.routes.js'
-import { buildSiteChatRoutes } from './routes/chat/site-chat.routes.js'
+import { buildChatRoutes } from './routes/chat/chat.routes.js'
 import { buildAgentRoutes } from './routes/agent/agent.routes.js'
 import { buildCoreRoutes } from './routes/core/core.routes.js'
 import { buildMcpRoutes } from './routes/mcp/mcp.routes.js'
@@ -37,12 +37,15 @@ import {
 } from './workers/notification-worker.js'
 import { config } from './config/index.js'
 import { registerCeAgentModels, type CeAgentModels } from './models/agent.js'
+import { registerCeChatModels } from './models/chat.js'
+import { ChatService } from './services/chat/chat-service.js'
 import { AgentHostService } from './services/agent/agent-host.js'
 import type { ModelAdapter } from '@clearideas/agent-runtime'
 import {
   startAgentTaskWorker,
   type AgentTaskWorkerHandle,
 } from './workers/agent-task-worker.js'
+import { envValue } from './lib/env.js'
 
 const currentFile = fileURLToPath(import.meta.url)
 export const ceAppRoot = path.resolve(path.dirname(currentFile), '..')
@@ -74,6 +77,8 @@ export interface CeRuntimeOptions {
   httpsRequired?: boolean
   startWorkers?: boolean
   agentModelAdapter?: ModelAdapter
+  /** Chat's model (tests); defaults to `agentModelAdapter`, else AI_CHAT_MODEL. */
+  chatModelAdapter?: ModelAdapter
 }
 
 export interface CeRuntime {
@@ -93,8 +98,8 @@ export async function createCeRuntime(options: CeRuntimeOptions = {}): Promise<C
 
   const port = Number(process.env.PORT ?? 4100)
   const host = process.env.HOST ?? '127.0.0.1'
-  const appUrl = options.appUrl ?? process.env.APP_URL ?? `http://${host}:${port}`
-  const baseUrl = options.baseUrl ?? process.env.BETTER_AUTH_URL ?? appUrl
+  const appUrl = options.appUrl ?? envValue('APP_URL') ?? `http://${host}:${port}`
+  const baseUrl = options.baseUrl ?? envValue('BETTER_AUTH_URL') ?? appUrl
   const webRoot = options.webRoot ?? path.join(ceAppRoot, 'web')
   const templateRoot = options.templateRoot ?? path.join(ceAppRoot, 'templates/email')
   const storageRoot = resolveAppPath(
@@ -113,7 +118,11 @@ export async function createCeRuntime(options: CeRuntimeOptions = {}): Promise<C
   if (mongoose.connection.readyState !== 0) await mongoose.disconnect()
   await mongoose.connect(mongo.uri, mongo.options)
 
-  const models = { ...registerCoreModels(mongoose), ...registerCeAgentModels(mongoose) }
+  const models = {
+    ...registerCoreModels(mongoose),
+    ...registerCeAgentModels(mongoose),
+    ...registerCeChatModels(mongoose),
+  }
   const mongoClient = mongoose.connection.getClient()
   const db = mongoClient.db(mongoose.connection.name)
   const emailProvider = options.emailProvider ?? (await createCeEmailProvider({ templateRoot }))
@@ -195,6 +204,7 @@ export async function createCeRuntime(options: CeRuntimeOptions = {}): Promise<C
     search,
   }
   const agentHost = new AgentHostService(agentContext, options.agentModelAdapter)
+  const chat = new ChatService(agentContext, options.chatModelAdapter ?? options.agentModelAdapter)
   const app = createCeApp({
     auth,
     models,
@@ -203,6 +213,7 @@ export async function createCeRuntime(options: CeRuntimeOptions = {}): Promise<C
     webRoot,
     httpsRequired: options.httpsRequired,
     agentHost,
+    chat,
   })
 
   let notificationWorker: NotificationWorkerHandle | undefined
@@ -243,6 +254,7 @@ export function createCeApp(input: {
   webRoot: string
   httpsRequired?: boolean
   agentHost: AgentHostService
+  chat: ChatService
 }) {
   const app = express()
   app.set('trust proxy', resolveTrustProxy())
@@ -294,7 +306,7 @@ export function createCeApp(input: {
   app.use('/api', buildActivityRoutes(ctx))
   app.use('/api', buildAnalyticsRoutes(ctx))
   app.use('/api', buildNotificationRoutes(ctx))
-  app.use('/api', buildSiteChatRoutes(ctx))
+  app.use('/api', buildChatRoutes(ctx, input.chat))
   app.use('/api', buildAgentRoutes(ctx, input.agentHost))
   app.use('/api', buildMcpRoutes(ctx))
   app.get('/api/app-config', (_req, res) => {
@@ -320,7 +332,7 @@ export function createCeApp(input: {
   app.get('/{*any}', spaRateLimit, (req, res, next) => {
     if (req.path.startsWith('/api/')) return next()
     res.setHeader('cache-control', 'no-store')
-    res.sendFile(path.join(input.webRoot, 'index.html'))
+    res.sendFile('index.html', { root: input.webRoot })
   })
 
   app.use(errorHandler)

@@ -1,3 +1,8 @@
+<script setup lang="ts">
+const currentYear = new Date().getFullYear()
+const showHealthLink = import.meta.env.DEV
+</script>
+
 <template>
   <div class="app-footer">
     <div>
@@ -6,15 +11,13 @@
     </div>
     <div class="d-print-none">
       <RouterLink to="/settings">Settings</RouterLink>
-      <span> • </span>
-      <a href="/api/health" target="_blank">API health</a>
+      <template v-if="showHealthLink">
+        <span> • </span>
+        <a href="/api/health" target="_blank" rel="noopener">API health</a>
+      </template>
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-const currentYear = new Date().getFullYear()
-</script>
 
 <style scoped>
 .app-footer {
@@ -22,7 +25,7 @@ const currentYear = new Date().getFullYear()
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  color: rgba(var(--v-theme-on-surface), 0.5);
+  color: rgba(var(--v-theme-on-surface), 0.68);
   font-size: 0.72rem;
   line-height: 1rem;
   padding: 6px 4px 2px;
@@ -34,7 +37,7 @@ const currentYear = new Date().getFullYear()
 }
 
 .app-footer a:hover {
-  color: rgba(var(--v-theme-on-surface), 0.72);
+  color: rgba(var(--v-theme-on-surface), 0.9);
 }
 
 @media (max-width: 720px) {

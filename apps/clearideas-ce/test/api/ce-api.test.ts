@@ -4,7 +4,7 @@ import supertest from 'supertest'
 import { createDefaultUserAttributes } from '@clearideas/core'
 import { processPendingNotifications } from '../../src/workers/notification-worker.js'
 import { createTestCeRuntime, signIn, type TestCeRuntime } from '../harness/runtime.js'
-import { SiteChatController } from '../../src/controllers/chat/site-chat.controller.js'
+import { ContentToolOperations } from '../../src/services/content-tools.js'
 import { waitForPdfExtractions } from '../../src/services/pdf-text-extraction.js'
 
 describe('Clear Ideas CE API integration', () => {
@@ -23,68 +23,147 @@ describe('Clear Ideas CE API integration', () => {
   })
 
   it('serves health, protects API 404s from SPA fallback, and serves frontend routes', async () => {
-    await agent.get('/api/health').expect(200).expect(({ body }) => {
-      expect(body).toMatchObject({ status: 'ok', app: 'clearideas-ce', db: 'connected' })
-    })
-    await agent.get('/api/app-config').expect(200).expect(({ body }) => {
-      expect(body).toMatchObject({ docsEnabled: true })
-    })
-    await agent.get('/api/not-a-route').expect(404).expect(({ body }) => {
-      expect(body.error).toMatch(/not found/i)
-    })
+    await agent
+      .get('/api/health')
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body).toMatchObject({ status: 'ok', app: 'clearideas-ce', db: 'connected' })
+      })
+    await agent
+      .get('/api/app-config')
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body).toMatchObject({ docsEnabled: true })
+      })
+    await agent
+      .get('/api/not-a-route')
+      .expect(404)
+      .expect(({ body }) => {
+        expect(body.error).toMatch(/not found/i)
+      })
     await agent.get('/sites').expect(200).expect('content-type', /html/)
   })
 
   it('supports auth code sessions and account/profile settings', async () => {
-    await agent.get('/api/auth/session').expect(200).expect(({ body }) => {
-      expect(body.user.email).toBe('owner@clearideas.local')
-    })
-    await agent.patch('/api/profile').send({ attributes: { timezone: 'America/Toronto', sites: { autoAcceptInvites: true } } }).expect(200)
-    await agent.get('/api/profile').expect(200).expect(({ body }) => {
-      expect(body.profile.attributes.timezone).toBe('America/Toronto')
-      expect(body.profile.attributes.sites.autoAcceptInvites).toBe(true)
-    })
+    await agent
+      .get('/api/auth/session')
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.user.email).toBe('owner@clearideas.local')
+      })
+    await agent
+      .patch('/api/profile')
+      .send({ attributes: { timezone: 'America/Toronto', sites: { autoAcceptInvites: true } } })
+      .expect(200)
+    await agent
+      .get('/api/profile')
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.profile.attributes.timezone).toBe('America/Toronto')
+        expect(body.profile.attributes.sites.autoAcceptInvites).toBe(true)
+      })
+
+    // UI preferences (web preferences store) live under `attributes.ui` and round-trip without
+    // disturbing sibling attribute keys (the server merges attributes by top-level key).
+    await agent
+      .patch('/api/profile')
+      .send({ attributes: { ui: { tileView: true, sitePageSize: 50, theme: 'dark', navRail: true } } })
+      .expect(200)
+    await agent
+      .get('/api/profile')
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.profile.attributes.ui).toEqual({
+          tileView: true,
+          sitePageSize: 50,
+          theme: 'dark',
+          navRail: true,
+        })
+        expect(body.profile.attributes.timezone).toBe('America/Toronto')
+        expect(body.profile.attributes.sites.autoAcceptInvites).toBe(true)
+      })
   })
 
   it('creates sites, nested folders, files, search records, activities, notifications, and MCP read/write access', async () => {
     const site = await createSite('CE API Site')
-    await agent.patch(`/api/sites/${site.id}`).send({ attributes: { ai: { chatEnabled: true, mcpEnabled: true }, mcp: { enabled: true } } }).expect(200).expect(({ body }) => {
-      expect(body.site.attributes.ai).toMatchObject({ chatEnabled: true, mcpEnabled: true })
-    })
-    await agent.patch(`/api/sites/${site.id}`).send({ attributes: null }).expect(400).expect(({ body }) => {
-      expect(body.error).toMatch(/attributes/i)
-    })
+    await agent
+      .patch(`/api/sites/${site.id}`)
+      .send({ attributes: { ai: { chatEnabled: true, mcpEnabled: true }, mcp: { enabled: true } } })
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.site.attributes.ai).toMatchObject({ chatEnabled: true, mcpEnabled: true })
+      })
+    await agent
+      .patch(`/api/sites/${site.id}`)
+      .send({ attributes: null })
+      .expect(400)
+      .expect(({ body }) => {
+        expect(body.error).toMatch(/attributes/i)
+      })
 
-    const folder = await agent.post(`/api/sites/${site.id}/folders`).send({ name: 'Financials' }).expect(201).then(res => res.body.folder)
-    const childFolder = await agent.post(`/api/sites/${site.id}/folders`).send({ name: 'Quarterly', folderId: folder.id }).expect(201).then(res => res.body.folder)
+    const folder = await agent
+      .post(`/api/sites/${site.id}/folders`)
+      .send({ name: 'Financials' })
+      .expect(201)
+      .then(res => res.body.folder)
+    const childFolder = await agent
+      .post(`/api/sites/${site.id}/folders`)
+      .send({ name: 'Quarterly', folderId: folder.id })
+      .expect(201)
+      .then(res => res.body.folder)
     expect(childFolder.parentId).toBe(folder.id)
 
-    const jsonFile = await uploadFile({ siteId: site.id, folderId: childFolder.id, fileName: 'topics.json', contentType: 'application/json', body: Buffer.from('{"topic":"GMV","value":"$235.9B"}') })
-    const mdFile = await uploadFile({ siteId: site.id, folderId: childFolder.id, fileName: 'notes.md', contentType: 'text/markdown', body: Buffer.from('# Notes\n\nShopify GMV grew strongly.') })
-    const pdfFile = await uploadFile({ siteId: site.id, fileName: 'sample-report.pdf', contentType: 'application/pdf', body: testPdfBuffer() })
-    await agent.get('/api/sites').expect(200).expect(({ body }) => {
-      const listedSite = body.sites.find((entry: any) => entry.id === site.id)
-      expect(listedSite).toBeTruthy()
-      expect(listedSite.files ?? []).toHaveLength(0)
-      expect(listedSite.folders ?? []).toHaveLength(0)
+    const jsonFile = await uploadFile({
+      siteId: site.id,
+      folderId: childFolder.id,
+      fileName: 'topics.json',
+      contentType: 'application/json',
+      body: Buffer.from('{"topic":"GMV","value":"$235.9B"}'),
     })
-    await agent.get(`/api/sites/${site.id}`).expect(200).expect(({ body }) => {
-      expect(body.site.files).toEqual(expect.arrayContaining([expect.objectContaining({ id: pdfFile.id })]))
-      expect(body.site.folders).toEqual(expect.arrayContaining([
-        expect.objectContaining({
-          id: folder.id,
-          files: expect.any(Array),
-        }),
-        expect.objectContaining({
-          id: childFolder.id,
-          parentId: folder.id,
-          files: expect.arrayContaining([
-            expect.objectContaining({ id: jsonFile.id }),
-            expect.objectContaining({ id: mdFile.id }),
+    const mdFile = await uploadFile({
+      siteId: site.id,
+      folderId: childFolder.id,
+      fileName: 'notes.md',
+      contentType: 'text/markdown',
+      body: Buffer.from('# Notes\n\nShopify GMV grew strongly.'),
+    })
+    const pdfFile = await uploadFile({
+      siteId: site.id,
+      fileName: 'sample-report.pdf',
+      contentType: 'application/pdf',
+      body: testPdfBuffer(),
+    })
+    await agent
+      .get('/api/sites')
+      .expect(200)
+      .expect(({ body }) => {
+        const listedSite = body.sites.find((entry: any) => entry.id === site.id)
+        expect(listedSite).toBeTruthy()
+        expect(listedSite.files ?? []).toHaveLength(0)
+        expect(listedSite.folders ?? []).toHaveLength(0)
+      })
+    await agent
+      .get(`/api/sites/${site.id}`)
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.site.files).toEqual(expect.arrayContaining([expect.objectContaining({ id: pdfFile.id })]))
+        expect(body.site.folders).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              id: folder.id,
+              files: expect.any(Array),
+            }),
+            expect.objectContaining({
+              id: childFolder.id,
+              parentId: folder.id,
+              files: expect.arrayContaining([
+                expect.objectContaining({ id: jsonFile.id }),
+                expect.objectContaining({ id: mdFile.id }),
+              ]),
+            }),
           ]),
-        }),
-      ]))
-    })
+        )
+      })
     const siteDoc = await ctx.runtime.models.SiteModel.findById(site.id).lean()
     const dbOnlyFile = await ctx.runtime.models.ContentModel.create({
       name: 'welcome.txt',
@@ -104,7 +183,10 @@ describe('Clear Ideas CE API integration', () => {
       attributes: {},
     })
     // The seeded record has no stored object yet; store one so it can be indexed like a real file.
-    await ctx.runtime.providers.storage.writeObject({ key: 'seed-welcome.txt', body: Buffer.from('Welcome to Clear Ideas Community Edition.\n') })
+    await ctx.runtime.providers.storage.writeObject({
+      key: 'seed-welcome.txt',
+      body: Buffer.from('Welcome to Clear Ideas Community Edition.\n'),
+    })
     // PDF text is extracted and indexed in the background; wait for both before asserting on search.
     await waitForPdfExtractions()
     await ctx.runtime.search.settle()
@@ -125,179 +207,293 @@ describe('Clear Ideas CE API integration', () => {
     })
     await ctx.runtime.search.settle()
 
-    await agent.get(`/api/site/${site.id}/file/${jsonFile.id}`).expect(200).expect(({ body }) => {
-      expect(body.file.contentType).toBe('application/json')
-      expect(body.file.viewUrl).toBe(`/api/files/view/${jsonFile.id}`)
-      expect(body.file.downloadUrl).toBe(`/api/files/download/${jsonFile.id}`)
-      expect(body.file.viewUrl).not.toContain(jsonFile.key)
-      expect(body.file.downloadUrl).not.toContain(jsonFile.key)
-    })
-    const jsonViewUrl = await agent.get(`/api/site/${site.id}/file/${jsonFile.id}/token`).query({ purpose: 'view' }).expect(200).then(res => res.body.url)
-    const mdDownloadUrl = await agent.get(`/api/site/${site.id}/file/${mdFile.id}/token`).query({ purpose: 'download' }).expect(200).then(res => res.body.url)
+    await agent
+      .get(`/api/site/${site.id}/file/${jsonFile.id}`)
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.file.contentType).toBe('application/json')
+        expect(body.file.viewUrl).toBe(`/api/files/view/${jsonFile.id}`)
+        expect(body.file.downloadUrl).toBe(`/api/files/download/${jsonFile.id}`)
+        expect(body.file.viewUrl).not.toContain(jsonFile.key)
+        expect(body.file.downloadUrl).not.toContain(jsonFile.key)
+      })
+    const jsonViewUrl = await agent
+      .get(`/api/site/${site.id}/file/${jsonFile.id}/token`)
+      .query({ purpose: 'view' })
+      .expect(200)
+      .then(res => res.body.url)
+    const mdDownloadUrl = await agent
+      .get(`/api/site/${site.id}/file/${mdFile.id}/token`)
+      .query({ purpose: 'download' })
+      .expect(200)
+      .then(res => res.body.url)
     expect(jsonViewUrl).toContain(`/api/files/view/${jsonFile.id}?token=`)
     expect(jsonViewUrl).not.toContain(jsonFile.key)
     expect(mdDownloadUrl).toContain(`/api/files/download/${mdFile.id}?token=`)
     expect(mdDownloadUrl).not.toContain(mdFile.key)
     await agent.get(jsonViewUrl).expect(200).expect('content-type', /json/)
-    await agent.get(mdDownloadUrl).expect(200).expect('content-disposition', /attachment/)
-    await expect(ctx.runtime.models.ActivityModel.findOne({
-      action: 'file-viewed',
-      target: jsonFile.id,
-      onModel: 'Content',
-      parent: site.id,
-      parentOnModel: 'Site',
-    }).lean()).resolves.toMatchObject({
+    await agent
+      .get(mdDownloadUrl)
+      .expect(200)
+      .expect('content-disposition', /attachment/)
+    await expect(
+      ctx.runtime.models.ActivityModel.findOne({
+        action: 'file-viewed',
+        target: jsonFile.id,
+        onModel: 'Content',
+        parent: site.id,
+        parentOnModel: 'Site',
+      }).lean(),
+    ).resolves.toMatchObject({
       attributes: expect.objectContaining({ fileName: jsonFile.name }),
     })
-    await expect(ctx.runtime.models.ActivityModel.findOne({
-      action: 'file-downloaded',
-      target: mdFile.id,
-      onModel: 'Content',
-      parent: site.id,
-      parentOnModel: 'Site',
-    }).lean()).resolves.toMatchObject({
+    await expect(
+      ctx.runtime.models.ActivityModel.findOne({
+        action: 'file-downloaded',
+        target: mdFile.id,
+        onModel: 'Content',
+        parent: site.id,
+        parentOnModel: 'Site',
+      }).lean(),
+    ).resolves.toMatchObject({
       attributes: expect.objectContaining({ fileName: mdFile.name }),
     })
 
-    await agent.post(`/api/site/${site.id}/search`).send({ q: 'GMV' }).expect(200).expect(({ body }) => {
-      expect(body.results.some((result: any) => result.id === mdFile.id || result.id === pdfFile.id)).toBe(true)
-    })
-    await agent.post(`/api/site/${site.id}/search`).send({ q: 'welcome.txt' }).expect(200).expect(({ body }) => {
-      expect(body.results).toEqual(expect.arrayContaining([
-        expect.objectContaining({ id: String(dbOnlyFile._id), name: 'welcome.txt' }),
-      ]))
-    })
-    await agent.post('/api/search').send({ q: 'welcome.txt' }).expect(200).expect(({ body }) => {
-      expect(body.results).toEqual(expect.arrayContaining([
-        expect.objectContaining({ id: String(dbOnlyFile._id), name: 'welcome.txt' }),
-      ]))
-    })
-    await agent.post('/api/search').send({ q: '@contentType: application/pdf' }).expect(200).expect(({ body }) => {
-      expect(body.results.some((result: any) => result.id === pdfFile.id)).toBe(true)
-    })
+    await agent
+      .post(`/api/site/${site.id}/search`)
+      .send({ q: 'GMV' })
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.results.some((result: any) => result.id === mdFile.id || result.id === pdfFile.id)).toBe(
+          true,
+        )
+      })
+    await agent
+      .post(`/api/site/${site.id}/search`)
+      .send({ q: 'welcome.txt' })
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.results).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ id: String(dbOnlyFile._id), name: 'welcome.txt' }),
+          ]),
+        )
+      })
+    await agent
+      .post('/api/search')
+      .send({ q: 'welcome.txt' })
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.results).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ id: String(dbOnlyFile._id), name: 'welcome.txt' }),
+          ]),
+        )
+      })
+    await agent
+      .post('/api/search')
+      .send({ q: '@contentType: application/pdf' })
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.results.some((result: any) => result.id === pdfFile.id)).toBe(true)
+      })
 
-    await agent.post('/api/activities').send({
-      action: 'viewed',
-      target: jsonFile.id,
-      onModel: 'Content',
-      parent: site.id,
-      parentOnModel: 'Site',
-      attributes: { source: 'test' },
-    }).expect(201)
-    await agent.get('/api/analytics/dashboard').expect(200).expect(({ body }) => {
-      expect(body.totalOwnedOrAdministeredSites).toBeGreaterThanOrEqual(1)
-      expect(body.totalContent).toBeGreaterThanOrEqual(3)
-      expect(body.mostAccessedContent).toEqual(expect.arrayContaining([
-        expect.objectContaining({ id: jsonFile.id, name: jsonFile.name }),
-      ]))
-    })
+    await agent
+      .post('/api/activities')
+      .send({
+        action: 'viewed',
+        target: jsonFile.id,
+        onModel: 'Content',
+        parent: site.id,
+        parentOnModel: 'Site',
+        attributes: { source: 'test' },
+      })
+      .expect(201)
+    await agent
+      .get('/api/analytics/dashboard')
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.totalOwnedOrAdministeredSites).toBeGreaterThanOrEqual(1)
+        expect(body.totalContent).toBeGreaterThanOrEqual(3)
+        expect(body.mostAccessedContent).toEqual(
+          expect.arrayContaining([expect.objectContaining({ id: jsonFile.id, name: jsonFile.name })]),
+        )
+        // Folder activity is named too (it read "Unknown content").
+        expect(body.mostAccessedContent).toEqual(
+          expect.arrayContaining([expect.objectContaining({ id: folder.id, name: folder.name })]),
+        )
+        expect(body.mostAccessedContent.map((row: any) => row.name)).not.toContain('Unknown content')
+      })
 
     await processPendingNotifications({ models: ctx.runtime.models, providers: ctx.runtime.providers })
 
-    const key = await agent.post('/api/account/access-keys').send({
-      name: 'MCP Test Key',
-      keyType: 'mcp',
-      scopes: ['mcp:read', 'mcp:write'],
-    }).expect(201).then(res => res.body.key as string)
+    const key = await agent
+      .post('/api/account/access-keys')
+      .send({
+        name: 'MCP Test Key',
+        keyType: 'mcp',
+        scopes: ['mcp:read', 'mcp:write'],
+      })
+      .expect(201)
+      .then(res => res.body.key as string)
     await callMcp(key, 'clearideas.list_sites', {}).expect(({ body }) => {
       expect(body.result.sites.some((entry: any) => entry.id === site.id)).toBe(true)
     })
-    await callMcp(key, 'clearideas.create_folder', { siteId: site.id, folderId: folder.id, name: 'MCP Nested' }).expect(({ body }) => {
+    await callMcp(key, 'clearideas.create_folder', {
+      siteId: site.id,
+      folderId: folder.id,
+      name: 'MCP Nested',
+    }).expect(({ body }) => {
       expect(body.result.folder.parentId).toBe(folder.id)
     })
     await callMcp(key, 'clearideas.retrieve_file_content', { contentId: mdFile.id }).expect(({ body }) => {
       expect(body.result.content).toContain('Shopify GMV')
     })
-    const chatController = new SiteChatController({
-      auth: ctx.runtime.auth,
-      models: ctx.runtime.models,
-      providers: ctx.runtime.providers,
-      search: ctx.runtime.search,
-    })
-    const chatTools = (chatController as any).buildSiteChatTools({ _id: site.id, name: site.name, files: [], folders: [] }, site.id)
-    const pdfContent = await chatTools.retrieve_file_content.execute({ contentId: pdfFile.id, maxTokens: 4000 })
-    expect(pdfContent).not.toHaveProperty('error')
+    // The AI tools (chat, agents) extract a PDF's text on first read.
+    const owner = await ctx.runtime.models.UserModel.findById(user.id).lean()
+    const ownerAccount = await ctx.runtime.models.AccountModel.findOne({ owner: owner._id }).lean()
+    const contentTools = new ContentToolOperations(
+      {
+        auth: ctx.runtime.auth,
+        models: ctx.runtime.models,
+        providers: ctx.runtime.providers,
+        search: ctx.runtime.search,
+      } as any,
+      { accountId: String(ownerAccount._id), userId: String(owner._id) },
+    )
+    const pdfContent = await contentTools.retrieveFile(pdfFile.id, 4000)
     expect(pdfContent.content).toContain('Sample report revenue increased in 2023.')
-    const extractedPdf = (await ctx.runtime.models.ContentModel.findById(pdfFile.id).select('+extractedText').lean()) as any
+    const extractedPdf = (await ctx.runtime.models.ContentModel.findById(pdfFile.id)
+      .select('+extractedText')
+      .lean()) as any
     expect(extractedPdf).toMatchObject({
       extractionStatus: 'complete',
       extractedTextKey: `${pdfFile.key}.extracted.txt`,
     })
     // Extracted text is kept as a companion object, not on the database record.
     expect(extractedPdf.extractedText).toBeUndefined()
-    const companionText = await ctx.runtime.providers.storage.readObject({ key: String(extractedPdf.extractedTextKey) })
+    const companionText = await ctx.runtime.providers.storage.readObject({
+      key: String(extractedPdf.extractedTextKey),
+    })
     expect(companionText.toString('utf8')).toContain('Sample report revenue increased in 2023.')
     await waitForPdfExtractions()
     await ctx.runtime.search.settle()
-    await agent.post(`/api/site/${site.id}/search`).send({ q: 'revenue increased' }).expect(200).expect(({ body }) => {
-      const hit = body.results.find((result: any) => result.id === pdfFile.id)
-      expect(hit).toBeTruthy()
-      expect(hit.snippet).toContain('revenue increased')
-    })
+    await agent
+      .post(`/api/site/${site.id}/search`)
+      .send({ q: 'revenue increased' })
+      .expect(200)
+      .expect(({ body }) => {
+        const hit = body.results.find((result: any) => result.id === pdfFile.id)
+        expect(hit).toBeTruthy()
+        expect(hit.snippet).toContain('revenue increased')
+      })
     // Oversized or malformed MCP search arguments are rejected before any work is done.
-    await agent.post('/api/mcp').set('authorization', `Bearer ${key}`).send({
-      tool: 'clearideas.search_content',
-      args: { q: 'x'.repeat(501) },
-    }).expect(400)
+    await agent
+      .post('/api/mcp')
+      .set('authorization', `Bearer ${key}`)
+      .send({
+        tool: 'clearideas.search_content',
+        args: { q: 'x'.repeat(501) },
+      })
+      .expect(400)
     await callMcp(key, 'clearideas.search_content', { q: 'GMV', siteIds: [site.id] }).expect(({ body }) => {
-      expect(body.result.results.some((result: any) => result.id === mdFile.id || result.id === pdfFile.id)).toBe(true)
+      expect(
+        body.result.results.some((result: any) => result.id === mdFile.id || result.id === pdfFile.id),
+      ).toBe(true)
     })
 
-    const uploader = await agent.post(`/api/site/${site.id}/users`).send({
-      email: 'mcp-uploader@clearideas.local',
-      displayName: 'MCP Uploader',
-      siteRole: 'uploader',
-    }).expect(200).then(res => res.body.user)
+    const uploader = await agent
+      .post(`/api/site/${site.id}/users`)
+      .send({
+        email: 'mcp-uploader@clearideas.local',
+        displayName: 'MCP Uploader',
+        siteRole: 'uploader',
+      })
+      .expect(200)
+      .then(res => res.body.user)
     const uploaderAgent = supertest.agent(ctx.runtime.app)
     await signIn({ agent: uploaderAgent, email: ctx.email, address: uploader.email, name: 'MCP Uploader' })
-    const uploaderKey = await uploaderAgent.post('/api/account/access-keys').send({
-      name: 'MCP Uploader Key',
-      keyType: 'mcp',
-      scopes: ['mcp:read', 'mcp:write'],
-    }).expect(201).then(res => res.body.key as string)
-    await agent.post('/api/mcp').set('authorization', `Bearer ${uploaderKey}`).send({
-      tool: 'clearideas.create_folder',
-      args: { siteId: site.id, folderId: folder.id, name: 'Uploader MCP Folder' },
-    }).expect(200).expect(({ body }) => {
-      expect(body.result.folder.parentId).toBe(folder.id)
-    })
+    const uploaderKey = await uploaderAgent
+      .post('/api/account/access-keys')
+      .send({
+        name: 'MCP Uploader Key',
+        keyType: 'mcp',
+        scopes: ['mcp:read', 'mcp:write'],
+      })
+      .expect(201)
+      .then(res => res.body.key as string)
+    await agent
+      .post('/api/mcp')
+      .set('authorization', `Bearer ${uploaderKey}`)
+      .send({
+        tool: 'clearideas.create_folder',
+        args: { siteId: site.id, folderId: folder.id, name: 'Uploader MCP Folder' },
+      })
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.result.folder.parentId).toBe(folder.id)
+      })
   })
 
   it('adds an existing user to a site through the site membership endpoint with a selected role', async () => {
     const site = await createSite('Membership Site')
     ctx.email.clear()
-    const createdMember = await agent.post(`/api/site/${site.id}/users`).send({ email: 'member@clearideas.local', displayName: 'Member User', siteRole: 'viewer' }).expect(200).then(res => res.body.user)
+    const createdMember = await agent
+      .post(`/api/site/${site.id}/users`)
+      .send({ email: 'member@clearideas.local', displayName: 'Member User', siteRole: 'viewer' })
+      .expect(200)
+      .then(res => res.body.user)
     expect(createdMember.status).toBe('pending-invite')
     expect(ctx.email.lastTemplate('site-invitation')).toBeUndefined()
     const memberRuntimeAgent = supertest.agent(ctx.runtime.app)
-    const member = await signIn({ agent: memberRuntimeAgent, email: ctx.email, address: createdMember.email, name: 'Member User' })
+    const member = await signIn({
+      agent: memberRuntimeAgent,
+      email: ctx.email,
+      address: createdMember.email,
+      name: 'Member User',
+    })
 
-    await agent.post(`/api/site/${site.id}/users`).send({ email: member.email, displayName: 'Member User', siteRole: 'viewer' }).expect(200)
-    await agent.get(`/api/site/${site.id}/users`).expect(200).expect(({ body }) => {
-      const row = body.users.find((entry: any) => entry.id === member.id)
-      expect(row).toMatchObject({ email: member.email })
-      expect(row.sites.find((entry: any) => entry.siteId === site.id)).toMatchObject({ role: 'viewer' })
-    })
+    await agent
+      .post(`/api/site/${site.id}/users`)
+      .send({ email: member.email, displayName: 'Member User', siteRole: 'viewer' })
+      .expect(200)
+    await agent
+      .get(`/api/site/${site.id}/users`)
+      .expect(200)
+      .expect(({ body }) => {
+        const row = body.users.find((entry: any) => entry.id === member.id)
+        expect(row).toMatchObject({ email: member.email })
+        expect(row.sites.find((entry: any) => entry.siteId === site.id)).toMatchObject({ role: 'viewer' })
+      })
     await agent.put(`/api/site/${site.id}/user/${member.id}`).send({ role: 'editor' }).expect(200)
-    await agent.patch(`/api/site/${site.id}/user/${member.id}/resend`).expect(200).expect(({ body }) => {
-      expect(body.success).toBe(false)
-    })
+    await agent
+      .patch(`/api/site/${site.id}/user/${member.id}/resend`)
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.success).toBe(false)
+      })
     expect(ctx.email.lastTemplate('site-invitation')).toBeUndefined()
     await agent.patch(`/api/sites/${site.id}`).send({ visibility: 'public' }).expect(200)
     const inviteEmail = ctx.email.lastTemplate('site-invitation')
     expect(inviteEmail?.to).toBe(member.email)
     expect(String(inviteEmail?.templateModel?.action_url)).toContain('code=')
-    await agent.get(`/api/site/${site.id}/users`).expect(200).expect(({ body }) => {
-      const row = body.users.find((entry: any) => entry.id === member.id)
-      expect(row.status).toBe('active')
-    })
+    await agent
+      .get(`/api/site/${site.id}/users`)
+      .expect(200)
+      .expect(({ body }) => {
+        const row = body.users.find((entry: any) => entry.id === member.id)
+        expect(row.status).toBe('active')
+      })
   })
 
   it('marks manually accepted private site invitations as accepted membership', async () => {
     const site = await createSite('Manual Accept Site')
     const invited = await createStandaloneUser('manual-accept@clearideas.local', 'Manual Accept')
     await invited.updateOne({ $set: { 'attributes.sites.autoAcceptInvites': false } })
-    await agent.post(`/api/site/${site.id}/users`).send({ email: invited.email, displayName: invited.displayName, siteRole: 'viewer' }).expect(200)
+    await agent
+      .post(`/api/site/${site.id}/users`)
+      .send({ email: invited.email, displayName: invited.displayName, siteRole: 'viewer' })
+      .expect(200)
 
     const invitedAgent = supertest.agent(ctx.runtime.app)
     await signIn({ agent: invitedAgent, email: ctx.email, address: invited.email, name: invited.displayName })
@@ -308,14 +504,23 @@ describe('Clear Ideas CE API integration', () => {
     expect(member?.acceptedAt).toBeTruthy()
     expect(member?.declinedAt ?? null).toBeNull()
     await agent.patch(`/api/sites/${site.id}`).send({ visibility: 'public' }).expect(200)
-    await invitedAgent.get('/api/sites').expect(200).expect(({ body }) => {
-      expect(body.sites.find((entry: any) => entry.id === site.id)).toMatchObject({ currentUserRole: 'viewer' })
-    })
+    await invitedAgent
+      .get('/api/sites')
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.sites.find((entry: any) => entry.id === site.id)).toMatchObject({
+          currentUserRole: 'viewer',
+        })
+      })
   })
 
   it('enforces site authorization for private reads, content writes, uploads, downloads, and activities', async () => {
     const site = await createSite('Private Security Site')
-    const folder = await agent.post(`/api/sites/${site.id}/folders`).send({ name: 'Private Folder' }).expect(201).then(res => res.body.folder)
+    const folder = await agent
+      .post(`/api/sites/${site.id}/folders`)
+      .send({ name: 'Private Folder' })
+      .expect(201)
+      .then(res => res.body.folder)
     const file = await uploadFile({
       siteId: site.id,
       folderId: folder.id,
@@ -326,78 +531,131 @@ describe('Clear Ideas CE API integration', () => {
 
     const outsiderAgent = supertest.agent(ctx.runtime.app)
     await createStandaloneUser('outsider@clearideas.local', 'Outsider User')
-    await signIn({ agent: outsiderAgent, email: ctx.email, address: 'outsider@clearideas.local', name: 'Outsider User' })
+    await signIn({
+      agent: outsiderAgent,
+      email: ctx.email,
+      address: 'outsider@clearideas.local',
+      name: 'Outsider User',
+    })
 
     await outsiderAgent.get(`/api/sites/${site.id}`).expect(403)
-    await outsiderAgent.get(`/api/site/${site.id}/file/${file.id}/token`).query({ purpose: 'view' }).expect(403)
+    await outsiderAgent
+      .get(`/api/site/${site.id}/file/${file.id}/token`)
+      .query({ purpose: 'view' })
+      .expect(403)
     await outsiderAgent.post(`/api/site/${site.id}/search`).send({ q: 'private' }).expect(403)
-    await outsiderAgent.post(`/api/site/${site.id}/folder/${folder.id}/search`).send({ q: 'private' }).expect(403)
-    await outsiderAgent.post('/api/search').send({ q: 'private' }).expect(200).expect(({ body }) => {
-      expect(body.results.some((result: any) => result.id === file.id)).toBe(false)
-    })
-    await agent.post(`/api/site/${site.id}/search`).send({ q: 'x'.repeat(501) }).expect(400)
+    await outsiderAgent
+      .post(`/api/site/${site.id}/folder/${folder.id}/search`)
+      .send({ q: 'private' })
+      .expect(403)
+    await outsiderAgent
+      .post('/api/search')
+      .send({ q: 'private' })
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.results.some((result: any) => result.id === file.id)).toBe(false)
+      })
+    await agent
+      .post(`/api/site/${site.id}/search`)
+      .send({ q: 'x'.repeat(501) })
+      .expect(400)
     await agent.post(`/api/site/${site.id}/search`).send({ q: '@constructor:native' }).expect(200)
-    await agent.patch(`/api/sites/${site.id}`).send({ attributes: { ai: { enabled: true, chatEnabled: true } } }).expect(200)
-    await agent.post(`/api/sites/${site.id}/chat`).send({
-      id: 'transport-request',
-      trigger: 'submit-message',
-      messages: [{ id: 'message-1', role: 'user', parts: [{ type: 'text', text: 'hello' }] }],
-    }).expect(400).expect(({ body }) => {
-      expect(body.error).toBe('Invalid request.')
-    })
-    await outsiderAgent.post(`/api/sites/${site.id}/chat`).send({
-      messages: [{ id: 'outsider-message', role: 'user', parts: [{ type: 'text', text: 'hello' }] }],
-    }).expect(403)
+    await agent
+      .patch(`/api/sites/${site.id}`)
+      .send({ attributes: { ai: { enabled: true, chatEnabled: true } } })
+      .expect(200)
+    await agent
+      .post('/api/chat')
+      .send({
+        id: 'transport-request',
+        trigger: 'submit-message',
+        messages: [{ id: 'message-1', role: 'user', parts: [{ type: 'text', text: 'hello' }] }],
+      })
+      .expect(400)
+      .expect(({ body }) => {
+        // The legacy AI SDK transport shape is rejected by the chat turn schema.
+        expect(body.error).toBeTruthy()
+      })
+    await outsiderAgent
+      .post('/api/chat')
+      .send({ siteId: site.id, message: { id: 'outsider-message', text: 'hello' } })
+      .expect(403)
     await outsiderAgent.post(`/api/sites/${site.id}/folders`).send({ name: 'Nope' }).expect(403)
-    await outsiderAgent.post('/api/files/upload-target').send({
-      siteId: site.id,
-      folderId: folder.id,
-      fileName: 'nope.txt',
-      contentType: 'text/plain',
-      size: 4,
-    }).expect(403)
+    await outsiderAgent
+      .post('/api/files/upload-target')
+      .send({
+        siteId: site.id,
+        folderId: folder.id,
+        fileName: 'nope.txt',
+        contentType: 'text/plain',
+        size: 4,
+      })
+      .expect(403)
     await outsiderAgent.get(`/api/files/view/${encodeURIComponent(file.key)}`).expect(400)
     await outsiderAgent.get('/api/files/download/not-a-real-key.txt').expect(400)
-    await outsiderAgent.post('/api/activities').send({
-      action: 'viewed',
-      target: file.id,
-      onModel: 'Content',
-      parent: site.id,
-      parentOnModel: 'Site',
-      attributes: { source: 'forged-test' },
-    }).expect(403)
+    await outsiderAgent
+      .post('/api/activities')
+      .send({
+        action: 'viewed',
+        target: file.id,
+        onModel: 'Content',
+        parent: site.id,
+        parentOnModel: 'Site',
+        attributes: { source: 'forged-test' },
+      })
+      .expect(403)
 
-    const viewer = await agent.post(`/api/site/${site.id}/users`).send({
-      email: 'viewer@clearideas.local',
-      displayName: 'Viewer User',
-      siteRole: 'viewer',
-    }).expect(200).then(res => res.body.user)
+    const viewer = await agent
+      .post(`/api/site/${site.id}/users`)
+      .send({
+        email: 'viewer@clearideas.local',
+        displayName: 'Viewer User',
+        siteRole: 'viewer',
+      })
+      .expect(200)
+      .then(res => res.body.user)
     const viewerAgent = supertest.agent(ctx.runtime.app)
     await signIn({ agent: viewerAgent, email: ctx.email, address: viewer.email, name: 'Viewer User' })
     await viewerAgent.get(`/api/sites/${site.id}`).expect(200)
-    await viewerAgent.post(`/api/site/${site.id}/search`).send({ q: 'private' }).expect(200).expect(({ body }) => {
-      expect(body.results.some((result: any) => result.id === file.id)).toBe(true)
-    })
+    await viewerAgent
+      .post(`/api/site/${site.id}/search`)
+      .send({ q: 'private' })
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.results.some((result: any) => result.id === file.id)).toBe(true)
+      })
     await viewerAgent.get(`/api/site/${site.id}/file/${file.id}/token`).query({ purpose: 'view' }).expect(200)
-    await viewerAgent.get(`/api/site/${site.id}/file/${file.id}/token`).query({ purpose: 'download' }).expect(403)
+    await viewerAgent
+      .get(`/api/site/${site.id}/file/${file.id}/token`)
+      .query({ purpose: 'download' })
+      .expect(403)
 
     // Expired memberships no longer grant access to site content or search.
-    await agent.put(`/api/site/${site.id}/user/${viewer.id}`).send({
-      role: 'viewer',
-      expiresAt: new Date(Date.now() - 60_000).toISOString(),
-    }).expect(200)
+    await agent
+      .put(`/api/site/${site.id}/user/${viewer.id}`)
+      .send({
+        role: 'viewer',
+        expiresAt: new Date(Date.now() - 60_000).toISOString(),
+      })
+      .expect(200)
     await viewerAgent.post(`/api/site/${site.id}/search`).send({ q: 'private' }).expect(403)
     await viewerAgent.get(`/api/sites/${site.id}`).expect(403)
-    await agent.put(`/api/site/${site.id}/user/${viewer.id}`).send({ role: 'viewer', expiresAt: '' }).expect(200)
+    await agent
+      .put(`/api/site/${site.id}/user/${viewer.id}`)
+      .send({ role: 'viewer', expiresAt: '' })
+      .expect(200)
     await viewerAgent.post(`/api/site/${site.id}/search`).send({ q: 'private' }).expect(200)
     await viewerAgent.delete(`/api/site/${site.id}/content/${folder.id}`).expect(403)
-    await viewerAgent.post('/api/files/upload-target').send({
-      siteId: site.id,
-      folderId: folder.id,
-      fileName: 'viewer-upload.txt',
-      contentType: 'text/plain',
-      size: 6,
-    }).expect(403)
+    await viewerAgent
+      .post('/api/files/upload-target')
+      .send({
+        siteId: site.id,
+        folderId: folder.id,
+        fileName: 'viewer-upload.txt',
+        contentType: 'text/plain',
+        size: 6,
+      })
+      .expect(403)
   })
 
   it('attributes search terms to administrators only for the sites where the search matched', async () => {
@@ -405,67 +663,141 @@ describe('Clear Ideas CE API integration', () => {
     const siteA = await createSite('Search Analytics A')
     await createStandaloneUser('admin2@clearideas.local', 'Admin Two')
     const admin2Agent = supertest.agent(ctx.runtime.app)
-    await signIn({ agent: admin2Agent, email: ctx.email, address: 'admin2@clearideas.local', name: 'Admin Two' })
-    const siteB = await admin2Agent.post('/api/sites').send({ name: 'Search Analytics B' }).expect(201).then(res => res.body.site as { id: string })
+    await signIn({
+      agent: admin2Agent,
+      email: ctx.email,
+      address: 'admin2@clearideas.local',
+      name: 'Admin Two',
+    })
+    const siteB = await admin2Agent
+      .post('/api/sites')
+      .send({ name: 'Search Analytics B' })
+      .expect(201)
+      .then(res => res.body.site as { id: string })
 
-    await uploadFileAs(agent, { siteId: siteA.id, fileName: 'alpha-budget.txt', contentType: 'text/plain', body: Buffer.from('alpha budget figures for the year') })
-    await uploadFileAs(admin2Agent, { siteId: siteB.id, fileName: 'beta-notes.txt', contentType: 'text/plain', body: Buffer.from('beta notes only') })
+    await uploadFileAs(agent, {
+      siteId: siteA.id,
+      fileName: 'alpha-budget.txt',
+      contentType: 'text/plain',
+      body: Buffer.from('alpha budget figures for the year'),
+    })
+    await uploadFileAs(admin2Agent, {
+      siteId: siteB.id,
+      fileName: 'beta-notes.txt',
+      contentType: 'text/plain',
+      body: Buffer.from('beta notes only'),
+    })
     await ctx.runtime.search.settle()
 
     // A shared user is a member of both sites.
     const sharedEmail = 'shared-searcher@clearideas.local'
-    await agent.post(`/api/site/${siteA.id}/users`).send({ email: sharedEmail, displayName: 'Shared Searcher', siteRole: 'viewer' }).expect(200)
-    await admin2Agent.post(`/api/site/${siteB.id}/users`).send({ email: sharedEmail, displayName: 'Shared Searcher', siteRole: 'viewer' }).expect(200)
+    await agent
+      .post(`/api/site/${siteA.id}/users`)
+      .send({ email: sharedEmail, displayName: 'Shared Searcher', siteRole: 'viewer' })
+      .expect(200)
+    await admin2Agent
+      .post(`/api/site/${siteB.id}/users`)
+      .send({ email: sharedEmail, displayName: 'Shared Searcher', siteRole: 'viewer' })
+      .expect(200)
     const sharedAgent = supertest.agent(ctx.runtime.app)
-    const shared = await signIn({ agent: sharedAgent, email: ctx.email, address: sharedEmail, name: 'Shared Searcher' })
+    const shared = await signIn({
+      agent: sharedAgent,
+      email: ctx.email,
+      address: sharedEmail,
+      name: 'Shared Searcher',
+    })
 
     // Global searches: "alpha" matches only Site A, "beta" only Site B, "zzz-nothing" nowhere.
-    await sharedAgent.post('/api/search').send({ q: 'alpha' }).expect(200).expect(({ body }) => {
-      expect(body.results.map((result: any) => result.name)).toEqual(['alpha-budget.txt'])
-    })
+    await sharedAgent
+      .post('/api/search')
+      .send({ q: 'alpha' })
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.results.map((result: any) => result.name)).toEqual(['alpha-budget.txt'])
+      })
     await sharedAgent.post('/api/search').send({ q: 'beta' }).expect(200)
-    await sharedAgent.post('/api/search').send({ q: 'zzz-nothing' }).expect(200).expect(({ body }) => {
-      expect(body.results).toEqual([])
-    })
+    await sharedAgent
+      .post('/api/search')
+      .send({ q: 'zzz-nothing' })
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.results).toEqual([])
+      })
     // A site-scoped search is attributed to that site even when it finds nothing.
-    await sharedAgent.post(`/api/site/${siteB.id}/search`).send({ q: 'alpha' }).expect(200).expect(({ body }) => {
-      expect(body.results).toEqual([])
-    })
+    await sharedAgent
+      .post(`/api/site/${siteB.id}/search`)
+      .send({ q: 'alpha' })
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.results).toEqual([])
+      })
 
     const terms = (rows: any[]) => rows.map(row => row.term).sort()
 
     // Admin 1 sees only what matched Site A.
-    await agent.post(`/api/site/${siteA.id}/analytics/search-terms`).send({}).expect(200).expect(({ body }) => {
-      expect(terms(body.rows)).toEqual(['alpha'])
-      expect(body.rows[0]).toMatchObject({ count: 1, userCount: 1, zeroResultCount: 0, sources: { 'ce-search': 1 } })
-    })
-    await agent.post('/api/analytics/search-terms').send({ sites: [siteA.id] }).expect(200).expect(({ body }) => {
-      expect(terms(body.rows)).toEqual(['alpha'])
-    })
+    await agent
+      .post(`/api/site/${siteA.id}/analytics/search-terms`)
+      .send({})
+      .expect(200)
+      .expect(({ body }) => {
+        expect(terms(body.rows)).toEqual(['alpha'])
+        expect(body.rows[0]).toMatchObject({
+          count: 1,
+          userCount: 1,
+          zeroResultCount: 0,
+          sources: { 'ce-search': 1 },
+        })
+      })
+    await agent
+      .post('/api/analytics/search-terms')
+      .send({ sites: [siteA.id] })
+      .expect(200)
+      .expect(({ body }) => {
+        expect(terms(body.rows)).toEqual(['alpha'])
+      })
 
     // Admin 2 sees the global "beta" search and the scoped zero-result "alpha" search on Site B, nothing else.
-    await admin2Agent.post(`/api/site/${siteB.id}/analytics/search-terms`).send({}).expect(200).expect(({ body }) => {
-      expect(terms(body.rows)).toEqual(['alpha', 'beta'])
-      const alpha = body.rows.find((row: any) => row.term === 'alpha')
-      expect(alpha).toMatchObject({ count: 1, zeroResultCount: 1 })
-    })
+    await admin2Agent
+      .post(`/api/site/${siteB.id}/analytics/search-terms`)
+      .send({})
+      .expect(200)
+      .expect(({ body }) => {
+        expect(terms(body.rows)).toEqual(['alpha', 'beta'])
+        const alpha = body.rows.find((row: any) => row.term === 'alpha')
+        expect(alpha).toMatchObject({ count: 1, zeroResultCount: 1 })
+      })
     // Admin 2 cannot read Site A's report, and a viewer cannot read any site report.
     await admin2Agent.post(`/api/site/${siteA.id}/analytics/search-terms`).send({}).expect(403)
     await sharedAgent.post(`/api/site/${siteA.id}/analytics/search-terms`).send({}).expect(403)
-    await sharedAgent.post('/api/analytics/search-terms').send({}).expect(200).expect(({ body }) => {
-      expect(body.rows).toEqual([])
-    })
+    await sharedAgent
+      .post('/api/analytics/search-terms')
+      .send({})
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.rows).toEqual([])
+      })
 
     // The search that matched nowhere is recorded for audit without any site attribution.
-    const orphan = await ctx.runtime.models.ActivityModel.findOne({ action: 'content-searched', 'attributes.q': 'zzz-nothing' }).lean()
-    expect(orphan).toMatchObject({ user: expect.anything(), onModel: 'User', attributes: expect.objectContaining({ scope: 'all', resultCount: 0, matchedSiteCount: 0 }) })
+    const orphan = await ctx.runtime.models.ActivityModel.findOne({
+      action: 'content-searched',
+      'attributes.q': 'zzz-nothing',
+    }).lean()
+    expect(orphan).toMatchObject({
+      user: expect.anything(),
+      onModel: 'User',
+      attributes: expect.objectContaining({ scope: 'all', resultCount: 0, matchedSiteCount: 0 }),
+    })
     expect(String((orphan as any).user)).toBe(shared.id)
     expect((orphan as any).parent ?? null).toBeNull()
     // Searches never appear in another site's analytics, even via the generic content-activity report.
-    await agent.post(`/api/site/${siteA.id}/analytics/most-active`).send({ actions: ['content-searched'] }).expect(200).expect(({ body }) => {
-      expect(body.rows.map((row: any) => row.id)).toEqual([shared.id])
-      expect(body.rows[0].viewCount).toBe(1)
-    })
+    await agent
+      .post(`/api/site/${siteA.id}/analytics/most-active`)
+      .send({ actions: ['content-searched'] })
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.rows.map((row: any) => row.id)).toEqual([shared.id])
+        expect(body.rows[0].viewCount).toBe(1)
+      })
   })
 
   it('does not send a code until the email has been invited', async () => {
@@ -500,9 +832,12 @@ describe('Clear Ideas CE API integration', () => {
   it('can hide bundled operator documentation', async () => {
     const hiddenDocs = await createTestCeRuntime({ env: { CLEARIDEAS_DOCS_ENABLED: 'false' } })
     try {
-      await hiddenDocs.agent.get('/api/app-config').expect(200).expect(({ body }) => {
-        expect(body).toMatchObject({ docsEnabled: false })
-      })
+      await hiddenDocs.agent
+        .get('/api/app-config')
+        .expect(200)
+        .expect(({ body }) => {
+          expect(body).toMatchObject({ docsEnabled: false })
+        })
       await hiddenDocs.agent.get('/docs').expect(404)
       await hiddenDocs.agent.get('/docs/index.json').expect(404)
       await hiddenDocs.agent.get('/sites').expect(200).expect('content-type', /html/)
@@ -512,25 +847,57 @@ describe('Clear Ideas CE API integration', () => {
   })
 
   async function createSite(name: string) {
-    return agent.post('/api/sites').send({ name }).expect(201).then(res => res.body.site as { id: string; name: string })
+    return agent
+      .post('/api/sites')
+      .send({ name })
+      .expect(201)
+      .then(res => res.body.site as { id: string; name: string })
   }
 
-  async function uploadFile(input: { siteId: string; folderId?: string; fileName: string; contentType: string; body: Buffer }) {
+  async function uploadFile(input: {
+    siteId: string
+    folderId?: string
+    fileName: string
+    contentType: string
+    body: Buffer
+  }) {
     return uploadFileAs(agent, input)
   }
 
-  async function uploadFileAs(client: SuperTest<Test>, input: { siteId: string; folderId?: string; fileName: string; contentType: string; body: Buffer }) {
-    const target = await client.post('/api/files/upload-target').send({
-      siteId: input.siteId,
-      folderId: input.folderId,
-      fileName: input.fileName,
-      contentType: input.contentType,
-      size: input.body.length,
-    }).expect(200).then(res => res.body.target as { url: string; fileId: string; fileKey: string; headers?: Record<string, string> })
+  async function uploadFileAs(
+    client: SuperTest<Test>,
+    input: { siteId: string; folderId?: string; fileName: string; contentType: string; body: Buffer },
+  ) {
+    const target = await client
+      .post('/api/files/upload-target')
+      .send({
+        siteId: input.siteId,
+        folderId: input.folderId,
+        fileName: input.fileName,
+        contentType: input.contentType,
+        size: input.body.length,
+      })
+      .expect(200)
+      .then(
+        res =>
+          res.body.target as {
+            url: string
+            fileId: string
+            fileKey: string
+            headers?: Record<string, string>
+          },
+      )
     expect(target.url).toBe(`/api/files/upload/${target.fileId}`)
     expect(target.url).not.toContain(target.fileKey)
-    await client.put(target.url).set({ 'content-type': input.contentType, ...(target.headers ?? {}) }).send(input.body).expect(200)
-    const site = await client.get(`/api/sites/${input.siteId}`).expect(200).then(res => res.body.site)
+    await client
+      .put(target.url)
+      .set({ 'content-type': input.contentType, ...(target.headers ?? {}) })
+      .send(input.body)
+      .expect(200)
+    const site = await client
+      .get(`/api/sites/${input.siteId}`)
+      .expect(200)
+      .then(res => res.body.site)
     const files = [
       ...(site.files ?? []),
       ...(site.folders ?? []).flatMap((folder: any) => folder.files ?? []),

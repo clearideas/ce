@@ -297,9 +297,11 @@ export class AnalyticsController {
 
   private async contentById(siteIds: string[]) {
     const [files, sites] = await Promise.all([
+      // Folders too: folder activity (created, renamed, viewed) is content activity, and without them
+      // every folder row in "Most active content" read "Unknown content".
       this.ctx.models.ContentModel.find({
         site: { $in: siteIds.map(id => new Types.ObjectId(id)) },
-        kind: 'File',
+        kind: { $in: ['File', 'Folder'] },
       }).lean(),
       this.ctx.models.SiteModel.find({ _id: { $in: siteIds.map(id => new Types.ObjectId(id)) } }).select('_id name').lean(),
     ])

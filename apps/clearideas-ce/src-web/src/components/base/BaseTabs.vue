@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
+import { isNavigationFailure, NavigationFailureType, useRouter, type RouteLocationRaw } from 'vue-router'
 
-defineProps<{
+const props = defineProps<{
   tabs: Array<{
     title: string
     key: string
-    to?: Record<string, unknown> | string
+    to?: RouteLocationRaw
     hasIndicator?: boolean
   }>
   containerWidth?: number
@@ -16,14 +16,30 @@ defineProps<{
 const model = defineModel<string>({ required: true })
 const router = useRouter()
 
-function navigate(to?: Record<string, unknown> | string) {
-  if (!to) return
-  void router.push(to as any)
+/**
+ * Routed tabs navigate first and only then become selected: a route guard (e.g. the unsaved-changes
+ * prompt on site settings) can cancel the switch before the current panel unmounts and its state is
+ * lost. `router.push` resolves once guards pass, before the destination view loads its data.
+ */
+async function select(key: unknown) {
+  const tab = props.tabs.find(candidate => candidate.key === key)
+  if (!tab) return
+  if (tab.to) {
+    const failure = await router.push(tab.to)
+    if (isNavigationFailure(failure, NavigationFailureType.aborted)) return
+  }
+  model.value = tab.key
 }
 </script>
 
 <template>
-  <VTabs v-model="model" :color="color ?? 'primary'" class="base-tabs" :class="$props.class">
+  <VTabs
+    :model-value="model"
+    :color="color ?? 'primary'"
+    class="base-tabs"
+    :class="$props.class"
+    @update:model-value="select"
+  >
     <VTab
       v-for="tab in tabs"
       :key="tab.key"
@@ -31,7 +47,6 @@ function navigate(to?: Record<string, unknown> | string) {
       center-active
       class="base-tabs__tab"
       min-width="0"
-      @click="navigate(tab.to)"
     >
       <span class="base-tabs__tab-label">
         {{ tab.title }}
@@ -69,16 +84,24 @@ function navigate(to?: Record<string, unknown> | string) {
 
 .base-tabs :deep(.v-slide-group__prev),
 .base-tabs :deep(.v-slide-group__next) {
-  display: none !important;
+  display: none;
 }
 
 .base-tabs :deep(.v-tab.v-btn) {
-  border-radius: 6px 6px 0 0 !important;
+  border-radius: 6px 6px 0 0;
   height: 100%;
   min-height: 100%;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
+  padding-top: 0;
+  padding-bottom: 0;
   align-items: center;
+}
+
+/* Phones: tighter tabs so a site's four tabs and its toolbar fit a 360 px screen (the last tab was
+   cut off under the toolbar). */
+@media (max-width: 600px) {
+  .base-tabs :deep(.v-tab.v-btn) {
+    padding-inline: 10px;
+  }
 }
 
 .base-tabs__tab-label {

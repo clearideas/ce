@@ -38,12 +38,14 @@ describe('core reusable services', () => {
   })
 
   it('builds invite login links that can carry one-time codes', () => {
-    expect(buildLoginUrl({
-      baseUrl: 'https://localhost:4110/',
-      email: 'member+test@clearideas.local',
-      siteId: 'site-1',
-      code: '123456',
-    })).toBe('https://localhost:4110/login?email=member%2Btest%40clearideas.local&siteId=site-1&code=123456')
+    expect(
+      buildLoginUrl({
+        baseUrl: 'https://localhost:4110/',
+        email: 'member+test@clearideas.local',
+        siteId: 'site-1',
+        code: '123456',
+      }),
+    ).toBe('https://localhost:4110/login?email=member%2Btest%40clearideas.local&siteId=site-1&code=123456')
   })
 
   it('renders templates, preserves override subjects, and logs safely', async () => {
@@ -110,25 +112,29 @@ describe('core reusable services', () => {
     const logger = createActivityLogger(async () => {
       throw new Error('logging backend unavailable')
     })
-    await expect(logger.safe({
-      action: 'downloaded',
-      target: 'file-1',
-      onModel: 'Content',
-    })).resolves.toBeUndefined()
+    await expect(
+      logger.safe({
+        action: 'downloaded',
+        target: 'file-1',
+        onModel: 'Content',
+      }),
+    ).resolves.toBeUndefined()
   })
 
   it('validates LLM tool arguments before domain access', async () => {
     const contentId = '6a0669a96aa08c7a23e9bd29'
 
-    await expect(validateSchema(llmContentReferenceArgsSchema, {}))
-      .rejects.toThrow('contentId is required')
-    await expect(validateSchema(llmContentReferenceArgsSchema, { contentId: undefined }))
-      .rejects.toThrow('contentId is required')
-    await expect(validateSchema(llmContentReferenceArgsSchema, { contentId: 'undefined' }))
-      .rejects.toThrow('contentId is required')
+    await expect(validateSchema(llmContentReferenceArgsSchema, {})).rejects.toThrow('contentId is required')
+    await expect(validateSchema(llmContentReferenceArgsSchema, { contentId: undefined })).rejects.toThrow(
+      'contentId is required',
+    )
+    await expect(validateSchema(llmContentReferenceArgsSchema, { contentId: 'undefined' })).rejects.toThrow(
+      'contentId is required',
+    )
 
-    await expect(validateSchema(llmContentReferenceArgsSchema, { id: contentId }))
-      .resolves.toMatchObject({ contentId: expect.anything() })
+    await expect(validateSchema(llmContentReferenceArgsSchema, { id: contentId })).resolves.toMatchObject({
+      contentId: expect.anything(),
+    })
 
     const retrieveArgs = await validateSchema(llmRetrieveFileContentArgsSchema, {
       fileId: contentId,
@@ -144,9 +150,11 @@ describe('core reusable services', () => {
     expect(String(listArgs.folderId)).toBe(contentId)
     expect(listArgs.limit).toBe(25)
 
-    await expect(validateSchema(llmSearchContentArgsSchema, { query: ' GMV ' }))
-      .resolves.toEqual({ query: 'GMV' })
-    await expect(validateSchema(llmSearchContentArgsSchema, { query: '' }))
-      .rejects.toThrow('query is required')
+    await expect(validateSchema(llmSearchContentArgsSchema, { query: ' GMV ' })).resolves.toEqual({
+      query: 'GMV',
+    })
+    await expect(validateSchema(llmSearchContentArgsSchema, { query: '' })).rejects.toThrow(
+      'query is required',
+    )
   })
 })

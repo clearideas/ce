@@ -111,32 +111,38 @@ describe('CE site/content store contract', () => {
     await siteStore.updateCurrentSite({ attributes: { ai: { chatEnabled: true } } })
 
     expect(updateSite).toHaveBeenCalledWith('site-1', { attributes: { ai: { chatEnabled: true } } })
-    expect(alertAdd).toHaveBeenCalledWith(expect.objectContaining({
-      message: 'Site settings saved.',
-      type: 'success',
-    }))
+    expect(alertAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Site settings saved.',
+        type: 'success',
+      }),
+    )
 
     updateSite.mockRejectedValueOnce(new Error('"attributes" is invalid'))
     await expect(siteStore.updateCurrentSite({ attributes: {} })).rejects.toThrow('"attributes" is invalid')
-    expect(alertAdd).toHaveBeenCalledWith(expect.objectContaining({
-      message: '"attributes" is invalid',
-      type: 'error',
-    }))
+    expect(alertAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: '"attributes" is invalid',
+        type: 'error',
+      }),
+    )
   })
 
   it('sends an explicit media clear request and removes the cached site icon', async () => {
     const siteStore = useSiteStore()
     siteStore.currentSiteId = 'site-1'
-    siteStore.sites = [{
-      id: 'site-1',
-      name: 'Test Site',
-      folders: [],
-      attributes: {
-        media: {
-          icon: { dataUrl: 'data:image/png;base64,old-icon' },
+    siteStore.sites = [
+      {
+        id: 'site-1',
+        name: 'Test Site',
+        folders: [],
+        attributes: {
+          media: {
+            icon: { dataUrl: 'data:image/png;base64,old-icon' },
+          },
         },
       },
-    }]
+    ]
     siteStore.siteDetails = {
       'site-1': {
         id: 'site-1',
@@ -172,5 +178,25 @@ describe('CE site/content store contract', () => {
       },
     })
     expect(siteStore.currentSite?.attributes?.media?.icon).toBeUndefined()
+  })
+
+  it('coalesces concurrent detail fetches for the same site (review finding C9)', async () => {
+    sites.mockResolvedValue({
+      sites: [{ id: 'site-1', name: 'Test Site', currentUserRole: 'owner', folders: [], files: [] }],
+    })
+    let resolveSite: (value: unknown) => void = () => {}
+    site.mockReturnValue(new Promise(resolve => (resolveSite = resolve)))
+    const siteStore = useSiteStore()
+
+    const first = siteStore.setCurrentSite('site-1')
+    const second = siteStore.setCurrentSite('site-1')
+    await Promise.resolve()
+    await Promise.resolve()
+    resolveSite({
+      site: { id: 'site-1', name: 'Test Site', currentUserRole: 'owner', folders: [], files: [] },
+    })
+    await Promise.all([first, second])
+
+    expect(site).toHaveBeenCalledTimes(1)
   })
 })

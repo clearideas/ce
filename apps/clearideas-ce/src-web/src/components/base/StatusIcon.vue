@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from 'vue'
+import type { ActionStore } from '../../types/ui'
 
 interface Props {
   icon?: string
@@ -10,16 +11,17 @@ interface Props {
   failure?: string
   failureDuration?: number
   action?: string
-  store?: Function // Prop to receive a function returning a store
+  /** Factory returning the store whose `action` should drive the icon state. */
+  store?: () => ActionStore | undefined
   color?: string
 }
 const props = withDefaults(defineProps<Props>(), {
-  icon: 'fasl fa-home',
-  loading: 'fasl fa-rotate',
+  icon: 'fas fa-house',
+  loading: 'fas fa-arrows-rotate',
   loadingDuration: 2000,
-  success: 'fasl fa-check',
+  success: 'fas fa-check',
   successDuration: 5000,
-  failure: 'fasl fa-xmark',
+  failure: 'fas fa-xmark',
   failureDuration: 10000,
   action: '',
   store: () => undefined,
@@ -29,7 +31,8 @@ const props = withDefaults(defineProps<Props>(), {
 const currentIcon = ref<string>('')
 const currentColor = ref<string>('grey')
 const timeoutId = ref<number | null>(null)
-const storeInstance = ref<any>(undefined)
+const storeInstance = ref<ActionStore | undefined>(undefined)
+let unsubscribeFromStore: (() => void) | undefined
 
 // Initialize the store if provided
 onMounted(() => {
@@ -67,46 +70,29 @@ function clearIconTimeout() {
   }
 }
 
-// Only set up store action monitoring if store and action are provided
+// Subscribe to the store action (if any); always release the previous subscription first.
 watch(
   () => storeInstance.value,
   newStore => {
-    if (newStore && props.action) {
-      // Clean up any previous action handlers
-      if (newStore.$onAction) {
-        newStore.$onAction(
-          ({
-            after,
-            onError,
-            name,
-          }: {
-            after: (callback: () => void) => void
-            onError: (callback: (error: Error) => void) => void
-            name: string
-          }) => {
-            if (name === props.action) {
-              if (currentIcon.value !== props.loading)
-                startIconTimeout(props.loading, 'primary', props.loadingDuration)
+    unsubscribeFromStore?.()
+    unsubscribeFromStore = undefined
+    if (!newStore?.$onAction || !props.action) return
 
-              after(() => {
-                startIconTimeout(props.success, 'success', props.successDuration)
-              })
-
-              onError(() => {
-                startIconTimeout(props.failure, 'error', props.failureDuration)
-              })
-            }
-          },
-        )
-      }
-    }
+    unsubscribeFromStore = newStore.$onAction(({ after, onError, name }) => {
+      if (name !== props.action) return
+      if (currentIcon.value !== props.loading)
+        startIconTimeout(props.loading, 'primary', props.loadingDuration)
+      after(() => startIconTimeout(props.success, 'success', props.successDuration))
+      onError(() => startIconTimeout(props.failure, 'error', props.failureDuration))
+    })
   },
   { immediate: true },
 )
 
-// Clean up on unmount
 onUnmounted(() => {
   clearIconTimeout()
+  unsubscribeFromStore?.()
+  unsubscribeFromStore = undefined
 })
 </script>
 

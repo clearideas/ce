@@ -24,30 +24,24 @@ const props = withDefaults(defineProps<Props>(), {
   size: 'default',
   text: undefined,
   color: 'primary',
-  icon: 'fasl fa-download',
+  icon: 'fas fa-download',
   showAsButton: false,
 })
 
 const contentStore = useContentStore()
 const isDownloading = ref(false)
-const resolvedLabel = computed(() => props.text ?? 'Download')
+const resolvedLabel = computed(() => props.text || 'Download')
 const resolvedTooltip = computed(() => resolvedLabel.value)
-const progressSize = computed(() => {
-  if (props.size === 'x-small') return 16
-  if (props.size === 'small') return 18
-  if (props.size === 'large') return 28
-  if (props.size === 'x-large') return 32
-  return 22
-})
 
 async function handleDownload() {
   if (props.disabled || isDownloading.value) return
 
   isDownloading.value = true
   try {
-    const item = contentStore.file?.id === props.id
-      ? contentStore.file
-      : contentStore.contents.find(content => content.id === props.id)
+    const item =
+      contentStore.file?.id === props.id
+        ? contentStore.file
+        : contentStore.contents.find(content => content.id === props.id)
     const url = await contentStore.createFileAccessUrl(item, 'download')
     if (!url) return
     const anchor = document.createElement('a')
@@ -64,9 +58,11 @@ async function handleDownload() {
 </script>
 
 <template>
-  <Tippy v-if="!props.showAsMenu && props.showAsButton" :content="resolvedTooltip" placement="top">
+  <!-- Outside a menu it is always a real, named button (an icon with a click handler is neither
+       focusable nor announced). `showAsButton` is kept for existing call sites. -->
+  <Tippy v-if="!props.showAsMenu" :content="resolvedTooltip" placement="top">
     <VBtn
-      icon="fasl fa-download"
+      icon="fas fa-download"
       :variant="props.variant"
       :color="props.color"
       :disabled="props.disabled || isDownloading"
@@ -77,21 +73,6 @@ async function handleDownload() {
       @click="handleDownload"
     />
   </Tippy>
-  <VProgressCircular
-    v-if="!props.showAsMenu && !props.showAsButton && isDownloading"
-    indeterminate
-    :color="props.color"
-    :size="progressSize"
-    width="2"
-  />
-  <VIcon
-    v-if="!props.showAsMenu && !props.showAsButton && !isDownloading"
-    v-tippy="{ content: resolvedTooltip, placement: 'top' }"
-    :icon="props.icon"
-    :color="props.color"
-    :size="props.size"
-    @click="handleDownload"
-  />
   <VListItem
     v-if="props.showAsMenu && props.kind === 'file'"
     :disabled="props.disabled || isDownloading"
@@ -99,6 +80,7 @@ async function handleDownload() {
   >
     <template #append>
       <VProgressCircular
+        aria-label="Downloading"
         v-if="isDownloading"
         indeterminate
         color="secondary"

@@ -6,6 +6,7 @@ import {
 import type { CoreProviders } from '@clearideas/core/providers'
 import { DateTime } from 'luxon'
 import { config } from '../config/index.js'
+import { envValue } from '../lib/env.js'
 
 export interface NotificationWorkerContext {
   models: {
@@ -627,5 +628,5 @@ function formatError(error: unknown): string {
 }
 
 function getAppBaseUrl(): string {
-  return process.env.APP_URL ?? process.env.BETTER_AUTH_URL ?? `http://${process.env.HOST ?? '127.0.0.1'}:${process.env.PORT ?? 4100}`
+  return envValue('APP_URL', 'BETTER_AUTH_URL') ?? `http://${process.env.HOST ?? '127.0.0.1'}:${process.env.PORT ?? 4100}`
 }

@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import BaseActions from '../../base/BaseActions.vue'
 import DownloadIcon from '../../content/actions/DownloadIcon.vue'
 import Refresh from '../../content/actions/RefreshContent.vue'
+import { siteContentPermissions } from '../../../config/roles'
 import { useContentStore, useSiteStore } from '../../../stores'
 
 interface Props {
@@ -16,10 +17,7 @@ const props = defineProps<Props>()
 const siteStore = useSiteStore()
 const contentStore = useContentStore()
 
-const canDownload = computed(() => {
-  const role = siteStore.currentSite?.currentUserRole || ''
-  return role !== 'viewer'
-})
+const canDownload = computed(() => siteContentPermissions(siteStore.currentSite?.currentUserRole).canDownload)
 </script>
 
 <template>
@@ -35,10 +33,16 @@ const canDownload = computed(() => {
     />
 
     <template #narrow>
-      <Refresh v-if="!(contentStore.file?.kind === 'file' && canDownload)" :id="id" :site-id="props.siteId" content-type="file" size="small" />
+      <Refresh
+        v-if="!(contentStore.file?.kind === 'file' && canDownload)"
+        :id="id"
+        :site-id="props.siteId"
+        content-type="file"
+        size="small"
+      />
       <Tippy v-else content="More" placement="top">
         <VBtn size="small" variant="text" icon aria-label="More">
-          <VIcon>fasl fa-ellipsis-vertical</VIcon>
+          <VIcon>fas fa-ellipsis-vertical</VIcon>
           <VMenu offset-y activator="parent" text="More">
             <VList density="compact" nav>
               <Refresh :id="id" show-as-menu :site-id="props.siteId" content-type="file" />

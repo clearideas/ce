@@ -4,7 +4,12 @@ import { onMounted, ref, watch } from 'vue'
 import { useContentTypes } from '../../composables/useContentTypes'
 import { useContentStore } from '../../stores'
 
-interface Props { id: string; siteId: string; contentType: string; name: string }
+interface Props {
+  id: string
+  siteId: string
+  contentType: string
+  name: string
+}
 const props = defineProps<Props>()
 const contentStore = useContentStore()
 const { MarkupContentTypes } = useContentTypes()
@@ -22,7 +27,13 @@ watch(() => [props.id, props.contentType], loadContent)
 
 <template>
   <div class="html-embed">
-    <iframe v-if="props.contentType === 'text/html' || props.contentType === 'application/xhtml+xml'" sandbox class="html-embed-frame" :srcdoc="content" />
+    <iframe
+      v-if="props.contentType === 'text/html' || props.contentType === 'application/xhtml+xml'"
+      sandbox=""
+      class="html-embed-frame"
+      :srcdoc="content"
+      :title="`Preview of ${props.name}`"
+    />
     <MarkdownRenderer v-else class="html-embed-renderer" :content="content" />
   </div>
 </template>
@@ -38,7 +49,7 @@ watch(() => [props.id, props.contentType], loadContent)
   color: var(--ci-on-surface);
   border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   border-radius: 8px;
-  box-shadow: 0 8px 28px rgba(15, 23, 42, 0.06);
+  box-shadow: var(--ci-shadow-md);
 }
 
 .html-embed-frame,

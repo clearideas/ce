@@ -1,7 +1,19 @@
 import { createCeRuntime } from './app.js'
-import { loadCeEnv } from './scripts/env.js'
+import { envValue } from './lib/env.js'
+import { ceEnvFiles, loadCeEnv } from './scripts/env.js'
 
-loadCeEnv()
+const envFiles = loadCeEnv()
+console.log(
+  envFiles.length > 0
+    ? `clearideas-ce env files: ${envFiles.join(', ')}`
+    : `clearideas-ce env files: none found (looked for ${ceEnvFiles().join(', ')})`,
+)
+const agentModel = envValue('AI_AGENT_MODEL', 'AI_CHAT_MODEL')
+console.log(
+  agentModel
+    ? `clearideas-ce agents: model ${agentModel}`
+    : 'clearideas-ce agents: not configured (set AI_AGENT_MODEL, or AI_CHAT_MODEL, to provider:model)',
+)
 
 const port = Number(process.env.PORT ?? 4100)
 const host = process.env.HOST ?? '127.0.0.1'
@@ -19,7 +31,7 @@ async function shutdown(signal: string) {
   const forceExit = setTimeout(() => process.exit(1), 30_000)
   forceExit.unref()
   try {
-    await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()))
+    await new Promise<void>((resolve, reject) => server.close(error => (error ? reject(error) : resolve())))
     // Persists pending search index changes before the process exits.
     await runtime.close()
     process.exit(0)

@@ -2,7 +2,6 @@
 $colors: (
   "primary": var(--v-theme-primary),
   "secondary": var(--v-theme-secondary),
-  "accent": var(--v-theme-accent),
   "error": var(--v-theme-error),
   "info": var(--v-theme-info),
   "success": var(--v-theme-success),
@@ -39,101 +38,22 @@ $colors: (
   color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)) !important;
 }
 
-.text-high-emphasis {
-  color: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity)) !important;
-}
-
-.ci-readable-subtitle {
-  color: rgba(var(--v-theme-on-surface), 0.74) !important;
-  font-weight: 400 !important;
-}
-
-// gap utility class
-$gap: (
-  "0": 0,
-  "1": 0.25rem,
-  "2": 0.5rem,
-  "3": 0.75rem,
-  "4": 1rem,
-  "5": 1.25rem,
-  "6":1.5rem,
-  "7": 1.75rem,
-  "8": 2rem,
-  "9": 2.25rem,
-  "10": 2.5rem,
-  "11": 2.75rem,
-  "12": 3rem,
-  "14": 3.5rem,
-  "16": 4rem,
-  "20": 5rem,
-  "24": 6rem,
-  "28": 7rem,
-  "32": 8rem,
-  "36": 9rem,
-  "40": 10rem,
-  "44": 11rem,
-  "48": 12rem,
-  "52": 13rem,
-  "56": 14rem,
-  "60": 15rem,
-  "64": 16rem,
-  "72": 18rem,
-  "80": 20rem,
-  "96": 24rem
-);
-
-@each $name, $size in $gap {
-  .gap-#{$name} {
-    gap: $size;
-  }
-
-  .gap-x-#{$name} {
-    column-gap: $size;
-  }
-
-  .gap-y-#{$name} {
-    row-gap: $size;
-  }
-}
-
-.font-weight-semibold {
-  font-weight: 600 !important;
-}
-
-.text-gradient {
-  background: linear-gradient(0deg, rgb(var(--v-theme-primary)) 0, rgb(var(--v-theme-secondary)) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  font-weight: 700;
-  -webkit-text-fill-color: transparent;
+/*
+ * Page bleed: widen a view's scroll area past the content column by --ci-page-bleed on each side,
+ * with matching padding, so cards can cast their shadow without being clipped by the scroll
+ * container. The single home of the former per-view "shadow zone" blocks (plan 2.7).
+ */
+.page-bleed {
+  width: calc(100% + var(--ci-page-bleed, 8px) * 2);
+  margin-left: calc(var(--ci-page-bleed, 8px) * -1);
+  margin-right: calc(var(--ci-page-bleed, 8px) * -1);
+  padding-left: var(--ci-page-bleed, 8px);
+  padding-right: var(--ci-page-bleed, 8px);
+  box-sizing: border-box;
 }
 
 .cursor-pointer {
   cursor: pointer;
-}
-
-.text-2xl {
-  font-size: 1.5rem;
-}
-
-.text-xl {
-  font-size: 1.25rem;
-}
-
-.text-lg {
-  font-size: 1.125rem;
-}
-
-.text-base {
-  font-size: 1rem;
-}
-
-.text-sm {
-  font-size: 0.875rem;
-}
-
-.text-xs {
-  font-size: 0.75rem;
 }
 
 .text-caption {
@@ -147,6 +67,7 @@ $gap: (
   --ci-flex-card-grid-min-width: 180px;
   --ci-flex-card-grid-columns: 2;
   --ci-flex-card-grid-columns-desktop: 4;
+
   display: flex;
   flex-wrap: wrap;
   gap: var(--ci-flex-card-grid-gap);
@@ -161,50 +82,12 @@ $gap: (
   min-width: var(--ci-flex-card-grid-min-width);
 }
 
-.ci-action-row {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-}
-
-.ci-action-row > * {
-  flex: 0 0 auto;
-}
-
-.ci-detail-row {
-  display: flex;
-  flex-direction: column;
-  gap: 10px 12px;
-  padding: 4px 0;
-}
-
-.ci-detail-label,
-.ci-detail-value {
-  min-width: 0;
-}
-
 @media (min-width: 960px) {
   .ci-flex-card-grid__item {
     flex-basis: calc(
       (100% - (var(--ci-flex-card-grid-columns-desktop) - 1) * var(--ci-flex-card-grid-gap)) /
         var(--ci-flex-card-grid-columns-desktop)
     );
-  }
-
-  .ci-detail-row {
-    flex-direction: row;
-    align-items: center;
-  }
-
-  .ci-detail-label {
-    flex: 0 0 25%;
-    max-width: 25%;
-  }
-
-  .ci-detail-value {
-    flex: 1 1 75%;
   }
 }
 

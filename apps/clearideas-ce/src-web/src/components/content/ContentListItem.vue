@@ -8,7 +8,6 @@ interface Props {
   prependIcon?: string
   prependWidth?: string
   prependHeight?: string
-  isSorting?: boolean
   prependBelowOnMobile?: boolean
   clickable?: boolean
 }
@@ -16,13 +15,12 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   prependWidth: '40px',
   prependHeight: '40px',
-  isSorting: false,
   prependBelowOnMobile: false,
   clickable: true,
 })
 
 const emit = defineEmits<{
-  click: any
+  click: []
 }>()
 const { mobile } = useDisplay()
 
@@ -35,12 +33,8 @@ const handleClick = () => {
 </script>
 
 <template>
-  <div
-    class="content-item"
-    :class="{ 'is-sorting': props.isSorting, 'content-item--static': !props.clickable }"
-    @click="handleClick"
-  >
-    <div class="prepend" v-if="$slots.checkbox">
+  <div class="content-item" :class="{ 'content-item--static': !props.clickable }" @click="handleClick">
+    <div v-if="$slots.checkbox" class="prepend">
       <slot name="checkbox"></slot>
     </div>
     <template v-if="showPrependBelow">
@@ -52,17 +46,11 @@ const handleClick = () => {
                 {{ props.text }}
               </slot>
             </div>
-            <div v-if="$slots.latest" class="subtitle">
-              <slot name="latest"></slot>
-            </div>
-            <div v-if="$slots.bookmark" class="subtitle">
-              <slot name="bookmark"></slot>
-            </div>
             <div v-if="$slots.subtitle || props.subtitle" class="subtitle">
               <slot name="subtitle">{{ props.subtitle }}</slot>
             </div>
           </div>
-          <div class="append" v-if="$slots.append" @click.stop>
+          <div v-if="$slots.append" class="append" @click.stop>
             <slot name="append"></slot>
           </div>
         </div>
@@ -94,18 +82,12 @@ const handleClick = () => {
               {{ props.text }}
             </slot>
           </div>
-          <div v-if="$slots.latest" class="subtitle">
-            <slot name="latest"></slot>
-          </div>
-          <div v-if="$slots.bookmark" class="subtitle">
-            <slot name="bookmark"></slot>
-          </div>
           <div v-if="$slots.subtitle || props.subtitle" class="subtitle">
             <slot name="subtitle">{{ props.subtitle }}</slot>
           </div>
         </div>
       </div>
-      <div class="append" v-if="$slots.append" @click.stop>
+      <div v-if="$slots.append" class="append" @click.stop>
         <slot name="append"></slot>
       </div>
     </template>
@@ -113,17 +95,6 @@ const handleClick = () => {
 </template>
 
 <style scoped>
-.content-item.is-sorting {
-  background-image: repeating-linear-gradient(
-    -45deg,
-    rgba(var(--v-theme-info), 0.15),
-    rgba(var(--v-theme-info), 0.15) 8px,
-    transparent 8px,
-    transparent 16px
-  );
-  border: solid 1px rgba(var(--v-theme-info), 0.6);
-}
-
 .content-item--static {
   cursor: default;
 }
@@ -143,7 +114,7 @@ const handleClick = () => {
 }
 
 .content-prepend--below {
-  width: 100% !important;
+  width: 100%;
   max-width: 100%;
 }
 </style>

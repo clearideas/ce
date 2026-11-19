@@ -1,0 +1,27 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    // The contracts package is type-checked from source via `paths`; rootDir must enclose it (noEmit, so harmless).
+    "rootDir": "../..",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["vite/client"],
+    "jsx": "preserve",
+    "allowImportingTsExtensions": true,
+    // Dead code fails the web type-check (vue-tsc also reports template refs nothing reads).
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "paths": {
+      "@clearideas/contracts-core": ["../../packages/clearideas-contracts-core/src/index.ts"],
+      "@clearideas/pdf-viewer": ["../../packages/clearideas-pdf-viewer/src/index.ts"],
+      "@/*": ["./src-web/src/*"]
+    }
+  },
+  "include": [
+    "src-web/src/**/*.ts",
+    "src-web/src/**/*.d.ts",
+    "src-web/src/**/*.vue",
+    "../../packages/clearideas-pdf-viewer/src/**/*.ts",
+    "../../packages/clearideas-pdf-viewer/src/**/*.vue"
+  ]
+}

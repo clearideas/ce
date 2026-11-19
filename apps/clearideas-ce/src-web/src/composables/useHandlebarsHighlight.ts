@@ -2,13 +2,7 @@
  * Composable for parsing and categorizing Handlebars expressions for syntax highlighting
  */
 
-export type HandlebarsTokenType =
-  | 'default-var'
-  | 'defined-var'
-  | 'undefined-var'
-  | 'helper'
-  | 'tool'
-  | 'text'
+export type HandlebarsTokenType = 'default-var' | 'defined-var' | 'undefined-var' | 'helper' | 'tool' | 'text'
 
 export interface HandlebarsToken {
   type: HandlebarsTokenType
@@ -140,11 +134,7 @@ const toolRegexCache = new Map<string, RegExp>()
 /**
  * Parses plain text for AI tool names and returns tokens
  */
-function parseToolsInText(
-  text: string,
-  offset: number,
-  availableTools: string[],
-): HandlebarsToken[] {
+function parseToolsInText(text: string, offset: number, availableTools: string[]): HandlebarsToken[] {
   const tokens: HandlebarsToken[] = []
 
   if (!text || availableTools.length === 0) {
@@ -222,10 +212,7 @@ function parseToolsInText(
  * @param availableTools Array of available AI tool names
  * @returns Object with parsing function and utility functions
  */
-export function useHandlebarsHighlight(
-  definedVariables: string[] = [],
-  availableTools: string[] = [],
-) {
+export function useHandlebarsHighlight(definedVariables: string[] = [], availableTools: string[] = []) {
   return {
     parseHandlebarsExpressions: (content: string) =>
       parseHandlebarsExpressions(content, definedVariables, availableTools),

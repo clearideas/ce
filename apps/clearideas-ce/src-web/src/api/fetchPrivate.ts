@@ -1,7 +1,9 @@
 import { EmptyObjectRequestSchema } from '@clearideas/contracts-core'
 
 type RequestSchema<T> = {
-  safeParse: (payload: unknown) =>
+  safeParse: (
+    payload: unknown,
+  ) =>
     | { success: true; data: T }
     | { success: false; error: { issues: Array<{ path: Array<PropertyKey>; message: string }> } }
 }
@@ -58,7 +60,7 @@ async function refreshBetterAuthSessionOnce(): Promise<boolean> {
   const currentBody = await parseBody(current)
   if (!hasBetterAuthSession(currentBody)) return false
 
-  if ((currentBody as any).needsRefresh === true) {
+  if ((currentBody as { needsRefresh?: unknown }).needsRefresh === true) {
     const refreshed = await request('/api/auth/get-session', {
       method: 'POST',
       bodySchema: EmptyObjectRequestSchema,
@@ -95,7 +97,14 @@ function validateRequest<T>(schema: RequestSchema<T>, payload: unknown, context:
 async function parseResponse<T>(response: Response): Promise<T> {
   const body = await parseBody(response)
   if (!response.ok) {
-    const message = typeof body === 'string' ? body : (body as any)?.error || (body as any)?.message || response.statusText
+    const details =
+      body && typeof body === 'object' ? (body as { error?: unknown; message?: unknown }) : undefined
+    const message =
+      typeof body === 'string'
+        ? body
+        : (typeof details?.error === 'string' && details.error) ||
+          (typeof details?.message === 'string' && details.message) ||
+          response.statusText
     throw new FetchPrivateError(message, response.status, body)
   }
   return body as T
@@ -108,5 +117,7 @@ async function parseBody(response: Response): Promise<unknown> {
 }
 
 function hasBetterAuthSession(value: unknown) {
-  return Boolean(value && typeof value === 'object' && (value as any).session && (value as any).user)
+  if (!value || typeof value !== 'object') return false
+  const candidate = value as { session?: unknown; user?: unknown }
+  return Boolean(candidate.session && candidate.user)
 }

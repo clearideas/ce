@@ -7,17 +7,31 @@ import FileViewer from '../components/files/FileViewer.vue'
 import Properties from '../components/files/Properties.vue'
 import Breadcrumbs from '../components/sites/Breadcrumbs.vue'
 import { useContentStore, useSiteStore } from '../stores'
+import PageHeader from '../components/base/PageHeader.vue'
+import BaseButton from '../components/base/BaseButton.vue'
+import EmptyState from '../components/base/EmptyState.vue'
+import LoadError from '../components/base/LoadError.vue'
+import { FetchPrivateError } from '../api/fetchPrivate'
+import { errorMessage } from '../utils/errors'
 
 const contentStore = useContentStore()
 const siteStore = useSiteStore()
 const route = useRoute()
 const router = useRouter()
-const contentHeaderRef = ref<HTMLElement | null>(null)
 const tab = ref('file')
 const loadingFile = ref(false)
+/**
+ * The file (or its site) could not be opened: `missing` (404/403 — deleted, moved, or no longer
+ * shared) shows a "not available" state with a way back; other failures a retryable error.
+ */
+const loadError = ref<{ missing: boolean; message: string } | null>(null)
 
-const siteId = computed(() => Array.isArray(route.params.siteId) ? route.params.siteId[0] : String(route.params.siteId ?? ''))
-const id = computed(() => Array.isArray(route.params.fileId) ? route.params.fileId[0] : String(route.params.fileId ?? ''))
+const siteId = computed(() =>
+  Array.isArray(route.params.siteId) ? route.params.siteId[0] : String(route.params.siteId ?? ''),
+)
+const id = computed(() =>
+  Array.isArray(route.params.fileId) ? route.params.fileId[0] : String(route.params.fileId ?? ''),
+)
 const requestedTab = computed(() => {
   const raw = Array.isArray(route.params.fileTab) ? route.params.fileTab[0] : route.params.fileTab
   return raw === 'properties' ? 'properties' : 'file'
@@ -31,40 +45,70 @@ const initialPage = computed<number | undefined>(() => {
 const loading = computed(() => !!(siteStore.loadingSites || loadingFile.value || contentStore.loading))
 const userTabs = computed(() => [
   { title: 'File', key: 'file', to: { name: 'file', params: { siteId: siteId.value, fileId: id.value } } },
-  { title: 'Properties', key: 'properties', to: { name: 'file', params: { siteId: siteId.value, fileId: id.value, fileTab: 'properties' } } },
+  {
+    title: 'Properties',
+    key: 'properties',
+    to: { name: 'file', params: { siteId: siteId.value, fileId: id.value, fileTab: 'properties' } },
+  },
 ])
 
 async function loadFile() {
   if (!siteId.value || !id.value) return
   loadingFile.value = true
+  loadError.value = null
   try {
     contentStore.file = null
     await siteStore.getSitesIfRequired()
     await siteStore.setCurrentSite(siteId.value)
     await contentStore.getFile(siteId.value, id.value)
+  } catch (error) {
+    const missing = error instanceof FetchPrivateError && [403, 404].includes(error.status)
+    loadError.value = { missing, message: errorMessage(error, 'This file could not be loaded.') }
   } finally {
     loadingFile.value = false
   }
 }
 
 watch([siteId, id], loadFile, { immediate: true })
-watch(requestedTab, value => { tab.value = value }, { immediate: true })
+watch(
+  requestedTab,
+  value => {
+    tab.value = value
+  },
+  { immediate: true },
+)
 watch(tab, nextTab => {
   const nextFileTab = nextTab === 'file' ? undefined : nextTab
   const current = Array.isArray(route.params.fileTab) ? route.params.fileTab[0] : route.params.fileTab
   if ((current || undefined) === nextFileTab) return
-  void router.replace({ name: 'file', params: { siteId: siteId.value, fileId: id.value, fileTab: nextFileTab } })
+  void router.replace({
+    name: 'file',
+    params: { siteId: siteId.value, fileId: id.value, fileTab: nextFileTab },
+  })
 })
-onMounted(() => { tab.value = requestedTab.value })
+onMounted(() => {
+  tab.value = requestedTab.value
+})
 </script>
 
 <template>
-  <template v-if="contentStore.fileError">
-    <div class="d-flex justify-center align-center" style="height: 100%">
-      <div style="min-width: 300px; width: 50%">
-        <VAlert type="error" icon="fasl fa-triangle-exclamation" style="width: 100%">File not found.</VAlert>
-      </div>
-    </div>
+  <template v-if="loadError">
+    <PageHeader title="File not available" />
+    <EmptyState
+      v-if="loadError.missing"
+      icon="fas fa-file-circle-xmark"
+      title="This file is not available"
+      text="It may have been deleted or moved, or you no longer have access to it."
+    >
+      <template #actions>
+        <BaseButton
+          :text="siteStore.currentSite ? `Back to ${siteStore.currentSite.name}` : 'Back to sites'"
+          intent="primary"
+          :to="siteStore.currentSite ? { name: 'site', params: { siteId } } : { name: 'sites' }"
+        />
+      </template>
+    </EmptyState>
+    <LoadError v-else :message="loadError.message" @retry="loadFile" />
   </template>
   <template v-else>
     <div
@@ -74,19 +118,20 @@ onMounted(() => { tab.value = requestedTab.value })
         'properties-active': tab === 'properties',
       }"
     >
+      <PageHeader :title="contentStore.file?.name ?? 'File'" />
       <div class="content-title-row file-breadcrumbs-row">
         <Breadcrumbs
-          :icon="!!siteStore.currentSite?.icon ? `fasl ${siteStore.currentSite.icon}` : undefined"
+          :icon="!!siteStore.currentSite?.icon ? `fas ${siteStore.currentSite.icon}` : undefined"
           :avatar="siteStore.currentSite?.attributes?.media?.icon?.dataUrl"
           :loading="loading"
           :site-id="siteId"
         />
       </div>
-      <div class="content-header" ref="contentHeaderRef">
+      <div class="content-header">
         <BaseTabs v-model="tab" :tabs="userTabs" />
         <FileActions :id="id" :site-id="siteId" :tab="tab" />
       </div>
-      <div class="file-content-shell">
+      <div class="file-content-shell page-bleed">
         <div class="file-tab-content">
           <FileViewer
             v-if="tab === 'file'"
@@ -96,7 +141,7 @@ onMounted(() => { tab.value = requestedTab.value })
             :initial-page="initialPage"
           />
           <div v-if="tab === 'properties'" class="properties-tab-viewport">
-            <div class="properties-tab-pane"><Properties /></div>
+            <div class="properties-tab-pane page-bleed"><Properties /></div>
           </div>
         </div>
       </div>
@@ -108,7 +153,8 @@ onMounted(() => { tab.value = requestedTab.value })
 .file-view {
   display: flex;
   flex-direction: column;
-  --file-shadow-zone: 24px;
+
+  --ci-page-bleed: 24px;
 }
 
 .file-content-shell {
@@ -116,11 +162,6 @@ onMounted(() => { tab.value = requestedTab.value })
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  width: calc(100% + (var(--file-shadow-zone) * 2));
-  margin-left: calc(var(--file-shadow-zone) * -1);
-  margin-right: calc(var(--file-shadow-zone) * -1);
-  padding-left: var(--file-shadow-zone);
-  padding-right: var(--file-shadow-zone);
   box-sizing: border-box;
   overflow: visible;
 }
@@ -168,7 +209,7 @@ onMounted(() => { tab.value = requestedTab.value })
   min-height: 0;
   overflow-y: auto;
   overflow-x: clip;
-  overflow-clip-margin: var(--file-shadow-zone);
+  overflow-clip-margin: var(--ci-page-bleed);
 }
 
 .properties-tab-pane {
@@ -178,17 +219,11 @@ onMounted(() => { tab.value = requestedTab.value })
   margin-top: var(--content-header-body-gap);
   gap: 16px;
   overflow: visible;
-  width: calc(100% + (var(--file-shadow-zone) * 2));
-  margin-left: calc(var(--file-shadow-zone) * -1);
-  margin-right: calc(var(--file-shadow-zone) * -1);
-  padding-left: var(--file-shadow-zone);
-  padding-right: var(--file-shadow-zone);
   padding-bottom: 8px;
   box-sizing: border-box;
 }
 
 .properties-tab-pane > * {
-  margin: 0 !important;
+  margin: 0;
 }
-
 </style>

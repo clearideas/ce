@@ -15,6 +15,15 @@ const props = withDefaults(defineProps<Props>(), {
   disabled: false,
 })
 
+const modelValue = defineModel<DayOfWeek | DayOfWeek[]>({
+  required: true,
+  validator: value => {
+    if (!value) return false
+    if (Array.isArray(value)) return value.length > 0
+    return true
+  },
+})
+
 const DAY_OF_WEEK_OPTIONS: DayOfWeek[] = [
   'Monday',
   'Tuesday',
@@ -35,15 +44,6 @@ const dayLabels: Record<DayOfWeek, string> = {
   Sunday: 'Sunday',
 }
 
-const modelValue = defineModel<DayOfWeek | DayOfWeek[]>({
-  required: true,
-  validator: value => {
-    if (!value) return false
-    if (Array.isArray(value)) return value.length > 0
-    return true
-  },
-})
-
 const selectedDaysArray = computed({
   get: (): DayOfWeek[] => {
     if (!modelValue.value) return props.multiple ? ['Monday'] : []
@@ -54,7 +54,8 @@ const selectedDaysArray = computed({
   },
   set: (value: DayOfWeek[]) => {
     if (props.multiple) {
-      modelValue.value = value.length > 0 ? value : selectedDaysArray.value.length > 0 ? selectedDaysArray.value : ['Monday']
+      modelValue.value =
+        value.length > 0 ? value : selectedDaysArray.value.length > 0 ? selectedDaysArray.value : ['Monday']
     } else {
       modelValue.value = value[0] || modelValue.value
     }
@@ -74,7 +75,13 @@ const validationRules = computed(() => [
 watch(
   () => (Array.isArray(modelValue.value) ? modelValue.value.length : 0),
   (newLength, oldLength) => {
-    if (props.multiple && Array.isArray(modelValue.value) && oldLength === 1 && newLength === 0 && !props.disabled) {
+    if (
+      props.multiple &&
+      Array.isArray(modelValue.value) &&
+      oldLength === 1 &&
+      newLength === 0 &&
+      !props.disabled
+    ) {
       nextTick(() => {
         if (Array.isArray(modelValue.value) && modelValue.value.length === 0) modelValue.value = ['Monday']
       })
@@ -85,7 +92,11 @@ watch(
 watch(
   () => modelValue.value,
   newValue => {
-    if (props.multiple && (!newValue || (Array.isArray(newValue) && newValue.length === 0)) && !props.disabled) {
+    if (
+      props.multiple &&
+      (!newValue || (Array.isArray(newValue) && newValue.length === 0)) &&
+      !props.disabled
+    ) {
       modelValue.value = ['Monday']
     }
   },
@@ -103,9 +114,10 @@ watch(
         :class="{ selected: selectedDaysArray.includes(day), disabled: props.disabled }"
       >
         <IconCheckbox
-          v-model="selectedDaysArray"
           :id="day"
+          v-model="selectedDaysArray"
           :disabled="props.disabled"
+          :aria-label="dayLabels[day]"
           class="day-checkbox"
           size="small"
         />

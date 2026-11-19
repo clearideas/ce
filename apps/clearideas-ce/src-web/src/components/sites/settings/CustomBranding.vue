@@ -23,13 +23,13 @@ watch(() => siteStore.currentSite, initializeComponentState, { immediate: true }
     :is-initialized="isInitialized"
     :store="useSiteStore"
     action="updateCurrentSite"
-    icon="fasl fa-image"
+    icon="fas fa-image"
   >
     <template #content>
       <p class="text-body-2">Supported types: PNG, GIF, JPG, WEBP, and SVG.</p>
-      <div class="d-flex w-100 flex-row gap-4">
+      <div class="d-flex w-100 flex-row ga-4">
         <div>
-          <h4 class="ci-settings-section-title">Site icon</h4>
+          <h3 class="ci-settings-section-title">Site icon</h3>
           <SiteMediaDropZone
             :site-id="siteStore.currentSiteId!"
             media-type="icon"
@@ -39,7 +39,7 @@ watch(() => siteStore.currentSite, initializeComponentState, { immediate: true }
           />
         </div>
         <div>
-          <h4 class="ci-settings-section-title">Site logo</h4>
+          <h3 class="ci-settings-section-title">Site logo</h3>
           <SiteMediaDropZone
             :site-id="siteStore.currentSiteId!"
             media-type="logo"

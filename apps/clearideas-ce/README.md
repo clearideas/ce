@@ -43,7 +43,7 @@ Minimal variables:
 - `EMAIL_FROM` (required for `smtp`)
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS` (required as applicable for `smtp`)
 - `NOTIFICATIONS_ENABLED` and `NOTIFICATION_POLL_INTERVAL_MS` for the simple CE email notification worker
-- Optional site AI chat:
+- Optional AI chat (Ask and the site AI tab):
   - `AI_CHAT_MODEL` in `provider:model` format, for example `openai:gpt-5.6-luna` or `anthropic:claude-sonnet-5`
   - `AI_CHAT_MODELS` optional comma-separated allow-list; defaults to `AI_CHAT_MODEL`
   - `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` for the selected provider
@@ -94,8 +94,8 @@ Default URL: `http://localhost:4100`
 - Activity logging through `POST /api/activities`
 - Analytics-lite reports
 - Basic notification send/template endpoints
-- Non-persisted site-scoped AI chat using AI SDK and the local CE MCP tools when `AI_CHAT_MODEL` is configured
-- Portable prompt agents powered by `@clearideas/agent-runtime` 0.4.1, with manual runs, durable history, read-only Site tools, and simple schedules
+- AI chat (**Ask** across sites, and a site AI tab) on the Clear Ideas agent runtime with read-only content tools, stored conversations and linked sources, when `AI_CHAT_MODEL` is configured
+- Portable prompt agents powered by `@clearideas/agent-runtime` 0.6.3, with manual runs, durable history, read-only Site tools, and simple schedules
 - SPA fallback for non-API routes
 
 Agent manifests and runtime concepts are documented at [agent-runtime.clearideas.com](https://agent-runtime.clearideas.com/). CE intentionally supports the smaller manifest surface described in its bundled **Agents** guide.

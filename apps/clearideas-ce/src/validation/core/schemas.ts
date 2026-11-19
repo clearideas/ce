@@ -8,6 +8,10 @@ export {
   agentScheduleIdParamSchema,
   agentScheduleUpdateSchema,
   agentUpdateSchema,
+  chatConversationIdParamSchema,
+  ChatConversationPatchRequestSchema as chatConversationPatchSchema,
+  ChatConversationsQuerySchema as chatConversationsQuerySchema,
+  ChatTurnRequestSchema as chatTurnSchema,
 } from '@clearideas/contracts-core'
 
 export {
@@ -36,7 +40,6 @@ export {
   siteAndFileParamsSchema,
   siteAndFolderParamsSchema,
   siteAndUserParamsSchema,
-  siteChatBodySchema,
   siteIdParamSchema,
   sitePatchSchema,
   siteUserPatchSchema,

@@ -2,15 +2,15 @@
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { VForm } from 'vuetify/components/VForm'
-import BaseButton from '../../base/BaseButton.vue'
 import BaseDialog from '../../base/BaseDialog.vue'
 import { useSiteStore } from '../../../stores'
+import type { Site } from '../../../types/domain'
 
 const props = withDefaults(defineProps<{ modelValue?: boolean; redirectOnCreate?: boolean }>(), {
   modelValue: false,
   redirectOnCreate: true,
 })
-const emit = defineEmits<{ 'update:modelValue': [value: boolean]; siteCreated: [site?: any] }>()
+const emit = defineEmits<{ 'update:modelValue': [value: boolean]; siteCreated: [site?: Site] }>()
 const siteStore = useSiteStore()
 const router = useRouter()
 const refSiteForm = ref<VForm>()
@@ -42,24 +42,39 @@ watch(isDialogVisible, value => {
 </script>
 
 <template>
-  <BaseDialog v-model="isDialogVisible" width="500" :title="isCreatingSite ? '' : 'New site'" :show-close="!isCreatingSite">
+  <BaseDialog
+    v-model="isDialogVisible"
+    width="500"
+    title="New site"
+    :loading="isCreatingSite"
+    form="new-site-form"
+    confirm-text="Create site"
+    :confirm-disabled="!siteData.name"
+  >
     <div v-if="isCreatingSite">
       <VList class="py-8" color="primary" elevation="12" rounded="lg">
-        <VListItem prepend-icon="fasl fa-building" :title="`Creating ${siteData.name}`">
-          <template #append><VProgressCircular color="primary" indeterminate="disable-shrink" width="6" /></template>
+        <VListItem prepend-icon="fas fa-building" :title="`Creating ${siteData.name}`">
+          <template #append
+            ><VProgressCircular
+              aria-label="Creating site"
+              color="primary"
+              indeterminate="disable-shrink"
+              width="6"
+          /></template>
         </VListItem>
       </VList>
     </div>
-    <VForm v-else ref="refSiteForm" @submit.prevent="addSite">
+    <VForm v-else id="new-site-form" ref="refSiteForm" @submit.prevent="addSite">
       <VCardText>
-        <VTextField v-model="siteData.name" label="Name" :rules="[v => !!v || 'Name is required']" autofocus validate-on="blur" maxlength="100" />
+        <VTextField
+          v-model="siteData.name"
+          label="Name"
+          :rules="[v => !!v || 'Name is required']"
+          autofocus
+          validate-on="blur"
+          maxlength="100"
+        />
       </VCardText>
-      <VDivider />
-      <VCardActions class="bg-surface-light">
-        <VSpacer />
-        <BaseButton text="Cancel" color="default" type="reset" variant="flat" @click="isDialogVisible = false" />
-        <BaseButton text="Create site" color="success" type="submit" variant="flat" density="default" :disabled="!siteData.name" />
-      </VCardActions>
     </VForm>
   </BaseDialog>
 </template>

@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url'
 import mongoose from 'mongoose'
 import { config } from '../config/index.js'
 import { buildMongoConfigFromEnv, loadCeEnv } from './env.js'
+import { envValue } from '../lib/env.js'
 
 loadCeEnv()
 
@@ -32,7 +33,7 @@ const mongoClient = mongoose.connection.getClient()
 const db = mongoClient.db(mongoose.connection.name)
 const auth = betterAuth({
   database: mongodbAdapter(db as any, { client: mongoClient as any, transaction: false }),
-  baseURL: process.env.BETTER_AUTH_URL ?? `http://${process.env.HOST ?? '127.0.0.1'}:${process.env.PORT ?? 4100}`,
+  baseURL: envValue('BETTER_AUTH_URL', 'APP_URL') ?? `http://${process.env.HOST ?? '127.0.0.1'}:${process.env.PORT ?? 4100}`,
   secret: config.tokens.authSecret(),
   emailAndPassword: { enabled: false },
   plugins: [

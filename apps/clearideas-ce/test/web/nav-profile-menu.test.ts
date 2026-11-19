@@ -1,110 +1,96 @@
-import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import NavUserProfileMenu from '../../src-web/src/layouts/components/NavUserProfileMenu.vue'
+import type { Session } from '../../src-web/src/types/domain'
+import { expectNoA11yViolations, mountWithVuetify, settle } from './harness'
 
-const { push, getAppConfig } = vi.hoisted(() => ({
-  push: vi.fn(),
-  getAppConfig: vi.fn(),
-}))
-
-vi.mock('vue-router', () => ({
-  useRouter: () => ({ push }),
-}))
+const { getAppConfig } = vi.hoisted(() => ({ getAppConfig: vi.fn() }))
 
 vi.mock('../../src-web/src/api/client', () => ({
   appConfigApi: { get: getAppConfig },
 }))
 
+const session: Session = { user: { id: 'user-1', name: 'CE User', email: 'ce@example.test' } }
+const stub = { template: '<div />' }
+
+/** VMenu teleports its content to document.body; query there. */
+function menuItems() {
+  return [...document.body.querySelectorAll('.v-overlay .v-list-item')].filter(
+    (el): el is HTMLElement => el instanceof HTMLElement,
+  )
+}
+
+async function mountMenu() {
+  const wrapper = await mountWithVuetify(NavUserProfileMenu, {
+    props: { session },
+    routes: [
+      { path: '/', name: 'home', component: stub },
+      { path: '/sites', name: 'sites', component: stub },
+      { path: '/settings', name: 'settings', component: stub },
+      { path: '/docs', name: 'docs', component: stub },
+    ],
+  })
+  await settle()
+  return wrapper
+}
+
+async function openMenu(wrapper: Awaited<ReturnType<typeof mountMenu>>) {
+  const trigger = wrapper.find('button[aria-label^="Account menu"]')
+  expect(trigger.exists()).toBe(true)
+  await trigger.trigger('click')
+  await settle()
+  return trigger
+}
+
 describe('NavUserProfileMenu', () => {
   beforeEach(() => {
-    push.mockReset()
     getAppConfig.mockReset()
   })
 
-  it('routes documentation to the bundled CE docs and emits logout', async () => {
+  it('names the trigger with the visible initials (WCAG 2.5.3 label in name)', async () => {
+    getAppConfig.mockResolvedValue({ docsEnabled: false })
+    const wrapper = await mountMenu()
+    expect(wrapper.get('button.navbar-avatar-trigger').attributes('aria-label')).toBe('Account menu, CU')
+    expect(wrapper.get('button.navbar-avatar-trigger').text()).toBe('CU')
+  })
+
+  it('opens from a named trigger, routes documentation to the bundled CE docs and emits logout', async () => {
     getAppConfig.mockResolvedValue({ docsEnabled: true })
-    const wrapper = mount(NavUserProfileMenu, {
-      props: {
-        session: {
-          user: { id: 'user-1', name: 'CE User', email: 'ce@example.test' },
-        } as any,
-      },
-      global: {
-        stubs: {
-          VMenu: { template: '<div><slot name="activator" :props="{}" /><slot /></div>' },
-          VList: { template: '<div><slot /></div>' },
-          VListItem: { template: `<button @click="$emit('click')"><slot name="prepend" /><slot /></button>` },
-          VListItemTitle: { template: '<span><slot /></span>' },
-          VListItemSubtitle: { template: '<span><slot /></span>' },
-          VDivider: true,
-          VIcon: true,
-          VChip: { template: '<span><slot /></span>' },
-          Avatar: { template: '<span />' },
-        },
-      },
-    })
-    await flushPromises()
+    const wrapper = await mountMenu()
+    await openMenu(wrapper)
 
-    const buttons = wrapper.findAll('button')
-    await buttons.find(button => button.text().includes('Documentation'))!.trigger('click')
-    await buttons.find(button => button.text().includes('Log out'))!.trigger('click')
+    const items = menuItems()
+    const docs = items.find(item => item.textContent?.includes('Documentation'))
+    expect(docs).toBeDefined()
+    docs!.click()
+    await settle()
+    expect(wrapper.router.currentRoute.value.path).toBe('/docs')
 
-    expect(push).toHaveBeenCalledWith('/docs')
+    const logout = menuItems().find(item => item.textContent?.includes('Log out'))
+    expect(logout).toBeDefined()
+    logout!.click()
+    await settle()
     expect(wrapper.emitted('logout')?.length).toBeGreaterThanOrEqual(1)
   })
 
   it('hides documentation when docs are disabled', async () => {
     getAppConfig.mockResolvedValue({ docsEnabled: false })
-    const wrapper = mount(NavUserProfileMenu, {
-      props: {
-        session: {
-          user: { id: 'user-1', name: 'CE User', email: 'ce@example.test' },
-        } as any,
-      },
-      global: {
-        stubs: {
-          VMenu: { template: '<div><slot name="activator" :props="{}" /><slot /></div>' },
-          VList: { template: '<div><slot /></div>' },
-          VListItem: { template: `<button @click="$emit('click')"><slot name="prepend" /><slot /></button>` },
-          VListItemTitle: { template: '<span><slot /></span>' },
-          VListItemSubtitle: { template: '<span><slot /></span>' },
-          VDivider: true,
-          VIcon: true,
-          VChip: { template: '<span><slot /></span>' },
-          Avatar: { template: '<span />' },
-        },
-      },
-    })
-    await flushPromises()
+    const wrapper = await mountMenu()
+    await openMenu(wrapper)
 
-    expect(wrapper.text()).not.toContain('Documentation')
+    const titles = menuItems().map(item => item.textContent?.trim() ?? '')
+    expect(titles.some(title => title.includes('Documentation'))).toBe(false)
+    expect(titles.some(title => title.includes('Settings'))).toBe(true)
   })
 
-  it('uses readable contrast for the profile email subtitle', async () => {
+  it('shows the account email at readable emphasis and is accessible', async () => {
     getAppConfig.mockResolvedValue({ docsEnabled: false })
-    const wrapper = mount(NavUserProfileMenu, {
-      props: {
-        session: {
-          user: { id: 'user-1', name: 'CE User', email: 'ce@example.test' },
-        } as any,
-      },
-      global: {
-        stubs: {
-          VMenu: { template: '<div><slot name="activator" :props="{}" /><slot /></div>' },
-          VList: { template: '<div><slot /></div>' },
-          VListItem: { template: `<button @click="$emit('click')"><slot name="prepend" /><slot /></button>` },
-          VListItemTitle: { template: '<span><slot /></span>' },
-          VListItemSubtitle: { template: '<span :class="$attrs.class"><slot /></span>' },
-          VDivider: true,
-          VIcon: true,
-          VChip: { template: '<span><slot /></span>' },
-          Avatar: { template: '<span />' },
-        },
-      },
-    })
-    await flushPromises()
+    const wrapper = await mountMenu()
+    await openMenu(wrapper)
 
-    expect(wrapper.find('.nav-profile-menu__subtitle').exists()).toBe(true)
-    expect(wrapper.find('.nav-profile-menu__subtitle').classes()).not.toContain('font-weight-light')
+    const subtitle = document.body.querySelector('.nav-profile-menu__subtitle')
+    expect(subtitle).not.toBeNull()
+    expect(subtitle!.textContent).toContain('ce@example.test')
+    expect(subtitle!.classList.contains('font-weight-light')).toBe(false)
+    await expectNoA11yViolations(wrapper)
   })
 })

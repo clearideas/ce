@@ -11,9 +11,7 @@ const internalSelectedTimeZone = ref<TimeZone>({
   offset: '',
 })
 const timeZonesWithOffset = ref<TimeZone[]>([])
-const currentTimeZone = ref<TimeZone>(
-  getTimeZoneWithOffset(Intl.DateTimeFormat().resolvedOptions().timeZone),
-)
+const currentTimeZone = ref<TimeZone>(getTimeZoneWithOffset(Intl.DateTimeFormat().resolvedOptions().timeZone))
 
 function fetchTimeZones() {
   timeZonesWithOffset.value = Intl.supportedValuesOf('timeZone').map(tz => getTimeZoneWithOffset(tz))
@@ -49,16 +47,11 @@ watch(
 </script>
 
 <template>
-  <h4>Current device time zone</h4>
+  <h3>Current device time zone</h3>
   <p>{{ currentTimeZone.title }}</p>
-  <BaseButton
-    text="Match current device"
-    color="primary"
-    variant="outlined"
-    @click="matchTimeZone"
-  />
+  <BaseButton text="Match current device" color="primary" variant="outlined" @click="matchTimeZone" />
   <div class="mt-4"></div>
-  <h4>Selected time zone</h4>
+  <h3>Selected time zone</h3>
   <p>{{ internalSelectedTimeZone.title }}</p>
   <VSelect
     v-model="internalSelectedTimeZone"

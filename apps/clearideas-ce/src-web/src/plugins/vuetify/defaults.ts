@@ -88,12 +88,10 @@ export default {
   VPagination: {
     density: 'compact',
   },
-  VIcon: {
-    'aria-hidden': false,
-  },
+  // Pill buttons at the standard 36px height. BaseButton inherits these; do not re-declare them there.
   VBtn: {
-    rounded: 'xl',
-    density: 'comfortable',
+    rounded: 'pill',
+    density: 'default',
     elevation: 0,
   },
 }

@@ -57,22 +57,33 @@ export const useUserStore = defineStore('user', () => {
       alert.add({ message: `User group "${input.name}" created.`, type: 'success', timeout: 3000 })
       return response.userGroup
     } catch (error) {
-      alert.add({ message: error instanceof Error ? error.message : 'User group could not be created.', type: 'error', timeout: 5000 })
+      alert.add({
+        message: error instanceof Error ? error.message : 'User group could not be created.',
+        type: 'error',
+        timeout: 5000,
+      })
       throw error
     }
   }
 
-  async function createUser(input: { email: string; displayName?: string; siteIds?: string[]; siteRole?: string }) {
+  async function createUser(input: {
+    email: string
+    displayName?: string
+    siteIds?: string[]
+    siteRole?: string
+  }) {
     try {
       const siteIds = input.siteIds ?? []
       if (siteIds.length === 0) throw new Error('At least one site is required.')
       const responses = []
       for (const siteId of siteIds) {
-        responses.push(await ceApi.addSiteUser(siteId, {
-          email: input.email,
-          displayName: input.displayName,
-          siteRole: input.siteRole,
-        }))
+        responses.push(
+          await ceApi.addSiteUser(siteId, {
+            email: input.email,
+            displayName: input.displayName,
+            siteRole: input.siteRole,
+          }),
+        )
       }
       const response = responses[0]
       await getUsers()
@@ -80,7 +91,11 @@ export const useUserStore = defineStore('user', () => {
       alert.add({ message: `User added: "${response.user.email}".`, type: 'success', timeout: 3000 })
       return response.user
     } catch (error) {
-      alert.add({ message: error instanceof Error ? error.message : 'User could not be added.', type: 'error', timeout: 5000 })
+      alert.add({
+        message: error instanceof Error ? error.message : 'User could not be added.',
+        type: 'error',
+        timeout: 5000,
+      })
       throw error
     }
   }
@@ -94,7 +109,11 @@ export const useUserStore = defineStore('user', () => {
       alert.add({ message: 'Users added to group.', type: 'success', timeout: 3000 })
       return response.userGroup
     } catch (error) {
-      alert.add({ message: error instanceof Error ? error.message : 'Users could not be added to group.', type: 'error', timeout: 5000 })
+      alert.add({
+        message: error instanceof Error ? error.message : 'Users could not be added to group.',
+        type: 'error',
+        timeout: 5000,
+      })
       throw error
     }
   }
@@ -106,19 +125,30 @@ export const useUserStore = defineStore('user', () => {
       await getUsers()
       alert.add({ message: 'User removed from site.', type: 'success', timeout: 3000 })
     } catch (error) {
-      alert.add({ message: error instanceof Error ? error.message : 'User could not be removed from site.', type: 'error', timeout: 5000 })
+      alert.add({
+        message: error instanceof Error ? error.message : 'User could not be removed from site.',
+        type: 'error',
+        timeout: 5000,
+      })
       throw error
     }
   }
 
   async function updateSiteUser(siteId: string, userId: string, role: string, expiresAt: Date | null) {
     try {
-      await ceApi.updateSiteUser(siteId, userId, { role, ...(expiresAt ? { expiresAt: expiresAt.toISOString() } : {}) })
+      await ceApi.updateSiteUser(siteId, userId, {
+        role,
+        ...(expiresAt ? { expiresAt: expiresAt.toISOString() } : {}),
+      })
       await getSiteUsers(siteId)
       await getUsers()
       alert.add({ message: 'User role updated.', type: 'success', timeout: 3000 })
     } catch (error) {
-      alert.add({ message: error instanceof Error ? error.message : 'User role could not be updated.', type: 'error', timeout: 5000 })
+      alert.add({
+        message: error instanceof Error ? error.message : 'User role could not be updated.',
+        type: 'error',
+        timeout: 5000,
+      })
       throw error
     }
   }
@@ -129,7 +159,11 @@ export const useUserStore = defineStore('user', () => {
       await getUsers()
       alert.add({ message: 'User removed from all sites.', type: 'success', timeout: 3000 })
     } catch (error) {
-      alert.add({ message: error instanceof Error ? error.message : 'User could not be removed from all sites.', type: 'error', timeout: 5000 })
+      alert.add({
+        message: error instanceof Error ? error.message : 'User could not be removed from all sites.',
+        type: 'error',
+        timeout: 5000,
+      })
       throw error
     }
   }
@@ -139,7 +173,11 @@ export const useUserStore = defineStore('user', () => {
       await ceApi.resendInvite(siteId, userId)
       alert.add({ message: 'Invite resend request completed.', type: 'success', timeout: 3000 })
     } catch (error) {
-      alert.add({ message: error instanceof Error ? error.message : 'Invite could not be resent.', type: 'error', timeout: 5000 })
+      alert.add({
+        message: error instanceof Error ? error.message : 'Invite could not be resent.',
+        type: 'error',
+        timeout: 5000,
+      })
       throw error
     }
   }
@@ -152,7 +190,11 @@ export const useUserStore = defineStore('user', () => {
       alert.add({ message: 'User removed from group.', type: 'success', timeout: 3000 })
       return response.userGroup
     } catch (error) {
-      alert.add({ message: error instanceof Error ? error.message : 'User could not be removed from group.', type: 'error', timeout: 5000 })
+      alert.add({
+        message: error instanceof Error ? error.message : 'User could not be removed from group.',
+        type: 'error',
+        timeout: 5000,
+      })
       throw error
     }
   }

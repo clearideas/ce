@@ -51,16 +51,22 @@ describe('CE error handler', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
     const res = createResponse()
     const error = new mongoose.Error.ValidationError()
-    error.addError('members.0.user', new mongoose.Error.ValidatorError({ path: 'members.0.user', message: 'Path `user` is required.' }))
+    error.addError(
+      'members.0.user',
+      new mongoose.Error.ValidatorError({ path: 'members.0.user', message: 'Path `user` is required.' }),
+    )
 
     errorHandler(error, createRequest(), res as any, vi.fn())
 
     expect(res.status).toHaveBeenCalledWith(400)
     expect(res.json).toHaveBeenCalledWith({ error: 'Invalid request.' })
-    expect(consoleError).toHaveBeenCalledWith('[clearideas-ce:error]', expect.objectContaining({
-      name: 'ValidationError',
-      message: expect.stringContaining('members.0.user'),
-      statusCode: 400,
-    }))
+    expect(consoleError).toHaveBeenCalledWith(
+      '[clearideas-ce:error]',
+      expect.objectContaining({
+        name: 'ValidationError',
+        message: expect.stringContaining('members.0.user'),
+        statusCode: 400,
+      }),
+    )
   })
 })

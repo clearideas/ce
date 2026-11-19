@@ -16,7 +16,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   showAsMenu: false,
   latest: false,
-  variant: 'text',
+
   contentType: 'folder',
   size: 'default',
 })

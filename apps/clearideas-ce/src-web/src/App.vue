@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { computed, onMounted, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { setUnauthorizedHandler } from './api/fetchPrivate'
 import AppLayout from './layouts/AppLayout.vue'
@@ -12,7 +12,7 @@ const router = useRouter()
 const authStore = useAuthStore()
 const { session, booted } = storeToRefs(authStore)
 const isPublicRoute = computed(() => route.meta.public === true)
-const { initializeTheme, watchSystemTheme } = useAppTheme()
+const { initializeTheme, stopWatchingSystemTheme, watchSystemTheme } = useAppTheme()
 
 setUnauthorizedHandler(async () => {
   session.value = null
@@ -29,13 +29,14 @@ onMounted(() => {
   watchSystemTheme()
   void requireSession()
 })
+onBeforeUnmount(stopWatchingSystemTheme)
 watch(() => route.fullPath, requireSession)
 </script>
 
 <template>
   <VApp style="height: 100vh; overflow-y: hidden">
     <VMain v-if="!booted" class="boot-screen">
-      <VProgressCircular indeterminate color="primary" />
+      <VProgressCircular aria-label="Loading Clear Ideas CE" indeterminate color="primary" />
       <p>Loading Clear Ideas CE...</p>
     </VMain>
     <RouterView v-else-if="isPublicRoute" />

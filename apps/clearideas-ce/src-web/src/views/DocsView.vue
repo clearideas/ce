@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import MarkdownRenderer from '../components/base/MarkdownRenderer.vue'
+import { usePageTitle } from '../composables/usePageTitle'
 
 type DocsPage = { title: string; slug: string; description?: string }
 type DocsSection = { title: string; pages: DocsPage[] }
@@ -50,6 +51,7 @@ async function loadPage() {
 
 onMounted(loadPage)
 watch(activeSlug, loadPage)
+usePageTitle(computed(() => activePage.value?.title ?? manifest.value?.title ?? 'Documentation'))
 </script>
 
 <template>
@@ -75,8 +77,8 @@ watch(activeSlug, loadPage)
       </div>
     </aside>
     <main class="docs-content-card">
-      <VProgressCircular v-if="loading" indeterminate color="primary" />
-      <VAlert v-else-if="error" type="error" icon="fasl fa-triangle-exclamation">{{ error }}</VAlert>
+      <VProgressCircular aria-label="Loading documentation" v-if="loading" indeterminate color="primary" />
+      <VAlert v-else-if="error" type="error" icon="fas fa-triangle-exclamation">{{ error }}</VAlert>
       <MarkdownRenderer v-else :content="markdown" />
     </main>
   </div>
