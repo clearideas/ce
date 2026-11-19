@@ -5,7 +5,10 @@ import { vi } from 'vitest'
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: vi.fn().mockImplementation((query: string) => ({
-    matches: false,
+    get matches() {
+      const minWidth = /^\(min-width:\s*(\d+(?:\.\d+)?)px\)$/.exec(query)
+      return minWidth !== null && window.innerWidth >= Number(minWidth[1])
+    },
     media: query,
     onchange: null,
     addListener: vi.fn(),
