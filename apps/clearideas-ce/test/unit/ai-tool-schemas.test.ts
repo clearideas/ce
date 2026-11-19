@@ -66,9 +66,8 @@ describe('AI tool schemas', () => {
     }
   })
 
-  // Also the regression test for the `@ai-sdk/anthropic@4` pin (root package.json overrides): from
-  // 4.0.72 the streamed `message_start` becomes a `custom` content part that agent-runtime-model-ai-sdk
-  // ≤ 0.6.0 rejects ("unsupported replay content: custom"), and this test fails.
+  // Exercise replay conversion through the real provider adapter. Anthropic SDK 4.0.72 and later
+  // emit message_start as a custom part, which older Agent Runtime versions rejected.
   it('sends the chat tools through the Anthropic provider (AI_CHAT_MODEL=anthropic:…)', async () => {
     vi.stubEnv('AI_CHAT_MODEL', 'anthropic:claude-sonnet-4-5')
     vi.stubEnv('ANTHROPIC_API_KEY', 'test-key')

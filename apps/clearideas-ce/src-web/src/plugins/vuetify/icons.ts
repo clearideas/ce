@@ -38,6 +38,7 @@ const aliases: IconAliases = {
   plus: 'fas fa-plus',
   minus: 'fas fa-minus',
   calendar: 'fas fa-calendar',
+  clock: 'fas fa-clock',
   treeviewCollapse: 'fas fa-angle-right',
   treeviewExpand: 'fas fa-angle-down',
   eyeDropper: 'fas fa-eye-dropper',

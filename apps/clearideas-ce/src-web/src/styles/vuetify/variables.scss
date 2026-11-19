@@ -42,9 +42,7 @@ $font-family-custom:
 
   // btn
   $button-font-weight: 500,
-  $button-card-actions-padding: 0 12px,
   $button-padding-ratio: 2,
-  $button-card-actions-margin: 0,
   $button-density: (
     "default": 0,
     "comfortable": -1,
@@ -56,6 +54,7 @@ $font-family-custom:
   $card-text-padding: 1.25rem,
   $card-item-padding: 1.25rem,
   $card-elevation: 1,
+  $card-actions-gap: 0,
   // $card-actions-padding: 0.5rem 1rem ,
   $card-transition-property: $card-transition-property-custom,
   $sheet-border-radius: 6px,

@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { createLocalStorageProvider } from '../../src/app.js'
 import {
   extractPdfTextForFile,
@@ -262,9 +262,18 @@ describe('CE service helpers', () => {
     expect(limited.status).toBe('complete')
     expect(limited.pages).toBe(1)
 
-    await expect(
-      extractTextFromPdfBuffer(testPdfBuffer(), { maxBytes: 1024 * 1024, maxPages: 1, timeoutMs: 1 }),
-    ).rejects.toThrow(/timed out/)
+    const destroy = vi.fn(async () => undefined)
+    vi.doMock('pdfjs-dist/legacy/build/pdf.mjs', () => ({
+      getDocument: () => ({ promise: new Promise<never>(() => {}), destroy }),
+    }))
+    try {
+      await expect(
+        extractTextFromPdfBuffer(testPdfBuffer(), { maxBytes: 1024 * 1024, maxPages: 1, timeoutMs: 10 }),
+      ).rejects.toThrow(/timed out/)
+      expect(destroy).toHaveBeenCalledOnce()
+    } finally {
+      vi.doUnmock('pdfjs-dist/legacy/build/pdf.mjs')
+    }
   })
 
   it('decides when on-demand PDF extraction should be retried', () => {

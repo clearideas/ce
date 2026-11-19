@@ -95,7 +95,7 @@ Default URL: `http://localhost:4100`
 - Analytics-lite reports
 - Basic notification send/template endpoints
 - AI chat (**Ask** across sites, and a site AI tab) on the Clear Ideas agent runtime with read-only content tools, stored conversations and linked sources, when `AI_CHAT_MODEL` is configured
-- Portable prompt agents powered by `@clearideas/agent-runtime` 0.6.0, with manual runs, durable history, read-only Site tools, and simple schedules
+- Portable prompt agents powered by `@clearideas/agent-runtime` 0.6.3, with manual runs, durable history, read-only Site tools, and simple schedules
 - SPA fallback for non-API routes
 
 Agent manifests and runtime concepts are documented at [agent-runtime.clearideas.com](https://agent-runtime.clearideas.com/). CE intentionally supports the smaller manifest surface described in its bundled **Agents** guide.

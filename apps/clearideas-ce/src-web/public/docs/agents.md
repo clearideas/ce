@@ -1,6 +1,6 @@
 # Agents
 
-Clear Ideas CE can run small, portable prompt agents using `@clearideas/agent-runtime` 0.6.0. Open **Agents** in the main navigation to create an agent from the included JSON template, supply variables, choose a Site, and inspect run history.
+Clear Ideas CE can run small, portable prompt agents using `@clearideas/agent-runtime` 0.6.3. Open **Agents** in the main navigation to create an agent from the included JSON template, supply variables, choose a Site, and inspect run history.
 
 See the [Clear Ideas Agent Runtime documentation](https://agent-runtime.clearideas.com/) for the portable manifest format and runtime concepts. CE intentionally supports only the compact subset documented below.
 

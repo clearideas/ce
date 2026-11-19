@@ -333,7 +333,7 @@ AI_CHAT_MODELS=openai:gpt-5.6-luna
 OPENAI_API_KEY=<key>
 ```
 
-Lightweight agents use `@clearideas/agent-runtime` 0.6.0 and the same provider keys. Configure a separate model or fall back to the chat model:
+Lightweight agents use `@clearideas/agent-runtime` 0.6.3 and the same provider keys. Configure a separate model or fall back to the chat model:
 
 ```env
 AI_AGENT_MODEL=openai:gpt-5.6-luna
