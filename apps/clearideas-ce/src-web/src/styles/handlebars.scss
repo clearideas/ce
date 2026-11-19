@@ -10,7 +10,7 @@
   margin: 0 1px;
   font-weight: 500;
   transition: all 0.15s ease;
-  font-family: 'Inter', monospace;
+  font-family: var(--ci-font-family);
 }
 
 .handlebars-default-var {

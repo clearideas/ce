@@ -2,7 +2,12 @@
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { useContentStore } from '../../stores'
 
-interface Props { id: string; siteId: string; contentType: string; name: string }
+interface Props {
+  id: string
+  siteId: string
+  contentType: string
+  name: string
+}
 const props = defineProps<Props>()
 const contentStore = useContentStore()
 const link = ref('')
@@ -18,7 +23,9 @@ async function loadContent() {
 
 onMounted(loadContent)
 watch(() => [props.id, props.contentType], loadContent)
-onUnmounted(() => { if (objectUrl) URL.revokeObjectURL(objectUrl) })
+onUnmounted(() => {
+  if (objectUrl) URL.revokeObjectURL(objectUrl)
+})
 </script>
 
 <template>

@@ -1,11 +1,10 @@
 import { expect, test } from '@playwright/test'
-import http from 'node:http'
-import path from 'node:path'
 import type { ModelAdapter, ModelRequest, ModelResult } from '@clearideas/agent-runtime'
-import { createTestCeRuntime, type TestCeRuntime } from '../harness/runtime.js'
+import type { TestCeRuntime } from '../harness/runtime.js'
+import { startCeServer, type CeTestServer } from './helpers/server.js'
 
 let ctx: TestCeRuntime
-let server: http.Server
+let ce: CeTestServer
 let baseURL: string
 
 class FakeModelAdapter implements ModelAdapter {
@@ -28,18 +27,13 @@ class FakeModelAdapter implements ModelAdapter {
 }
 
 test.beforeAll(async () => {
-  const webRoot = path.resolve(import.meta.dirname, '../../web')
-  ctx = await createTestCeRuntime({ webRoot, agentModelAdapter: new FakeModelAdapter() })
-  server = ctx.runtime.app.listen(0, '127.0.0.1')
-  await new Promise<void>(resolve => server.once('listening', resolve))
-  const address = server.address()
-  if (!address || typeof address === 'string') throw new Error('Could not resolve CE smoke server port')
-  baseURL = `http://127.0.0.1:${address.port}`
+  ce = await startCeServer({ agentModelAdapter: new FakeModelAdapter() })
+  ctx = ce.ctx
+  baseURL = ce.baseURL
 })
 
 test.afterAll(async () => {
-  await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()))
-  await ctx.close()
+  await ce.close()
 })
 
 test('critical CE browser smoke flow', async ({ page }) => {
@@ -50,30 +44,54 @@ test('critical CE browser smoke flow', async ({ page }) => {
 
   const site = await api(page, '/api/sites', { method: 'POST', body: { name: 'Smoke Site' } })
   const siteId = site.site.id as string
-  await api(page, `/api/sites/${siteId}`, { method: 'PATCH', body: { attributes: { ai: { chatEnabled: true, mcpEnabled: true }, mcp: { enabled: true } } } })
-  const folder = await api(page, `/api/sites/${siteId}/folders`, { method: 'POST', body: { name: 'Root Folder' } })
-  const child = await api(page, `/api/sites/${siteId}/folders`, { method: 'POST', body: { name: 'Nested Folder', folderId: folder.folder.id } })
+  await api(page, `/api/sites/${siteId}`, {
+    method: 'PATCH',
+    body: { attributes: { ai: { chatEnabled: true, mcpEnabled: true }, mcp: { enabled: true } } },
+  })
+  const folder = await api(page, `/api/sites/${siteId}/folders`, {
+    method: 'POST',
+    body: { name: 'Root Folder' },
+  })
+  const child = await api(page, `/api/sites/${siteId}/folders`, {
+    method: 'POST',
+    body: { name: 'Nested Folder', folderId: folder.folder.id },
+  })
   expect(child.folder.parentId).toBe(folder.folder.id)
 
   const target = await api(page, '/api/files/upload-target', {
     method: 'POST',
-    body: { siteId, folderId: child.folder.id, fileName: 'smoke.json', contentType: 'application/json', size: 17 },
+    body: {
+      siteId,
+      folderId: child.folder.id,
+      fileName: 'smoke.json',
+      contentType: 'application/json',
+      size: 17,
+    },
   })
   await page.request.put(`${baseURL}${target.target.url}`, {
     data: Buffer.from('{"hello":"world"}'),
     headers: { 'content-type': 'application/json', ...(target.target.headers ?? {}) },
   })
-  await expect.poll(async () => {
-    const result = await api(page, `/api/site/${siteId}/search`, { method: 'POST', body: { q: '@contentType:application/json' } })
-    return result.results.length
-  }).toBeGreaterThan(0)
+  await expect
+    .poll(async () => {
+      const result = await api(page, `/api/site/${siteId}/search`, {
+        method: 'POST',
+        body: { q: '@contentType:application/json' },
+      })
+      return result.results.length
+    })
+    .toBeGreaterThan(0)
 
   await page.goto(`${baseURL}/site/${siteId}/content`)
-  await expect(page.getByText('Smoke Site').first()).toBeVisible()
+  const breadcrumb = page.getByRole('navigation', { name: 'Breadcrumb' })
+  await expect(breadcrumb.getByRole('link', { name: 'Smoke Site' })).toBeVisible()
+  await expect(page.getByRole('main').getByText('Root Folder', { exact: true })).toBeVisible()
+  // The desktop search box is always visible and scoped to the current site.
+  await expect(page.getByRole('search').getByText('Search Smoke Site')).toBeVisible()
   await page.goto(`${baseURL}/site/${siteId}/users`)
-  await expect(page.getByText('Users').first()).toBeVisible()
+  await expect(page.getByRole('tab', { name: 'Users' })).toHaveAttribute('aria-selected', 'true')
   await page.goto(`${baseURL}/site/${siteId}/settings`)
-  await expect(page.getByText('Settings').first()).toBeVisible()
+  await expect(page.getByRole('tab', { name: 'Settings' })).toHaveAttribute('aria-selected', 'true')
 
   const accessKey = await api(page, '/api/account/access-keys', {
     method: 'POST',
@@ -105,9 +123,7 @@ test('creates, runs, inspects, and schedules an agent in the UI', async ({ page 
     variables: [
       { key: 'question', type: 'string', requiresOverride: true, description: 'Question to answer.' },
     ],
-    steps: [
-      { id: 'answer', type: 'prompt', prompt: '{{ question }}', includeInFinalOutput: true },
-    ],
+    steps: [{ id: 'answer', type: 'prompt', prompt: '{{ question }}', includeInFinalOutput: true }],
   }
   await page.getByLabel('Agent manifest (JSON)').fill(JSON.stringify(manifest, null, 2))
   await page.getByRole('button', { name: 'Save', exact: true }).click()
@@ -121,7 +137,7 @@ test('creates, runs, inspects, and schedules an agent in the UI', async ({ page 
   await page.getByRole('button', { name: 'View' }).click()
   await expect(page.getByText('Run details')).toBeVisible()
   await expect(page.getByText('A concise browser-tested agent answer.').last()).toBeVisible()
-  await page.getByRole('button', { name: 'Close run details' }).click()
+  await page.getByRole('dialog', { name: 'Run details' }).getByRole('button', { name: 'Close' }).click()
 
   await page.getByRole('button', { name: 'Create schedule' }).click()
   await expect(page.getByText('daily', { exact: true })).toBeVisible()
@@ -132,7 +148,9 @@ async function signIn(page: any, email: string) {
   await page.request.post(`${baseURL}/api/auth/code/send`, { data: { email } })
   const code = ctx.email.lastCode(email)
   if (!code) throw new Error(`No sign-in code captured for ${email}`)
-  const response = await page.request.post(`${baseURL}/api/auth/code/verify`, { data: { email, code, name: 'Smoke User' } })
+  const response = await page.request.post(`${baseURL}/api/auth/code/verify`, {
+    data: { email, code, name: 'Smoke User' },
+  })
   expect(response.ok()).toBe(true)
 }
 

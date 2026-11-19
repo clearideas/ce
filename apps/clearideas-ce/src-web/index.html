@@ -16,9 +16,12 @@
       Declaring the order here guarantees the browser sees it first regardless
       of bundle order. Mirrors node_modules/vuetify/lib/styles/generic/_layers.scss.
       See vuetifyjs/vuetify#22752 and #22801.
+
+      `ci-base` (our element defaults, styles/overrides.scss) sits just above Vuetify's reset, so
+      Vuetify components, Vuetify utilities (`mb-0`, …) and every unlayered app rule override it.
     -->
     <style>
-      @layer vuetify-core, vuetify-components, vuetify-overrides, vuetify-utilities, vuetify-final;
+      @layer vuetify-core, ci-base, vuetify-components, vuetify-overrides, vuetify-utilities, vuetify-final;
       @layer vuetify-core {
         @layer reset, base;
       }
@@ -39,7 +42,8 @@
       name="description"
       content="Clear Ideas Community Edition is a local-first open-source workspace for sites, files, users, search, analytics, MCP, and AI-assisted document workflows."
     />
-    <meta name="theme-color" content="#ffffff" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#171717" media="(prefers-color-scheme: dark)" />
     <title>Clear Ideas Community Edition</title>
   </head>
   <body>

@@ -23,7 +23,10 @@ describe('search query parsing and metadata matching', () => {
     })
     expect(parseMetadataSearchQuery('@name:"Jane Doe" @tag:invoice')).toEqual({
       plainText: '',
-      filters: [{ key: 'name', value: 'jane doe' }, { key: 'tag', value: 'invoice' }],
+      filters: [
+        { key: 'name', value: 'jane doe' },
+        { key: 'tag', value: 'invoice' },
+      ],
     })
   })
 
@@ -57,7 +60,8 @@ describe('search query parsing and metadata matching', () => {
       attributes: { metadata: { expiryDate: '2026-12-31', fullName: 'Jane Doe' } },
     }
     const site = { name: 'Acme', attributes: { tags: ['finance'] } }
-    const matches = (q: string) => matchesMetadataSearch({ file, site, folder: { name: 'Q1' }, search: parseMetadataSearchQuery(q) })
+    const matches = (q: string) =>
+      matchesMetadataSearch({ file, site, folder: { name: 'Q1' }, search: parseMetadataSearchQuery(q) })
 
     expect(matches('@tag:invoice')).toBe(true)
     expect(matches('@tags:finance')).toBe(true)
@@ -84,21 +88,33 @@ describe('search query parsing and metadata matching', () => {
     expect(buildFileNameSearchRegex('a.b')!.test('xaXby')).toBe(false)
     expect(buildFileNameSearchRegex('   ')).toBeNull()
 
-    const predicates = buildSearchQueryPredicates(parseMetadataSearchQuery('invoice @contentType:application/pdf'))
+    const predicates = buildSearchQueryPredicates(
+      parseMetadataSearchQuery('invoice @contentType:application/pdf'),
+    )
     // Patterns are plain strings with $options so they are portable across MongoDB versions.
     expect(predicates.name).toEqual({ $regex: expect.any(String), $options: 'i' })
     expect(predicates.contentType).toEqual({ $regex: 'application/pdf', $options: 'i' })
     expect(new RegExp((predicates.name as any).$regex, 'iu').test('My Invoice.pdf')).toBe(true)
     expect(buildSearchQueryPredicates(parseMetadataSearchQuery('@tag:x'))).toEqual({})
-    expect(buildSearchQueryPredicates(parseMetadataSearchQuery('a.b+c'))).toEqual({ name: { $regex: 'a\\.b\\+c|a[^\\p{L}\\p{N}]+b[^\\p{L}\\p{N}]+c', $options: 'i' } })
+    expect(buildSearchQueryPredicates(parseMetadataSearchQuery('a.b+c'))).toEqual({
+      name: { $regex: 'a\\.b\\+c|a[^\\p{L}\\p{N}]+b[^\\p{L}\\p{N}]+c', $options: 'i' },
+    })
   })
 
   it('validates MCP search arguments, accepting q as an alias and bounding query length', async () => {
-    await expect(validateSchema(mcpSearchContentArgsSchema, { q: 'hello' })).resolves.toMatchObject({ query: 'hello' })
-    await expect(validateSchema(mcpSearchContentArgsSchema, { query: 'hello', limit: '20' })).resolves.toMatchObject({ query: 'hello', limit: 20 })
-    await expect(validateSchema(mcpSearchContentArgsSchema, { query: 'x'.repeat(501) })).rejects.toThrow(/too long/)
+    await expect(validateSchema(mcpSearchContentArgsSchema, { q: 'hello' })).resolves.toMatchObject({
+      query: 'hello',
+    })
+    await expect(
+      validateSchema(mcpSearchContentArgsSchema, { query: 'hello', limit: '20' }),
+    ).resolves.toMatchObject({ query: 'hello', limit: 20 })
+    await expect(validateSchema(mcpSearchContentArgsSchema, { query: 'x'.repeat(501) })).rejects.toThrow(
+      /too long/,
+    )
     await expect(validateSchema(mcpSearchContentArgsSchema, { query: '' })).rejects.toThrow(/required/)
-    await expect(validateSchema(mcpSearchContentArgsSchema, { query: 'ok', siteIds: ['not-an-id'] })).rejects.toThrow()
+    await expect(
+      validateSchema(mcpSearchContentArgsSchema, { query: 'ok', siteIds: ['not-an-id'] }),
+    ).rejects.toThrow()
   })
 })
 
@@ -117,7 +133,8 @@ describe('site membership validity', () => {
   }
 
   it('ignores expired and declined memberships when resolving roles', () => {
-    const check = (userId: string) => hasSiteRole({ site, accountId: 'other', userId, permittedRoles: ['viewer', 'editor'], roles })
+    const check = (userId: string) =>
+      hasSiteRole({ site, accountId: 'other', userId, permittedRoles: ['viewer', 'editor'], roles })
     expect(check('active')).toMatchObject({ allowed: true, role: 'viewer' })
     expect(check('not-yet-expired')).toMatchObject({ allowed: true, role: 'editor' })
     expect(check('expired')).toMatchObject({ allowed: false, role: '' })
@@ -128,7 +145,12 @@ describe('site membership validity', () => {
 
   it('excludes expired and declined memberships in permitted-site queries', () => {
     const now = new Date('2026-03-01T00:00:00Z')
-    const query = buildPermittedSitesQuery({ accountId: 'account-1', userId: 'user-1', roles: ['viewer'], now })
+    const query = buildPermittedSitesQuery({
+      accountId: 'account-1',
+      userId: 'user-1',
+      roles: ['viewer'],
+      now,
+    })
     expect(query).toEqual({
       $or: [
         {
@@ -159,7 +181,11 @@ describe('database file search', () => {
           if (query.parent && String(file.parent) !== String(query.parent)) return false
           if (query._id?.$in) return query._id.$in.map(String).includes(String(file._id))
           if (query.name?.$regex && !new RegExp(query.name.$regex, 'iu').test(file.name)) return false
-          if (query.contentType?.$regex && !new RegExp(query.contentType.$regex, 'iu').test(file.contentType ?? '')) return false
+          if (
+            query.contentType?.$regex &&
+            !new RegExp(query.contentType.$regex, 'iu').test(file.contentType ?? '')
+          )
+            return false
           return true
         })
         const chain: any = {
@@ -192,14 +218,45 @@ describe('database file search', () => {
 
   it('pushes name and content-type predicates into the database query and resolves folders in batch', async () => {
     const files = [
-      { _id: 'f1', site: 'site-1', kind: 'File', status: 'active', name: 'Annual_Report.pdf', contentType: 'application/pdf', parentType: 'Content', parent: 'folder-1', updatedAt: new Date('2026-01-02') },
-      { _id: 'f2', site: 'site-1', kind: 'File', status: 'active', name: 'budget.xlsx', contentType: 'application/vnd.ms-excel', parentType: 'Site', parent: 'site-1', updatedAt: new Date('2026-01-01') },
-      { _id: 'folder-1', site: 'site-1', kind: 'Folder', status: 'active', name: 'Reports', parentType: 'Site', parent: 'site-1' },
+      {
+        _id: 'f1',
+        site: 'site-1',
+        kind: 'File',
+        status: 'active',
+        name: 'Annual_Report.pdf',
+        contentType: 'application/pdf',
+        parentType: 'Content',
+        parent: 'folder-1',
+        updatedAt: new Date('2026-01-02'),
+      },
+      {
+        _id: 'f2',
+        site: 'site-1',
+        kind: 'File',
+        status: 'active',
+        name: 'budget.xlsx',
+        contentType: 'application/vnd.ms-excel',
+        parentType: 'Site',
+        parent: 'site-1',
+        updatedAt: new Date('2026-01-01'),
+      },
+      {
+        _id: 'folder-1',
+        site: 'site-1',
+        kind: 'Folder',
+        status: 'active',
+        name: 'Reports',
+        parentType: 'Site',
+        parent: 'site-1',
+      },
     ]
     const { models, queries } = createModels(files)
     const service = createCoreContentService(models as any, { storage: {} as any })
 
-    const results = await service.searchFilesByName({ siteId: 'site-1', name: 'annual report @contentType:pdf' })
+    const results = await service.searchFilesByName({
+      siteId: 'site-1',
+      name: 'annual report @contentType:pdf',
+    })
     expect(results.map((file: any) => file.id)).toEqual(['f1'])
     expect(results[0]).toMatchObject({ folderId: 'folder-1', folderName: 'Reports', siteName: 'Acme' })
     const fileQuery = queries.find(query => query.kind === 'File')

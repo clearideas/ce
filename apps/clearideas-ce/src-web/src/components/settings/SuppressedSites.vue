@@ -5,6 +5,8 @@ import ContentListLoadingState from '../base/ContentListLoadingState.vue'
 import SettingsCard from '../base/SettingsCard.vue'
 import TableFooter from '../base/TableFooter.vue'
 import { useProfileStore, useSiteStore } from '../../stores'
+import EmptyState from '../base/EmptyState.vue'
+import { ICONS } from '../../icons'
 
 const profileStore = useProfileStore()
 const siteStore = useSiteStore()
@@ -29,30 +31,39 @@ function initializeComponentState() {
 }
 
 async function unblockSite(siteId: string) {
-  await profileStore.toggleSuppressedSites(siteId)
-  await Promise.all([siteStore.getSites(), siteStore.getSuppressedSites()])
+  await siteStore.unblockSite(siteId)
 }
 
-watch(() => profileStore.loading, loading => {
-  if (!loading) initializeComponentState()
-}, { immediate: true })
+watch(
+  () => profileStore.loading,
+  loading => {
+    if (!loading) initializeComponentState()
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
   <SettingsCard
     title="Blocked sites"
     subtitle="Sites you have hidden or suppressed from your workspace."
-    icon="fasl fa-ban"
+    icon="fas fa-ban"
     :is-initialized="isInitialized"
   >
-    <div v-if="siteStore.loadingSuppressedSites" class="data-table-wrapper suppressed-sites-loading" aria-hidden="true">
+    <div
+      v-if="siteStore.loadingSuppressedSites"
+      class="data-table-wrapper suppressed-sites-loading"
+      aria-hidden="true"
+    >
       <ContentListLoadingState :rows="5" variant="site" :show-checkbox="false" />
     </div>
-    <div v-else-if="blockedSites.length === 0" class="suppressed-sites-empty ci-empty-state-block">
-      <VIcon icon="fasl fa-ban" class="ci-empty-state-icon" />
-      <h4 class="ci-empty-state-title">No blocked sites</h4>
-      <p class="ci-empty-state-body">You have not blocked any sites.</p>
-    </div>
+    <EmptyState
+      v-else-if="blockedSites.length === 0"
+      :icon="ICONS.block"
+      title="No blocked sites"
+      text="Sites you block from the site menu will be listed here so you can unblock them."
+      compact
+    />
     <div v-else class="settings-management-section">
       <div v-for="site in pagedBlockedSites" :key="site.id" class="settings-management-item">
         <div class="settings-status-item-icon">
@@ -66,13 +77,13 @@ watch(() => profileStore.loading, loading => {
           />
           <VIcon
             v-else
-            :icon="(site.icon && `fasl ${site.icon}`) || 'fasl fa-folder-open'"
+            :icon="(site.icon && `fas ${site.icon}`) || 'fas fa-folder-open'"
             size="24"
             color="primary"
           />
         </div>
         <div class="content min-w-0">
-          <div class="title ellipsis">{{ site.name }}</div>
+          <div class="title text-truncate">{{ site.name }}</div>
           <div class="subtitle text-medium-emphasis">Blocked site</div>
         </div>
         <div class="suppressed-sites-actions">
@@ -98,19 +109,15 @@ watch(() => profileStore.loading, loading => {
 </template>
 
 <style scoped>
-.suppressed-sites-empty {
-  width: 100%;
-}
-
 .suppressed-sites-loading {
   min-height: 360px;
-  padding: 0 !important;
-  margin: 0 !important;
+  padding: 0;
+  margin: 0;
 }
 
 .suppressed-sites-loading :deep(.content-list-loading-state) {
-  margin: 0 !important;
-  padding: 0 !important;
+  margin: 0;
+  padding: 0;
 }
 
 .suppressed-sites-actions {

@@ -35,16 +35,13 @@ const slots = useSlots()
     :style="{
       color:
         props.color ??
-        (props.size === 'small'
-          ? 'rgb(var(--v-theme-secondary))'
-          : 'rgb(var(--v-theme-on-surface))'),
+        (props.size === 'small' ? 'rgb(var(--v-theme-secondary))' : 'rgb(var(--v-theme-on-surface))'),
       cursor: props.cursor,
       fontSize: typeof props.fontSize === 'number' ? `${props.fontSize}px` : props.fontSize,
     }"
   >
     <div class="compact-inline-selector__visual">
       <span
-        class="compact-inline-selector__icon-target"
         v-tippy="
           props.iconTooltip
             ? {
@@ -53,6 +50,7 @@ const slots = useSlots()
               }
             : undefined
         "
+        class="compact-inline-selector__icon-target"
       >
         <VIcon
           class="compact-inline-selector__icon"
@@ -66,8 +64,8 @@ const slots = useSlots()
         v-if="props.label"
         class="compact-inline-selector__label"
         :class="{
-          'fs-12': props.fontSize == null && props.size === 'small',
-          'fs-14': props.fontSize == null && props.size === 'medium',
+          'compact-inline-selector__label--small': props.fontSize == null && props.size === 'small',
+          'compact-inline-selector__label--medium': props.fontSize == null && props.size === 'medium',
         }"
       >
         {{ props.label }}
@@ -75,7 +73,7 @@ const slots = useSlots()
       <VIcon
         v-if="props.showChevron"
         class="compact-inline-selector__chevron"
-        icon="fasl fa-chevron-down"
+        icon="fas fa-chevron-down"
         :color="props.iconColor ?? (props.size === 'small' ? 'secondary' : 'default')"
       />
     </div>
@@ -116,6 +114,14 @@ const slots = useSlots()
   white-space: nowrap;
 }
 
+.compact-inline-selector__label--small {
+  font-size: 12px;
+}
+
+.compact-inline-selector__label--medium {
+  font-size: 14px;
+}
+
 .compact-inline-selector__chevron {
   font-size: 10px;
   height: 12px;
@@ -139,9 +145,9 @@ const slots = useSlots()
 
   .v-field,
   .v-field__overlay {
-    background: transparent !important;
-    background-color: transparent !important;
-    box-shadow: none !important;
+    background: transparent;
+    background-color: transparent;
+    box-shadow: none;
   }
 
   .v-field {
@@ -153,18 +159,18 @@ const slots = useSlots()
   }
 
   .v-field__field {
-    padding-inline-end: 0 !important;
+    padding-inline-end: 0;
   }
 
   .v-field__input {
-    min-height: 0 !important;
-    padding: 0 !important;
-    margin: auto 0 !important;
+    min-height: 0;
+    padding: 0;
+    margin: auto 0;
   }
 
   .v-field__append-inner {
-    padding: 0 !important;
-    margin: auto 0 !important;
+    padding: 0;
+    margin: auto 0;
     width: auto;
   }
 
@@ -176,7 +182,7 @@ const slots = useSlots()
   }
 
   .v-select__selection {
-    margin-inline-end: 0 !important;
+    margin-inline-end: 0;
   }
 }
 

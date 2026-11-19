@@ -18,11 +18,16 @@ export default defineConfig({
         __dirname,
         '../../packages/clearideas-contracts-core/src/index.ts',
       ),
+      '@clearideas/pdf-viewer': path.resolve(__dirname, '../../packages/clearideas-pdf-viewer/src/index.ts'),
     },
   },
   server: {
     fs: {
-      allow: [path.resolve(__dirname), path.resolve(__dirname, '../../packages/clearideas-contracts-core')],
+      allow: [
+        path.resolve(__dirname),
+        path.resolve(__dirname, '../../packages/clearideas-contracts-core'),
+        path.resolve(__dirname, '../../packages/clearideas-pdf-viewer'),
+      ],
     },
     proxy: {
       '/api': 'http://127.0.0.1:4100',

@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import BaseButton from '../../base/BaseButton.vue'
+import { ICONS } from '../../../icons'
 import NewSiteDialog from './NewSiteDialog.vue'
+import type { ButtonIntent } from '../../../types/ui'
 
 interface Props {
   text?: string
@@ -11,17 +13,17 @@ interface Props {
   icon?: string
   showAsMenu?: boolean
   variant?: 'text' | 'flat' | 'elevated' | 'tonal' | 'outlined' | 'plain'
+  intent?: ButtonIntent
   dialog?: boolean
   renderUiOnly?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  intent: 'primary',
   text: undefined,
-  color: 'primary',
   size: 'default',
-  prependIcon: 'fass fa-circle-plus',
+  prependIcon: 'fas fa-circle-plus',
   showAsMenu: false,
-  variant: 'text',
   dialog: undefined,
   renderUiOnly: false,
 })
@@ -31,27 +33,34 @@ const resolvedIcon = computed(() => props.icon ?? props.prependIcon)
 const internalDialogVisible = ref(false)
 const dialogModel = computed({
   get: () => (props.dialog !== undefined ? props.dialog : internalDialogVisible.value),
-  set: value => (props.dialog !== undefined ? emit('update:dialog', value) : (internalDialogVisible.value = value)),
+  set: value =>
+    props.dialog !== undefined ? emit('update:dialog', value) : (internalDialogVisible.value = value),
 })
-const handleClick = () => { dialogModel.value = !dialogModel.value }
+const handleClick = () => {
+  dialogModel.value = !dialogModel.value
+}
 </script>
 
 <template>
-  <Tippy v-if="!props.showAsMenu" content="Create site" placement="top">
-    <BaseButton
-      @click="handleClick"
-      :icon="props.text ? undefined : resolvedIcon"
-      :prepend-icon="props.text ? resolvedIcon : undefined"
-      :text="resolvedText"
-      :size="props.size"
-      :variant="props.variant"
-      :color="props.color"
-    />
-  </Tippy>
-  <Tippy v-else content="Create site" placement="right">
-    <VListItem prepend-icon="fasl fa-plus" density="compact" @click.stop="handleClick">
-      <VListItemTitle>{{ resolvedText }}</VListItemTitle>
-    </VListItem>
-  </Tippy>
-  <NewSiteDialog v-if="!props.renderUiOnly && props.dialog === undefined" v-model="dialogModel" @site-created="emit('siteCreated')" />
+  <BaseButton
+    v-if="!props.showAsMenu"
+    :icon="props.text ? undefined : resolvedIcon"
+    :prepend-icon="props.text ? resolvedIcon : undefined"
+    :text="resolvedText"
+    :size="props.size"
+    :variant="props.variant"
+    :intent="props.intent"
+    :color="props.color"
+    tooltip="Create site"
+    :aria-label="props.text === '' ? 'New site' : undefined"
+    @click="handleClick"
+  />
+  <VListItem v-else :prepend-icon="ICONS.add" density="compact" @click.stop="handleClick">
+    <VListItemTitle>{{ resolvedText }}</VListItemTitle>
+  </VListItem>
+  <NewSiteDialog
+    v-if="!props.renderUiOnly && props.dialog === undefined"
+    v-model="dialogModel"
+    @site-created="emit('siteCreated')"
+  />
 </template>

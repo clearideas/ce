@@ -23,6 +23,7 @@
     "build:ce": "npm run -w @clearideas/ce build",
     "type-check:core": "npm run -w @clearideas/core type-check",
     "type-check:ce": "npm run -w @clearideas/ce type-check",
+    "type-check:ce:web": "npm run -w @clearideas/ce type-check:web",
     "dev:ce": "npm run -w @clearideas/ce dev",
     "bootstrap:ce": "npm run -w @clearideas/ce bootstrap",
     "seed:ce": "npm run -w @clearideas/ce seed",
@@ -32,12 +33,21 @@
     "test:ce:unit": "vitest run --config apps/clearideas-ce/vitest.unit.config.ts",
     "test:ce:api": "vitest run --config apps/clearideas-ce/vitest.api.config.ts",
     "test:ce:web": "vitest run --config apps/clearideas-ce/vitest.web.config.ts",
-    "test:ce:e2e": "npm run -w @clearideas/ce build && playwright install chromium && playwright test --config apps/clearideas-ce/playwright.config.ts",
+    "test:ce:web:coverage": "vitest run --coverage --config apps/clearideas-ce/vitest.web.config.ts",
+    "test:ce:e2e": "npm run -w @clearideas/ce build && playwright install chromium && playwright test --config apps/clearideas-ce/playwright.config.ts --grep-invert \"@visual|@readme\"",
+    "test:ce:visual": "npm run -w @clearideas/ce build && playwright install chromium && playwright test --config apps/clearideas-ce/playwright.config.ts --grep @visual",
+    "docs:ce:screenshots": "npm run -w @clearideas/ce build && playwright install chromium && playwright test --config apps/clearideas-ce/playwright.config.ts --grep @readme --project desktop-light",
+    "test:ce:visual:update": "npm run -w @clearideas/ce build && playwright install chromium && playwright test --config apps/clearideas-ce/playwright.config.ts --grep @visual --update-snapshots",
     "test:ce:coverage": "vitest run --coverage --config apps/clearideas-ce/vitest.coverage.config.ts && vitest run --coverage --config apps/clearideas-ce/vitest.web.config.ts",
     "check:import-boundaries": "node scripts/check-import-boundaries.mjs",
     "validate:ce-routes": "node scripts/validate-ce-routes.mjs",
     "check:ce-env-contract": "node scripts/check-ce-env-contract.mjs",
     "check:ce-hygiene": "node scripts/check-ce-hygiene.mjs",
+    "lint:ce": "npm run -w @clearideas/ce lint",
+    "lint:ce:styles": "npm run -w @clearideas/ce lint:styles",
+    "format:ce": "npm run -w @clearideas/ce format",
+    "format:ce:check": "npm run -w @clearideas/ce format:check",
+    "check:ce-ui": "node scripts/check-ce-ui-conventions.mjs",
     "report:ce-css-usage": "node scripts/report-ce-css-usage.mjs",
     "report:ce-vue-usage": "node scripts/report-ce-vue-usage.mjs",
     "check:ce-release": "node scripts/check-ce-release-readiness.mjs --target ."
@@ -84,7 +94,8 @@
       "glob": "14.0.3"
     },
     "rollup": "4.60.3",
-    "undici": "7.30.1"
+    "undici": "7.30.1",
+    "@ai-sdk/anthropic@4": "4.0.71"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",

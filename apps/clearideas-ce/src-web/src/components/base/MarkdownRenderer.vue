@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import MarkdownIt from 'markdown-it'
-import hljs from 'highlight.js'
+import { hljs } from '../../utils/highlight'
 import { computed } from 'vue'
 
 interface Props {
@@ -12,27 +12,33 @@ const props = withDefaults(defineProps<Props>(), {
   stripFrontMatter: true,
 })
 
-const markdown = new MarkdownIt({
+// Explicit annotations: `highlight` refers back to `markdown`, which TS otherwise reports as a
+// self-referential implicit `any` (TS7022).
+const markdown: MarkdownIt = new MarkdownIt({
   html: false,
   linkify: true,
   typographer: true,
-  highlight(str, lang) {
+  highlight(str: string, lang: string): string {
     const language = lang && hljs.getLanguage(lang) ? lang : 'plaintext'
-    const value = language === 'plaintext'
-      ? markdown.utils.escapeHtml(str)
-      : hljs.highlight(str, { language, ignoreIllegals: true }).value
+    const value: string =
+      language === 'plaintext'
+        ? markdown.utils.escapeHtml(str)
+        : hljs.highlight(str, { language, ignoreIllegals: true }).value
     return `<pre class="hljs"><code class="language-${language}">${value}</code></pre>`
   },
 })
 
-function stripFrontMatter(content: string) {
+function removeFrontMatter(content: string) {
   if (!content.trim()) return content
   const lines = content.split('\n')
   if (lines.length < 2 || lines[0].trim() !== '---') return content
 
   for (let index = 1; index < lines.length; index += 1) {
     if (lines[index].trim() === '---') {
-      return lines.slice(index + 1).join('\n').trim()
+      return lines
+        .slice(index + 1)
+        .join('\n')
+        .trim()
     }
   }
 
@@ -40,10 +46,11 @@ function stripFrontMatter(content: string) {
 }
 
 const renderedContent = computed(() => {
-  const content = props.stripFrontMatter ? stripFrontMatter(props.content ?? '') : props.content ?? ''
+  const content = props.stripFrontMatter ? removeFrontMatter(props.content ?? '') : (props.content ?? '')
   return markdown.render(content)
 })
 </script>
+
 <template>
   <div class="w-100">
     <div class="markdown-content chart-container" v-html="renderedContent" />

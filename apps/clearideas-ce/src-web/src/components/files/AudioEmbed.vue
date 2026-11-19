@@ -2,7 +2,12 @@
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { useContentStore } from '../../stores'
 
-interface Props { id: string; siteId: string; contentType: string; name: string }
+interface Props {
+  id: string
+  siteId: string
+  contentType: string
+  name: string
+}
 const props = defineProps<Props>()
 const contentStore = useContentStore()
 const link = ref('')
@@ -18,7 +23,9 @@ async function loadContent() {
 
 onMounted(loadContent)
 watch(() => [props.id, props.contentType], loadContent)
-onUnmounted(() => { if (objectUrl) URL.revokeObjectURL(objectUrl) })
+onUnmounted(() => {
+  if (objectUrl) URL.revokeObjectURL(objectUrl)
+})
 </script>
 
 <template>
@@ -37,7 +44,7 @@ onUnmounted(() => { if (objectUrl) URL.revokeObjectURL(objectUrl) })
   color: var(--ci-on-surface);
   border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   border-radius: 8px;
-  box-shadow: 0 8px 28px rgba(15, 23, 42, 0.06);
+  box-shadow: var(--ci-shadow-md);
   box-sizing: border-box;
   overflow: hidden;
 }

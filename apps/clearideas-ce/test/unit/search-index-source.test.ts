@@ -11,12 +11,78 @@ describe('search index source (database adapter)', () => {
   const otherSite = { _id: 'site-2', name: 'Elsewhere', attributes: {} }
   const t = (iso: string) => new Date(iso)
   const docs = [
-    { _id: 'folder-1', site: 'site-1', kind: 'Folder', status: 'active', name: 'Reports', parent: 'site-1', parentType: 'Site' },
-    { _id: 'folder-2', site: 'site-1', kind: 'Folder', status: 'active', name: 'Nested', parent: 'folder-1', parentType: 'Content' },
-    { _id: 'f-root', site: 'site-1', kind: 'File', status: 'active', name: 'root.txt', key: 'root.txt', contentType: 'text/plain', parent: 'site-1', parentType: 'Site', tags: ['a'], uploadedAt: t('2026-01-01T00:00:00Z'), createdAt: t('2026-01-01T00:00:00Z'), updatedAt: t('2026-01-02T00:00:00Z'), attributes: { metadata: { owner: 'Jane' } } },
-    { _id: 'f-nested', site: 'site-1', kind: 'File', status: 'active', name: 'deep.pdf', key: 'deep.pdf', contentType: 'application/pdf', parent: 'folder-2', parentType: 'Content', extractedTextKey: 'deep.pdf.extracted.txt', extractionStatus: 'complete', uploadedAt: t('2026-01-03T00:00:00Z'), updatedAt: t('2026-01-04T00:00:00Z'), attributes: { metadata: 'not-an-object' } },
-    { _id: 'f-pending', site: 'site-1', kind: 'File', status: 'upload-pending', name: 'pending.txt', key: 'pending.txt', parent: 'site-1', parentType: 'Site', updatedAt: t('2026-01-05T00:00:00Z') },
-    { _id: 'f-other', site: 'site-2', kind: 'File', status: 'active', name: 'other.txt', key: 'other.txt', parent: 'site-2', parentType: 'Site', updatedAt: t('2026-01-06T00:00:00Z') },
+    {
+      _id: 'folder-1',
+      site: 'site-1',
+      kind: 'Folder',
+      status: 'active',
+      name: 'Reports',
+      parent: 'site-1',
+      parentType: 'Site',
+    },
+    {
+      _id: 'folder-2',
+      site: 'site-1',
+      kind: 'Folder',
+      status: 'active',
+      name: 'Nested',
+      parent: 'folder-1',
+      parentType: 'Content',
+    },
+    {
+      _id: 'f-root',
+      site: 'site-1',
+      kind: 'File',
+      status: 'active',
+      name: 'root.txt',
+      key: 'root.txt',
+      contentType: 'text/plain',
+      parent: 'site-1',
+      parentType: 'Site',
+      tags: ['a'],
+      uploadedAt: t('2026-01-01T00:00:00Z'),
+      createdAt: t('2026-01-01T00:00:00Z'),
+      updatedAt: t('2026-01-02T00:00:00Z'),
+      attributes: { metadata: { owner: 'Jane' } },
+    },
+    {
+      _id: 'f-nested',
+      site: 'site-1',
+      kind: 'File',
+      status: 'active',
+      name: 'deep.pdf',
+      key: 'deep.pdf',
+      contentType: 'application/pdf',
+      parent: 'folder-2',
+      parentType: 'Content',
+      extractedTextKey: 'deep.pdf.extracted.txt',
+      extractionStatus: 'complete',
+      uploadedAt: t('2026-01-03T00:00:00Z'),
+      updatedAt: t('2026-01-04T00:00:00Z'),
+      attributes: { metadata: 'not-an-object' },
+    },
+    {
+      _id: 'f-pending',
+      site: 'site-1',
+      kind: 'File',
+      status: 'upload-pending',
+      name: 'pending.txt',
+      key: 'pending.txt',
+      parent: 'site-1',
+      parentType: 'Site',
+      updatedAt: t('2026-01-05T00:00:00Z'),
+    },
+    {
+      _id: 'f-other',
+      site: 'site-2',
+      kind: 'File',
+      status: 'active',
+      name: 'other.txt',
+      key: 'other.txt',
+      parent: 'site-2',
+      parentType: 'Site',
+      updatedAt: t('2026-01-06T00:00:00Z'),
+    },
   ]
   const models = { SiteModel: createFakeModel([site, otherSite]), ContentModel: createFakeModel(docs) }
   const source = createMongoSearchIndexSource(models)
@@ -48,15 +114,30 @@ describe('search index source (database adapter)', () => {
   })
 
   it('supports folder scoping and the inclusive updatedAfter watermark', async () => {
-    expect((await source.listSiteFiles({ siteId: 'site-1', folderId: 'folder-2' })).map(file => file.id)).toEqual(['f-nested'])
-    expect((await source.listSiteFiles({ siteId: 'site-1', folderId: 'folder-1' })).map(file => file.id)).toEqual([])
-    expect((await source.listSiteFiles({ siteId: 'site-1', updatedAfter: t('2026-01-02T00:00:00Z') })).map(file => file.id)).toEqual(['f-root', 'f-nested'])
-    expect((await source.listSiteFiles({ siteId: 'site-1', updatedAfter: t('2026-01-02T00:00:00.001Z') })).map(file => file.id)).toEqual(['f-nested'])
+    expect(
+      (await source.listSiteFiles({ siteId: 'site-1', folderId: 'folder-2' })).map(file => file.id),
+    ).toEqual(['f-nested'])
+    expect(
+      (await source.listSiteFiles({ siteId: 'site-1', folderId: 'folder-1' })).map(file => file.id),
+    ).toEqual([])
+    expect(
+      (await source.listSiteFiles({ siteId: 'site-1', updatedAfter: t('2026-01-02T00:00:00Z') })).map(
+        file => file.id,
+      ),
+    ).toEqual(['f-root', 'f-nested'])
+    expect(
+      (await source.listSiteFiles({ siteId: 'site-1', updatedAfter: t('2026-01-02T00:00:00.001Z') })).map(
+        file => file.id,
+      ),
+    ).toEqual(['f-nested'])
     expect(await source.listSiteFiles({ siteId: 'missing-site' })).toEqual([])
   })
 
   it('resolves single files only within their site and only while active', async () => {
-    await expect(source.getSiteFile({ siteId: 'site-1', contentId: 'f-nested' })).resolves.toMatchObject({ id: 'f-nested', folderName: 'Nested' })
+    await expect(source.getSiteFile({ siteId: 'site-1', contentId: 'f-nested' })).resolves.toMatchObject({
+      id: 'f-nested',
+      folderName: 'Nested',
+    })
     await expect(source.getSiteFile({ siteId: 'site-2', contentId: 'f-nested' })).resolves.toBeNull()
     await expect(source.getSiteFile({ siteId: 'site-1', contentId: 'f-pending' })).resolves.toBeNull()
     await expect(source.getSiteFile({ siteId: 'site-1', contentId: 'folder-1' })).resolves.toBeNull()
@@ -64,8 +145,23 @@ describe('search index source (database adapter)', () => {
   })
 
   it('maps records defensively', () => {
-    const mapped = toSearchIndexFile({ _id: 'x', name: undefined, key: undefined, tags: 'bad', attributes: {} }, { _id: 's', name: undefined }, undefined)
-    expect(mapped).toMatchObject({ id: 'x', siteId: 's', siteName: '', name: '', key: '', tags: [], siteTags: [], metadata: {}, folderId: '', folderName: '' })
+    const mapped = toSearchIndexFile(
+      { _id: 'x', name: undefined, key: undefined, tags: 'bad', attributes: {} },
+      { _id: 's', name: undefined },
+      undefined,
+    )
+    expect(mapped).toMatchObject({
+      id: 'x',
+      siteId: 's',
+      siteName: '',
+      name: '',
+      key: '',
+      tags: [],
+      siteTags: [],
+      metadata: {},
+      folderId: '',
+      folderName: '',
+    })
   })
 })
 
@@ -102,7 +198,11 @@ describe('local storage bounded reads', () => {
     expect(empty.body.length).toBe(0)
     expect(empty.truncated).toBe(false)
 
-    await expect(storage.readObjectPrefix!({ key: 'missing.txt', maxBytes: 10 })).rejects.toMatchObject({ code: 'ENOENT' })
-    await expect(storage.readObjectPrefix!({ key: '../escape.txt', maxBytes: 10 })).rejects.toThrow(/Invalid storage/)
+    await expect(storage.readObjectPrefix!({ key: 'missing.txt', maxBytes: 10 })).rejects.toMatchObject({
+      code: 'ENOENT',
+    })
+    await expect(storage.readObjectPrefix!({ key: '../escape.txt', maxBytes: 10 })).rejects.toThrow(
+      /Invalid storage/,
+    )
   })
 })

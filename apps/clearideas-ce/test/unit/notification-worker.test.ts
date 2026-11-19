@@ -116,9 +116,11 @@ describe('CE notification worker', () => {
     })
 
     expect(sendTemplate).not.toHaveBeenCalled()
-    expect(activity.attributes.notificationDeliveries).toEqual(expect.arrayContaining([
-      expect.objectContaining({ userId: 'muted-id', status: 'skipped', reason: 'site-suppressed' }),
-    ]))
+    expect(activity.attributes.notificationDeliveries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ userId: 'muted-id', status: 'skipped', reason: 'site-suppressed' }),
+      ]),
+    )
   })
 
   it('skips pending site invitees who do not auto-accept invites', async () => {
@@ -133,20 +135,22 @@ describe('CE notification worker', () => {
         subscribedActions: ['uploaded'],
       },
       extraMembers: [{ user: 'pending-id', role: 'viewer', acceptedAt: null, declinedAt: null }],
-      extraUsers: [{
-        _id: 'pending-id',
-        email: 'pending@clearideas.local',
-        displayName: 'Pending User',
-        attributes: {
-          notifications: {
-            frequency: 'immediate',
-            hours: ['09:00', '17:00'],
-            days: ['Tuesday'],
-            subscribedActions: ['uploaded'],
+      extraUsers: [
+        {
+          _id: 'pending-id',
+          email: 'pending@clearideas.local',
+          displayName: 'Pending User',
+          attributes: {
+            notifications: {
+              frequency: 'immediate',
+              hours: ['09:00', '17:00'],
+              days: ['Tuesday'],
+              subscribedActions: ['uploaded'],
+            },
+            sites: { autoAcceptInvites: false },
           },
-          sites: { autoAcceptInvites: false },
         },
-      }],
+      ],
     })
     const sendTemplate = vi.fn()
 
@@ -158,9 +162,11 @@ describe('CE notification worker', () => {
     })
 
     expect(sendTemplate).toHaveBeenCalledTimes(1)
-    expect(activity.attributes.notificationDeliveries).toEqual(expect.arrayContaining([
-      expect.objectContaining({ userId: 'pending-id', status: 'skipped', reason: 'site-invite-pending' }),
-    ]))
+    expect(activity.attributes.notificationDeliveries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ userId: 'pending-id', status: 'skipped', reason: 'site-invite-pending' }),
+      ]),
+    )
   })
 
   it('applies the recipient eligibility matrix before sending', async () => {
@@ -178,7 +184,12 @@ describe('CE notification worker', () => {
       extraMembers: [
         { user: 'unsubscribed-id', role: 'viewer', acceptedAt },
         { user: 'pending-id', role: 'viewer', acceptedAt: null, declinedAt: null },
-        { user: 'declined-id', role: 'viewer', acceptedAt: null, declinedAt: new Date('2026-05-19T11:00:00Z') },
+        {
+          user: 'declined-id',
+          role: 'viewer',
+          acceptedAt: null,
+          declinedAt: new Date('2026-05-19T11:00:00Z'),
+        },
         { user: 'accepted-no-auto-id', role: 'viewer', acceptedAt },
       ],
       extraUsers: [
@@ -256,14 +267,16 @@ describe('CE notification worker', () => {
 
     expect(sent).toHaveLength(1)
     expect(sent[0]).toMatchObject({ to: 'accepted@clearideas.local' })
-    expect(activity.attributes.notificationDeliveries).toEqual(expect.arrayContaining([
-      expect.objectContaining({ userId: 'member-id', status: 'skipped', reason: 'frequency-never' }),
-      expect.objectContaining({ userId: 'muted-id', status: 'skipped', reason: 'site-suppressed' }),
-      expect.objectContaining({ userId: 'unsubscribed-id', status: 'skipped', reason: 'not-subscribed' }),
-      expect.objectContaining({ userId: 'pending-id', status: 'skipped', reason: 'site-invite-pending' }),
-      expect.objectContaining({ userId: 'declined-id', status: 'skipped', reason: 'site-invite-declined' }),
-      expect.objectContaining({ userId: 'accepted-no-auto-id', status: 'sent' }),
-    ]))
+    expect(activity.attributes.notificationDeliveries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ userId: 'member-id', status: 'skipped', reason: 'frequency-never' }),
+        expect.objectContaining({ userId: 'muted-id', status: 'skipped', reason: 'site-suppressed' }),
+        expect.objectContaining({ userId: 'unsubscribed-id', status: 'skipped', reason: 'not-subscribed' }),
+        expect.objectContaining({ userId: 'pending-id', status: 'skipped', reason: 'site-invite-pending' }),
+        expect.objectContaining({ userId: 'declined-id', status: 'skipped', reason: 'site-invite-declined' }),
+        expect.objectContaining({ userId: 'accepted-no-auto-id', status: 'sent' }),
+      ]),
+    )
     expect(activity.attributes.notificationProcessedAt).toEqual(now)
     expect(activity.attributes.notificationSentCount).toBe(1)
   })
@@ -292,9 +305,11 @@ describe('CE notification worker', () => {
 
     expect(sendTemplate).not.toHaveBeenCalled()
     expect(activity.attributes.notificationProcessedAt).toBeUndefined()
-    expect(activity.attributes.notificationDeliveries).toEqual(expect.arrayContaining([
-      expect.objectContaining({ userId: 'member-id', status: 'scheduled', frequency: 'hourly' }),
-    ]))
+    expect(activity.attributes.notificationDeliveries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ userId: 'member-id', status: 'scheduled', frequency: 'hourly' }),
+      ]),
+    )
 
     await processPendingNotifications({
       models,
@@ -305,15 +320,25 @@ describe('CE notification worker', () => {
 
     expect(sendTemplate).toHaveBeenCalledTimes(1)
     expect(activity.attributes.notificationProcessedAt).toEqual(topOfHour)
-    expect(activity.attributes.notificationDeliveries).toEqual(expect.arrayContaining([
-      expect.objectContaining({ userId: 'member-id', status: 'sent', frequency: 'hourly' }),
-    ]))
+    expect(activity.attributes.notificationDeliveries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ userId: 'member-id', status: 'sent', frequency: 'hourly' }),
+      ]),
+    )
   })
 
   it('pools multiple due notifications for a user into one digest email', async () => {
     const now = new Date('2026-05-19T12:00:00Z')
-    const firstActivity = createActivity({ id: 'activity-1', action: 'file-uploaded', fileName: 'report.pdf' })
-    const secondActivity = createActivity({ id: 'activity-2', action: 'folder-created', fileName: 'Financials' })
+    const firstActivity = createActivity({
+      id: 'activity-1',
+      action: 'file-uploaded',
+      fileName: 'report.pdf',
+    })
+    const secondActivity = createActivity({
+      id: 'activity-2',
+      action: 'folder-created',
+      fileName: 'Financials',
+    })
     const models = createNotificationModels({
       activities: [firstActivity, secondActivity],
       memberNotifications: {
@@ -500,7 +525,8 @@ describe('CE notification worker', () => {
         subscribedActions: ['uploaded'],
       },
     })
-    const sendTemplate = vi.fn()
+    const sendTemplate = vi
+      .fn()
       .mockRejectedValueOnce(new Error('SMTP unavailable'))
       .mockResolvedValueOnce(undefined)
 
@@ -575,7 +601,13 @@ describe('CE notification worker', () => {
   })
 })
 
-function createActivity(input: { action: string; attributes?: Record<string, unknown>; id?: string; fileName?: string; siteId?: string }) {
+function createActivity(input: {
+  action: string
+  attributes?: Record<string, unknown>
+  id?: string
+  fileName?: string
+  siteId?: string
+}) {
   const siteId = input.siteId ?? 'site-id'
   return {
     _id: input.id ?? `activity-${Math.random()}`,
@@ -648,7 +680,10 @@ function createNotificationModels(input: {
       async updateOne(query: any, update: any) {
         const activity = input.activities.find(item => String(item._id) === String(query._id))
         if (!activity) return { modifiedCount: 0 }
-        if (query['attributes.notificationClaimedBy'] && activity.attributes.notificationClaimedBy !== query['attributes.notificationClaimedBy']) {
+        if (
+          query['attributes.notificationClaimedBy'] &&
+          activity.attributes.notificationClaimedBy !== query['attributes.notificationClaimedBy']
+        ) {
           return { modifiedCount: 0 }
         }
         applyUpdate(activity, update)

@@ -24,7 +24,12 @@ export function createCapturedEmailProvider(): CapturedEmailProvider {
     lastCode(email) {
       const normalized = email?.toLowerCase()
       const template = [...provider.templates].reverse().find(item => {
-        if (item.templateAlias !== 'sign-in-code' && item.templateAlias !== 'site-invitation' && item.templateAlias !== 'user-invitation') return false
+        if (
+          item.templateAlias !== 'sign-in-code' &&
+          item.templateAlias !== 'site-invitation' &&
+          item.templateAlias !== 'user-invitation'
+        )
+          return false
         if (!normalized) return true
         return String(item.to).toLowerCase() === normalized
       })

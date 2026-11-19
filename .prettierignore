@@ -1,0 +1,11 @@
+node_modules
+dist
+apps/clearideas-ce/web
+coverage
+playwright-report
+test-results
+package-lock.json
+apps/clearideas-ce/src-web/public
+# Brand SVG path data is intentionally long.
+apps/clearideas-ce/src-web/src/components/brand/Logo.vue
+apps/clearideas-ce/src-web/src/components/brand/Icon.vue

@@ -14,7 +14,10 @@ import { analyticsFilterSchema, siteIdParamSchema } from '../../validation/core/
 
 export function buildAnalyticsRoutes(ctx: CeAppContext) {
   const router = Router()
+  // Scoped to the analytics paths: unscoped, it would also count every later /api request (chat,
+  // agents, MCP, app config) against the analytics limit.
   router.use(
+    ['/analytics', '/site/:siteId/analytics'],
     rateLimit({
       windowMs: Number(process.env.CLEARIDEAS_ANALYTICS_RATE_LIMIT_WINDOW_MS ?? 15 * 60 * 1000),
       limit: Number(process.env.CLEARIDEAS_ANALYTICS_RATE_LIMIT_LIMIT ?? 300),

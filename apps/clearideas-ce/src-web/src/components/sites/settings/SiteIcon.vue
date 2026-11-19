@@ -37,7 +37,7 @@ watch(() => siteStore.currentSite, initializeComponentState, { immediate: true }
     :store="useSiteStore"
     :error-message="errorMessage"
     action="updateCurrentSite"
-    icon="fasl fa-icons"
+    icon="fas fa-icons"
   >
     <template #content>
       <template v-if="isInitialized">

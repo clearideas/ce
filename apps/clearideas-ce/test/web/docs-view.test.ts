@@ -18,26 +18,29 @@ describe('DocsView', () => {
   beforeEach(() => {
     route.params = {}
     replace.mockClear()
-    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
-      if (url === '/docs/index.json') {
-        return jsonResponse({
-          title: 'Clear Ideas Community Edition',
-          description: 'Docs',
-          sections: [
-            {
-              title: 'Start',
-              pages: [
-                { title: 'Getting Started', slug: 'getting-started', description: 'Run it' },
-                { title: 'Security', slug: 'security-model', description: 'Harden it' },
-              ],
-            },
-          ],
-        })
-      }
-      if (url === '/docs/getting-started.md') return textResponse('# Getting Started\n\nWelcome.')
-      if (url === '/docs/security-model.md') return textResponse('# Security\n\nUse HTTPS.')
-      return new Response('missing', { status: 404 })
-    }))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url === '/docs/index.json') {
+          return jsonResponse({
+            title: 'Clear Ideas Community Edition',
+            description: 'Docs',
+            sections: [
+              {
+                title: 'Start',
+                pages: [
+                  { title: 'Getting Started', slug: 'getting-started', description: 'Run it' },
+                  { title: 'Security', slug: 'security-model', description: 'Harden it' },
+                ],
+              },
+            ],
+          })
+        }
+        if (url === '/docs/getting-started.md') return textResponse('# Getting Started\n\nWelcome.')
+        if (url === '/docs/security-model.md') return textResponse('# Security\n\nUse HTTPS.')
+        return new Response('missing', { status: 404 })
+      }),
+    )
   })
 
   afterEach(() => {

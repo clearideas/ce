@@ -4,17 +4,23 @@ export default {
     light: {
       dark: false,
       colors: {
-        primary: '#4D6BFE',
+        // 5.42:1 on white (5.19:1 on the page background, 4.58:1 over its own tonal tint) — AA for
+        // primary text, white text on primary fills and primary tonal chips.
+        primary: '#3D5BE9',
         'on-primary': '#FFFFFF',
-        secondary: '#7B8798',
+        // Semantic colours are also used as *text* (tertiary buttons, footers, tonal chips and alerts),
+        // so they meet 4.5:1 on surface/background and over their own tonal tint
+        // (test/web/theme-contrast.test.ts). Warning is a fill colour only (dark text on amber): as text
+        // over its own tint it is ~2:1, so warning chips/alerts use variant="flat" (enforced by that test).
+        secondary: '#626C7A',
         'on-secondary': '#FFFFFF',
-        info: '#3B82F6',
+        info: '#2F68C5',
         'on-info': '#FFFFFF',
-        success: '#158A52',
+        success: '#127546',
         'on-success': '#FFFFFF',
         warning: '#E9A23B',
-        'on-warning': '#FFFFFF',
-        error: '#D94B4B',
+        'on-warning': '#171717',
+        error: '#B23D3D',
         'on-error': '#FFFFFF',
         background: '#F8FAFD',
         'on-background': '#162033',
@@ -23,7 +29,8 @@ export default {
         'surface-variant': '#EEF3FB',
         'on-surface-variant': '#506078',
         feature: '#ed613f',
-        'feature-secondary': '#ed9858',
+        // The favourite star: 3.6:1 on white (the non-text 3:1 floor; #ed9858 measured 2.3:1).
+        'feature-secondary': '#D06A1E',
         'on-feature': '#FFFFFF',
         'ai-tools': '#6B46C1',
         'on-ai-tools': '#FFFFFF',
@@ -51,18 +58,20 @@ export default {
     dark: {
       dark: true,
       colors: {
-        primary: '#4080F2',
-        'on-primary': '#FFFFFF',
+        // 5.23:1 on the dark surface; dark text on primary fills (5.69:1) — the usual dark-theme treatment.
+        primary: '#5290F5',
+        'on-primary': '#171717',
+        // Dark text on every semantic fill (white on these light fills is ~2–3.6:1).
         secondary: '#95989F',
-        'on-secondary': '#FFFFFF',
+        'on-secondary': '#171717',
         info: '#5A87D7',
-        'on-info': '#FFFFFF',
+        'on-info': '#171717',
         success: '#3AA56E',
-        'on-success': '#FFFFFF',
+        'on-success': '#171717',
         warning: '#E9A23B',
-        'on-warning': '#FFFFFF',
+        'on-warning': '#171717',
         error: '#E06D6D',
-        'on-error': '#FFFFFF',
+        'on-error': '#171717',
         background: '#171717',
         'on-background': '#F3F6FB',
         surface: '#1F1F1F',

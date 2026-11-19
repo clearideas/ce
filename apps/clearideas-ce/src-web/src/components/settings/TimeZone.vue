@@ -25,16 +25,20 @@ function initializeComponentState() {
   isInitialized.value = true
 }
 
-watch(() => profileStore.loading, loading => {
-  if (!loading) initializeComponentState()
-}, { immediate: true })
+watch(
+  () => profileStore.loading,
+  loading => {
+    if (!loading) initializeComponentState()
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
   <SettingsCard
     title="Time zone"
     subtitle="Set the time zone used for dates, filters, analytics, and notifications."
-    icon="fasl fa-clock"
+    icon="fas fa-clock"
     :is-initialized="isInitialized"
   >
     <template #content>

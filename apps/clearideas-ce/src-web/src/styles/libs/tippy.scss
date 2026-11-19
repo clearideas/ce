@@ -1,0 +1,31 @@
+/* App tooltip theme (`theme: 'ci'` is the default in plugins/tippy.ts). Built on theme tokens. */
+.tippy-box[data-theme~="ci"] {
+  background-color: rgb(var(--v-theme-on-surface));
+  color: rgb(var(--v-theme-surface));
+  border-radius: 6px;
+  font-size: 0.78rem;
+  line-height: 1.3;
+  font-weight: 500;
+  letter-spacing: 0;
+  box-shadow: var(--ci-shadow-tooltip);
+}
+
+.tippy-box[data-theme~="ci"] .tippy-content {
+  padding: 6px 10px;
+}
+
+.tippy-box[data-theme~="ci"][data-placement^="top"] > .tippy-arrow::before {
+  border-top-color: rgb(var(--v-theme-on-surface));
+}
+
+.tippy-box[data-theme~="ci"][data-placement^="bottom"] > .tippy-arrow::before {
+  border-bottom-color: rgb(var(--v-theme-on-surface));
+}
+
+.tippy-box[data-theme~="ci"][data-placement^="left"] > .tippy-arrow::before {
+  border-left-color: rgb(var(--v-theme-on-surface));
+}
+
+.tippy-box[data-theme~="ci"][data-placement^="right"] > .tippy-arrow::before {
+  border-right-color: rgb(var(--v-theme-on-surface));
+}

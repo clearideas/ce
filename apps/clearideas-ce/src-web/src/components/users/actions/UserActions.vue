@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 import BaseActions from '../../base/BaseActions.vue'
 import NewUser from './NewUser.vue'
-import NewUserDialogContainer from './NewUserDialogContainer.vue'
+import UserDialog from './UserDialog.vue'
 import NewUserGroup from './NewUserGroup.vue'
 import RefreshUsers from './RefreshUsers.vue'
 import UserGroupDialog from './UserGroupDialog.vue'
@@ -12,58 +12,36 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {})
-const emit = defineEmits<{ interact: [] }>()
 
 const newUserDialogVisible = ref(false)
-const newUserUpgradeDialogVisible = ref(false)
 const newUserGroupDialogVisible = ref(false)
-
-watch(newUserDialogVisible, isVisible => {
-  if (isVisible) emit('interact')
-})
-
-watch(newUserUpgradeDialogVisible, isVisible => {
-  if (isVisible) emit('interact')
-})
-
-watch(newUserGroupDialogVisible, isVisible => {
-  if (isVisible) emit('interact')
-})
 </script>
 
 <template>
   <BaseActions>
     <template #primary="{ isNarrow }">
       <NewUser
+        v-model:dialog="newUserDialogVisible"
         :show-sites="props.siteId ? false : true"
         :show-as-menu="false"
         :site-id="props.siteId"
-        v-model:dialog="newUserDialogVisible"
-        v-model:upgrade-dialog="newUserUpgradeDialogVisible"
         :text="isNarrow ? '' : 'Add user'"
-        :icon="isNarrow ? 'fasl fa-user-plus' : undefined"
+        :icon="isNarrow ? 'fas fa-user-plus' : undefined"
         :size="isNarrow ? 'small' : undefined"
       />
     </template>
 
-    <NewUserGroup
-      v-if="!props.siteId"
-      :show-as-menu="false"
-      v-model:dialog="newUserGroupDialogVisible"
-    />
+    <NewUserGroup v-if="!props.siteId" v-model:dialog="newUserGroupDialogVisible" :show-as-menu="false" />
     <RefreshUsers :site-id="props.siteId" />
 
     <template #narrow>
       <RefreshUsers v-if="props.siteId" :site-id="props.siteId" size="small" />
       <Tippy v-else content="More" placement="top">
-        <VBtn icon="fasl fa-ellipsis" size="small" variant="text" aria-label="More">
-          <VIcon>fasl fa-ellipsis-vertical</VIcon>
+        <VBtn icon="fas fa-ellipsis" size="small" variant="text" aria-label="More">
+          <VIcon>fas fa-ellipsis-vertical</VIcon>
           <VMenu offset-y activator="parent" text="More">
             <VList density="compact" nav>
-              <NewUserGroup
-                show-as-menu
-                v-model:dialog="newUserGroupDialogVisible"
-              />
+              <NewUserGroup v-model:dialog="newUserGroupDialogVisible" show-as-menu />
               <RefreshUsers :site-id="props.siteId" show-as-menu />
             </VList>
           </VMenu>
@@ -72,14 +50,13 @@ watch(newUserGroupDialogVisible, isVisible => {
     </template>
 
     <template #persistent>
-      <NewUserDialogContainer
-        v-model:is-dialog-visible="newUserDialogVisible"
-        v-model:is-upgrade-dialog-visible="newUserUpgradeDialogVisible"
+      <UserDialog
+        v-model="newUserDialogVisible"
         :show-sites="props.siteId ? false : true"
         :site-id="props.siteId"
         :existing-users-only="false"
       />
-      <UserGroupDialog v-model:is-dialog-visible="newUserGroupDialogVisible" :is-new="true" />
+      <UserGroupDialog v-model="newUserGroupDialogVisible" />
     </template>
   </BaseActions>
 </template>

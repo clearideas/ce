@@ -1,6 +1,6 @@
 /* General styles for the markdown content */
 .markdown-content {
-  margin: 0 1em 0 1em;
+  margin: 0 1em;
   max-width: 100%;
   min-width: 0;
   overflow-x: auto;
@@ -23,7 +23,6 @@
   vertical-align: top;
   text-align: left;
   overflow-wrap: anywhere;
-  word-break: break-word;
   white-space: normal;
 }
 
@@ -42,16 +41,18 @@
 
 /* Style for all paragraphs within the markdown content */
 .markdown-content p {
-  margin: 0.5em 0;
+  margin: 0.5em 0 1rem;
   line-height: 1.6;
 }
 
 /* Remove bottom margin from paragraphs followed by lists */
 .markdown-content p:has(+ ul),
 .markdown-content p:has(+ ol) {
-  margin-bottom: 0 !important;
+  margin-bottom: 0;
 }
 
+/* <think> blocks are emitted by some AI models; rendered de-emphasised. */
+/* stylelint-disable-next-line selector-type-no-unknown */
 .markdown-content think {
   font-weight: 400;
   color: rgb(var(--v-theme-secondary));
@@ -69,7 +70,7 @@
 .markdown-content h4,
 .markdown-content h5,
 .markdown-content h6 {
-  margin: 1em 0 0.5em 0;
+  margin: 1em 0 0.5em;
   font-weight: 600;
   line-height: 1.2em;
 }
@@ -134,24 +135,24 @@
 }
 
 .markdown-content blockquote p {
-  margin: 0.5em 0 !important;
+  margin: 0.5em 0;
 }
 
 /* Style code elements and preformatted text */
 .markdown-content code {
   padding: 2px 4px;
-  font-family: 'JetBrains Mono', monospace;
-  color: var(--ci-accent-1);
+  font-family: "JetBrains Mono", monospace;
+  color: rgb(var(--v-theme-accent-1));
 }
 
 .markdown-content pre {
-  background-color: rgba(var(--v-theme-primary), 0.1) !important;
+  background-color: rgba(var(--v-theme-primary), 0.1);
   border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   padding: 12px;
   border-radius: 8px;
   overflow-x: auto;
   margin: 1em 0;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   line-height: 1.4;
 }
 
@@ -170,7 +171,7 @@
 /* Highlight.js code blocks */
 .hljs {
   white-space: pre-wrap; /* Enable line wrapping */
-  word-break: break-word; /* Break long words */
+  overflow-wrap: anywhere; /* Break long words */
 }
 
 /* Text formatting */
@@ -219,4 +220,3 @@
   flex-shrink: 0;
   flex-grow: 0;
 }
-

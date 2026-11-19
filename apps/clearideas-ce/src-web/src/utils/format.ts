@@ -44,13 +44,28 @@ export function contentTypeIconName(contentType?: string | null) {
   if (type.startsWith('video/')) return 'fa-file-video'
   if (type.includes('zip') || type.includes('archive') || type.includes('compressed')) return 'fa-file-zipper'
   if (type.includes('spreadsheet') || type.includes('excel') || type.includes('csv')) return 'fa-file-excel'
-  if (type.includes('powerpoint') || type.includes('presentation') || type.includes('presentationml') || type.includes('slideshow') || type.includes('keynote')) return 'fa-file-powerpoint'
-  if (type.includes('word') || type.includes('wordprocessingml') || type.includes('document')) return 'fa-file-word'
-  if (type.startsWith('text/') || type.includes('json') || type.includes('xml') || type.includes('yaml')) return 'fa-file-lines'
-  if (type.includes('javascript') || type.includes('typescript') || type.includes('css') || type.includes('html')) return 'fa-file-code'
+  if (
+    type.includes('powerpoint') ||
+    type.includes('presentation') ||
+    type.includes('presentationml') ||
+    type.includes('slideshow') ||
+    type.includes('keynote')
+  )
+    return 'fa-file-powerpoint'
+  if (type.includes('word') || type.includes('wordprocessingml') || type.includes('document'))
+    return 'fa-file-word'
+  if (type.startsWith('text/') || type.includes('json') || type.includes('xml') || type.includes('yaml'))
+    return 'fa-file-lines'
+  if (
+    type.includes('javascript') ||
+    type.includes('typescript') ||
+    type.includes('css') ||
+    type.includes('html')
+  )
+    return 'fa-file-code'
   return 'fa-file'
 }
 
 export function fileIcon(contentType?: string | null) {
-  return `fasl ${contentTypeIconName(contentType)}`
+  return `fas ${contentTypeIconName(contentType)}`
 }

@@ -16,7 +16,11 @@ const { mobile } = useDisplay()
 
 const isNarrow = computed(() => {
   if (props.forceNarrow === true) return true
-  if (props.containerWidth !== undefined && props.narrowBreakpoint !== undefined && props.containerWidth > 0) {
+  if (
+    props.containerWidth !== undefined &&
+    props.narrowBreakpoint !== undefined &&
+    props.containerWidth > 0
+  ) {
     return props.containerWidth < props.narrowBreakpoint
   }
   return mobile.value
@@ -40,16 +44,16 @@ const isNarrow = computed(() => {
 }
 
 .base-actions :deep(.v-btn) {
-  min-height: 36px !important;
+  min-height: 36px;
 }
 
 .base-actions :deep(.v-btn--icon) {
-  width: 36px !important;
-  height: 36px !important;
+  width: 36px;
+  height: 36px;
 }
 
 .base-actions :deep(.v-btn--icon .v-icon),
 .base-actions :deep(.v-btn--icon .svg-inline--fa) {
-  font-size: 18px !important;
+  font-size: 18px;
 }
 </style>

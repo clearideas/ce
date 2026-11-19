@@ -1,10 +1,27 @@
+// App-wide adjustments to Vuetify components.
+//
+// Vuetify 4 ships its styles in CSS cascade layers (see index.html), and this stylesheet is
+// unlayered, so a plain declaration here already beats Vuetify's own. `!important` is kept only
+// where a rule must win over *unlayered* app CSS or a Vuetify inline style; each such case says why.
+// Anything Vuetify exposes as a SASS variable belongs in styles/vuetify/variables.scss instead
+// (button weight, field radius, card radius, …).
+
 html,
 body {
   overflow-x: clip;
 }
 
-p {
-  margin-block-end: 1rem !important;
+// Element defaults live in the low-priority `ci-base` layer (declared in index.html): they beat
+// Vuetify's reset but lose to Vuetify components/utilities and to any unlayered app rule, so
+// `class="mb-0"` or a component's own paragraph spacing applies without `!important`.
+@layer ci-base {
+  p {
+    margin-block-end: 1rem;
+  }
+
+  a {
+    text-decoration: none;
+  }
 }
 
 body {
@@ -12,65 +29,55 @@ body {
 }
 
 .v-selection-control__input {
-  font-size: 14px !important;
+  font-size: 14px;
 }
 
 .v-btn {
-  font-weight: 500 !important;
-  text-transform: none !important;
-  letter-spacing: -0.01em !important;
+  text-transform: none;
+  letter-spacing: -0.01em;
 }
 
 // Vuetify 4 narrows rounded icon buttons back to 6px via
 // `.v-btn--rounded.v-btn--icon { border-radius: 6px }`.
-// Keep icon-only controls aligned with the pill/circle shape seen in dev.
+// Keep icon-only controls aligned with the pill/circle shape.
 .v-btn--rounded.v-btn--icon {
-  border-radius: 9999px !important;
+  border-radius: 9999px;
 }
 
-.v-btn--icon:not(.background-gradient-ai) {
+// Icon buttons never show a fill. `!important`: must beat the `.bg-*` colour utilities
+// (styles/utilities.scss) that `color` + `variant="flat"` add to the same element.
+.v-btn.v-btn--icon {
   background: transparent !important;
   background-color: transparent !important;
   box-shadow: none !important;
 }
 
-.v-btn--icon:not(.background-gradient-ai) .v-btn__overlay,
-.v-btn--icon:not(.background-gradient-ai) .v-btn__underlay,
-.v-btn--icon:not(.background-gradient-ai) .v-btn__content,
-.v-btn--icon:not(.background-gradient-ai) .v-icon {
+.v-btn.v-btn--icon .v-btn__overlay,
+.v-btn.v-btn--icon .v-btn__underlay,
+.v-btn.v-btn--icon .v-btn__content,
+.v-btn.v-btn--icon .v-icon {
   background: transparent !important;
   background-color: transparent !important;
 }
 
 .v-btn .svg-inline--fa {
-  background: transparent !important;
-  background-color: transparent !important;
+  background: transparent;
+  background-color: transparent;
+
   --fa-primary-color: currentColor;
   --fa-secondary-color: currentColor;
   --fa-secondary-opacity: 1;
 }
 
-.v-btn .svg-inline--fa path,
-.v-btn .svg-inline--fa .fa-primary,
-.v-btn .svg-inline--fa .fa-secondary {
-  background: transparent !important;
-  background-color: transparent !important;
-}
-
-.v-card-actions .v-btn~.v-btn:not(.v-btn-toggle .v-btn) {
-  margin-inline-start: .5rem !important;
-}
-
-a {
-  text-decoration: none !important;
+.v-card-actions .v-btn ~ .v-btn:not(.v-btn-toggle .v-btn) {
+  margin-inline-start: 0.5rem;
 }
 
 .v-field:hover .v-field__outline {
-  --v-field-border-opacity: var(--v-medium-emphasis-opacity) !important;
+  --v-field-border-opacity: var(--v-medium-emphasis-opacity);
 }
 
 .v-field {
-  border-radius: 6px !important;
   background: rgba(var(--v-theme-surface), 0.92);
 }
 
@@ -85,209 +92,108 @@ a {
 .v-card,
 .v-sheet,
 .v-menu > .v-overlay__content {
-  box-shadow: var(--ci-shell-shadow) !important;
+  box-shadow: var(--ci-shell-shadow);
+}
+
+// Card titles and subtitles wrap instead of being cut off with an ellipsis (Vuetify's default): on
+// phones a truncated heading ("Notificatio…") loses content (WCAG 1.4.10 reflow).
+.v-card-title,
+.v-card-subtitle {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .v-dialog > .v-overlay__content > .v-card {
-  background: var(--ci-surface) !important;
-  color: var(--ci-on-surface) !important;
-  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)) !important;
-  border-radius: 8px !important;
-  box-shadow: var(--ci-panel-shadow) !important;
+  background: var(--ci-surface);
+  color: var(--ci-on-surface);
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 8px;
+  box-shadow: var(--ci-panel-shadow);
 }
 
 .v-dialog > .v-overlay__content > .v-card .v-card-title,
 .v-dialog > .v-overlay__content > .v-card .v-card-subtitle,
 .v-dialog > .v-overlay__content > .v-card .v-card-text {
-  color: inherit !important;
+  color: inherit;
 }
 
 .v-dialog > .v-overlay__content > .v-card > .v-card-actions,
 .v-dialog > .v-overlay__content > .v-card > .bg-surface-light {
-  background: var(--ci-surface) !important;
-  color: inherit !important;
+  background: var(--ci-surface) !important; // beats the `.bg-surface-light` tint in utilities.scss
+  color: inherit;
   border-top: 1px solid rgba(var(--v-border-color), calc(var(--v-border-opacity) * 0.7));
 }
 
 .v-list-item--nav.v-list-item--active,
 .v-list-item--nav:hover {
-  background: rgba(var(--v-theme-primary), 0.075) !important;
+  background: rgba(var(--v-theme-primary), 0.075);
 }
 
 .v-list-item--nav.v-list-item--active {
-  color: rgb(var(--v-theme-primary)) !important;
+  color: rgb(var(--v-theme-primary));
 }
 
 .v-tab {
   min-width: 0;
-  padding-inline: 14px !important;
+  padding-inline: 14px;
 }
 
 /* Do not force primary on selected tabs: VTabs/BaseTabs `color` (e.g. feature) must control
    label and slider via Vuetify defaults + currentColor. */
 
 .v-data-table thead th {
-  background-color: rgb(var(--v-table-header-color)) !important;
-  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)) !important;
-  font-size: 0.72rem !important;
-  font-weight: 600 !important;
+  background-color: rgb(var(--v-table-header-color));
+  /* Opaque muted label: 6.4:1 light / 12:1 dark. The opacity-blended on-surface sat at 4.4:1 on the header tint. */
+  color: rgb(var(--v-theme-on-surface-variant));
+  font-size: 0.72rem;
+  font-weight: 600;
   letter-spacing: 0.01em;
   text-transform: uppercase;
+
+  // `!important`: VTable sizes header cells with a more specific selector (and the empty-state
+  // table stretches rows to 100 %); without it the header collapses to its text height.
   height: 34px !important;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 .v-data-table tbody td {
-  border-bottom-color: rgba(var(--v-border-color), calc(var(--v-border-opacity) * 0.55)) !important;
-}
-
-.v-empty-state {
-  width: 100%;
-  min-height: 320px;
-  padding: 28px 24px !important;
-}
-
-.v-empty-state .v-empty-state__title {
-  font-weight: 600 !important;
-  letter-spacing: -0.02em;
-}
-
-.v-empty-state .v-empty-state__text {
-  max-width: 520px;
-  margin-inline: auto;
-}
-
-.v-empty-state .v-empty-state__media .v-icon,
-.v-empty-state .v-empty-state__media .svg-inline--fa {
-  font-size: 48px !important;
-  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)) !important;
-}
-
-.ci-empty-state-block {
-  width: 100%;
-  min-height: 320px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 28px 24px;
-}
-
-.ci-empty-state-icon {
-  margin-bottom: 16px;
-  font-size: 48px !important;
-  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)) !important;
-}
-
-.ci-empty-state-title {
-  margin-bottom: 8px;
-  font-size: 1.125rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  color: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity));
-}
-
-.ci-empty-state-body {
-  max-width: 520px;
-  margin-bottom: 0;
-  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+  border-bottom-color: rgba(var(--v-border-color), calc(var(--v-border-opacity) * 0.55));
 }
 
 .v-card--variant-outlined,
 .v-list-item--variant-outlined {
-  border-color: rgba(var(--v-border-color), var(--v-border-opacity)) !important;
+  border-color: rgba(var(--v-border-color), var(--v-border-opacity));
 }
 
-.v-pagination {
-  .v-pagination__item {
-    .v-btn {
-      font-weight: 400 !important;
-    }
+.v-pagination .v-pagination__item .v-btn {
+  font-weight: 400;
+}
+
+.v-tabs .v-tab {
+  .v-btn__overlay {
+    opacity: 0;
+  }
+
+  .v-ripple__container {
+    display: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgb(var(--v-theme-primary));
+    outline-offset: -2px;
   }
 }
-
-// .v-table {
-//   .v-checkbox-btn {
-//     font-size: 1rem;
-//   }
-
-//   thead {
-//     th {
-//       background-color: rgb(var(--v-table-header-color)) !important;
-//       border-block-end: 0 !important;
-//       box-shadow: none !important;
-//       color: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity)) !important;
-//       font-size: 0.875rem;
-
-//       .v-checkbox-btn {
-//         font-size: 1rem;
-//       }
-//     }
-//   }
-
-//   &.table-borderless {
-//     th,
-//     td {
-//       border-block-end: 0 !important;
-//     }
-//   }
-
-//   .v-data-table-footer {
-//     justify-content: unset;
-//     font-size: 0.875rem;
-//     padding-block-end: 1rem;
-//     padding-inline: 1rem;
-
-//     .v-data-table-footer__items-per-page {
-//       margin-inline-end: auto;
-//     }
-
-//     .v-data-table-footer__pagination {
-//       .v-btn--icon.v-btn--density-default {
-//         --v-btn-height: 1.5rem !important;
-//       }
-//     }
-//   }
-// }
-
-.v-tabs {
-  .v-tab {
-    .v-btn__overlay {
-      opacity: 0 !important;
-    }
-
-    .v-ripple__container {
-      display: none !important;
-    }
-  }
-}
-
-// ::-webkit-scrollbar {
-//   block-size: 6px !important;
-//   inline-size: 6px !important;
-//   background-color: transparent !important;
-// }
-
-// ::-webkit-scrollbar-thumb {
-//   background-color: rgb(var(--v-border-color), var(--v-border-opacity)) !important;
-//   border-radius: 10px;
-// }
-
-// ::-webkit-scrollbar-track {
-//   //background-color: rgba(var(--v-border-color), calc(var(--v-border-opacity) / 2)) !important;
-//   background-color: transparent !important;
-//   border-radius: 10px;
-// }
-
-// .scrollbar {
-//   -ms-overflow-style: auto !important;
-//   scrollbar-color: rgb(var(--v-scrollbar-thumb)) transparent !important;
-//   scrollbar-width: auto !important;
-
-// }
 
 .v-divider {
-  color: rgb(var(--v-border-color)) !important;
+  color: rgb(var(--v-border-color));
+}
+
+// Windows High Contrast / forced colours drop backgrounds, so the current navigation item (sidebar,
+// section navigation) would look like any other link. Mark it with a system-colour outline.
+@media (forced-colors: active) {
+  .v-list-item--nav.v-list-item--active {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
 }

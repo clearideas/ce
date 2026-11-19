@@ -3,12 +3,14 @@ WORKDIR /usr/src/app
 
 COPY packages/clearideas-contracts-core/package.json packages/clearideas-contracts-core/package.json
 COPY packages/clearideas-core/package.json packages/clearideas-core/package.json
+COPY packages/clearideas-pdf-viewer/package.json packages/clearideas-pdf-viewer/package.json
 COPY apps/clearideas-ce/package.json apps/clearideas-ce/package.json
 COPY package.json package-lock.json .npmrc ./
 RUN npm ci --include=dev --workspaces --include-workspace-root=false
 
 COPY packages/clearideas-contracts-core packages/clearideas-contracts-core
 COPY packages/clearideas-core packages/clearideas-core
+COPY packages/clearideas-pdf-viewer packages/clearideas-pdf-viewer
 COPY apps/clearideas-ce apps/clearideas-ce
 COPY tsconfig.json tsconfig.json
 RUN npm run -w @clearideas/contracts-core build && \

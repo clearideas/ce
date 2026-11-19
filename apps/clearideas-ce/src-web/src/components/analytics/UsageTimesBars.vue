@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useProfileStore } from '../../stores'
+import type { AnalyticsRow } from '../../stores/analytics.store'
 
-const props = withDefaults(defineProps<{ rows: Record<string, any>[]; loading?: boolean }>(), {
+const props = withDefaults(defineProps<{ rows: AnalyticsRow[]; loading?: boolean }>(), {
   rows: () => [],
   loading: false,
 })
 
 const profileStore = useProfileStore()
-const timeZone = computed(() => profileStore.user?.attributes?.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone)
+const timeZone = computed(
+  () => profileStore.user?.attributes?.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+)
 const hours = computed(() => {
   const byHour = new Map<number, number>()
   for (const row of props.rows) {
@@ -24,7 +27,9 @@ const hours = computed(() => {
 })
 const maxCount = computed(() => Math.max(1, ...hours.value.map(item => item.count)))
 const totalCount = computed(() => hours.value.reduce((total, item) => total + item.count, 0))
-const busiestHour = computed(() => hours.value.reduce((best, item) => item.count > best.count ? item : best, hours.value[0]))
+const busiestHour = computed(() =>
+  hours.value.reduce((best, item) => (item.count > best.count ? item : best), hours.value[0]),
+)
 
 function utcHourToLocalHour(hour: number, zone: string) {
   if (!Number.isFinite(hour)) return 0
@@ -60,13 +65,22 @@ function utcHourToLocalHour(hour: number, zone: string) {
     </div>
 
     <div v-if="props.loading" class="usage-times-loading">
-      <VProgressCircular indeterminate color="primary" :size="48" :width="5" />
+      <VProgressCircular
+        aria-label="Loading usage times"
+        indeterminate
+        color="primary"
+        :size="48"
+        :width="5"
+      />
     </div>
     <div v-else class="usage-times-chart" aria-label="Activity by hour of day">
       <div v-for="item in hours" :key="item.hour" class="usage-times-chart__bar-wrap">
         <div class="usage-times-chart__bar-shell">
           <div
-            v-tippy="{ content: `${item.label}: ${item.count.toLocaleString()} activities`, placement: 'top' }"
+            v-tippy="{
+              content: `${item.label}: ${item.count.toLocaleString()} activities`,
+              placement: 'top',
+            }"
             class="usage-times-chart__bar"
             :class="{ 'usage-times-chart__bar--empty': item.count === 0 }"
             :style="{ height: `${Math.max(item.count === 0 ? 2 : 8, (item.count / maxCount) * 100)}%` }"

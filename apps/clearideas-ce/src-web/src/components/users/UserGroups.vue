@@ -4,10 +4,14 @@ import { useDisplay } from 'vuetify'
 import ContentListLoadingState from '../base/ContentListLoadingState.vue'
 import TableFooter from '../base/TableFooter.vue'
 import ContentListItem from '../content/ContentListItem.vue'
-import { useProfileStore, useUserStore } from '../../stores'
+import { useUserStore } from '../../stores'
 import NewUserGroup from './actions/NewUserGroup.vue'
 import UserGroupInfoIcons from './UserGroupInfoIcons.vue'
 import type { UserGroup } from '../../types/domain'
+import EmptyState from '../base/EmptyState.vue'
+import LoadError from '../base/LoadError.vue'
+import { errorMessage } from '../../utils/errors'
+import { usePreferences } from '../../composables/usePreferences'
 
 interface UserGroupHeader {
   title: string
@@ -16,18 +20,28 @@ interface UserGroupHeader {
 }
 
 const userStore = useUserStore()
-const profileStore = useProfileStore()
+const { preferences } = usePreferences()
 const { mobile } = useDisplay()
 const page = ref(1)
 
 const items = computed<UserGroup[]>(() => userStore.userGroups ?? [])
 const headers = computed<UserGroupHeader[]>(() => [{ title: 'Name', key: 'name' }])
-const computedHeaders = computed(() => mobile.value ? headers.value.filter(header => !header.mobileHide) : headers.value)
+const computedHeaders = computed(() =>
+  mobile.value ? headers.value.filter(header => !header.mobileHide) : headers.value,
+)
 const loading = computed(() => !!userStore.loadingUserGroups)
 const rowProps = () => ({ class: 'data-table-item' })
 
+/** Why the list could not be loaded (shown instead of "No user groups"); '' when it loaded. */
+const loadError = ref('')
+
 async function loadUserGroups() {
-  await userStore.getUserGroups()
+  loadError.value = ''
+  try {
+    await userStore.getUserGroups()
+  } catch (error) {
+    loadError.value = errorMessage(error, 'User groups could not be loaded.')
+  }
 }
 
 onMounted(loadUserGroups)
@@ -37,7 +51,7 @@ onMounted(loadUserGroups)
   <div class="data-table-wrapper">
     <VDataTable
       v-model:page="page"
-      v-model:items-per-page="profileStore.userGroupPageSize"
+      v-model:items-per-page="preferences.userGroupPageSize"
       density="comfortable"
       :items="items"
       item-value="id"
@@ -54,7 +68,7 @@ onMounted(loadUserGroups)
             {{ `${item.members?.length ?? item.users?.length ?? 0} members` }}
           </template>
           <template #prepend>
-            <VIcon :icon="(item.icon && `fasl ${item.icon}`) || 'fasl fa-user-group'" />
+            <VIcon :icon="(item.icon && `fas ${item.icon}`) || 'fas fa-user-group'" />
           </template>
           <template #append>
             <UserGroupInfoIcons :item="item" />
@@ -63,6 +77,14 @@ onMounted(loadUserGroups)
       </template>
       <template #item.members="{ item }">
         {{ `${item.members?.length ?? item.users?.length ?? 0} members` }}
+      </template>
+      <template #item.data-table-expand="{ props: expandProps, item, internalItem, isExpanded }">
+        <!-- Vuetify's expand toggle is an unnamed icon button; name it for the row it belongs to. -->
+        <VBtn
+          v-bind="expandProps"
+          :aria-label="`${isExpanded(internalItem) ? 'Hide' : 'Show'} members of ${item.name}`"
+          :aria-expanded="isExpanded(internalItem)"
+        />
       </template>
       <template #expanded-row="{ columns, item }">
         <tr class="data-table-item expanded-row">
@@ -87,30 +109,23 @@ onMounted(loadUserGroups)
       </template>
       <template #bottom />
       <template #no-data>
-        <VEmptyState title="No user groups" justify="center" min-height="55vh">
-          <template #media>
-            <VIcon icon="fasds fa-user-group" color="info" />
-          </template>
-          <template #text>
-            <p class="text-medium-emphasis">Create groups to manage site access in reusable sets.</p>
-          </template>
+        <LoadError v-if="loadError" :message="loadError" @retry="loadUserGroups" />
+        <EmptyState
+          v-else
+          icon="fas fa-user-group"
+          title="No user groups"
+          text="Create groups to manage site access in reusable sets."
+        >
           <template #actions>
-            <NewUserGroup
-              :show-as-menu="false"
-              variant="flat"
-              size="large"
-              rounded
-              density="default"
-              color="info"
-            />
+            <NewUserGroup :show-as-menu="false" intent="primary" />
           </template>
-        </VEmptyState>
+        </EmptyState>
       </template>
     </VDataTable>
   </div>
   <TableFooter
     v-model:page="page"
-    v-model:items-per-page="profileStore.userGroupPageSize"
+    v-model:items-per-page="preferences.userGroupPageSize"
     :items="items"
     item-label="Groups"
   />
@@ -124,15 +139,15 @@ onMounted(loadUserGroups)
 .data-table-wrapper :deep(.v-data-table-rows-loading),
 .data-table-wrapper :deep(.v-data-table-rows-loading td),
 .data-table-wrapper :deep(.v-data-table-rows-loading .v-data-table__td) {
-  vertical-align: middle !important;
+  vertical-align: middle;
 }
 
 .data-table-wrapper :deep(.v-data-table-rows-loading > td),
 .data-table-wrapper :deep(.v-data-table-rows-loading .v-data-table__td) {
-  padding: 0 !important;
+  padding: 0;
 }
 
 .data-table-wrapper :deep(.v-data-table-rows-loading .content-list-loading-state) {
-  margin: 0 !important;
+  margin: 0;
 }
 </style>

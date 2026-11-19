@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import BaseButton from '../../components/base/BaseButton.vue'
 import HandlebarsTextarea from '../../components/base/HandlebarsTextarea.vue'
+import { ICONS } from '../../icons'
 import { useContentStore, useSiteStore } from '../../stores'
 import { hasIncompleteMetadataToken } from '../../utils/metadataSearch'
 import { useMagicKeys } from '@vueuse/core'
@@ -7,16 +9,20 @@ import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useDisplay } from 'vuetify'
 
+const isExpanded = defineModel<boolean>({ default: false })
 const siteStore = useSiteStore()
 const contentStore = useContentStore()
-const { mobile } = useDisplay()
+const { mobile, mdAndUp } = useDisplay()
+/** On desktop the search box is always visible; only narrow screens collapse it to an icon. */
+const showInput = computed(() => mdAndUp.value || isExpanded.value)
+const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
+const shortcutHint = isMac ? '⌘K' : 'Ctrl K'
 const route = useRoute()
 const router = useRouter()
-const isExpanded = defineModel<boolean>({ default: false })
 const searchInput = ref<InstanceType<typeof HandlebarsTextarea> | null>(null)
 const focusRetryTimer = ref<number | null>(null)
 
-const inputWidth = computed(() => (mobile.value ? '100%' : '600px'))
+const inputWidth = computed(() => (mobile.value ? '100%' : 'min(600px, 100%)'))
 const placeholderText = computed(() =>
   siteStore.currentSite != null ? `Search ${siteStore.currentSite.name}` : 'Search all sites',
 )
@@ -97,6 +103,12 @@ async function executeSearch(text: string) {
 }
 
 async function handleKeydown(event: KeyboardEvent) {
+  // Escape closes the results panel, like its Close button (which also clears the query).
+  if (event.key === 'Escape' && contentStore.showSearchResults) {
+    event.preventDefault()
+    contentStore.showSearchResults = false
+    return
+  }
   if (event.key !== 'Enter' || event.shiftKey) return
 
   event.preventDefault()
@@ -106,6 +118,11 @@ async function handleKeydown(event: KeyboardEvent) {
 function resetInput() {
   contentStore.searchQuery = ''
   contentStore.searchResults = []
+}
+
+/** Desktop: the box stays visible; losing focus with nothing typed just drops the active styling. */
+function handleBlur() {
+  if (!mobile.value && !contentStore.searchQuery && !contentStore.showSearchResults) isExpanded.value = false
 }
 
 function closeSearch() {
@@ -120,29 +137,31 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="d-flex search-shell" :class="{ 'is-expanded': isExpanded }">
-    <Transition name="search-morph" mode="out-in" @after-enter="focusSearchInput()">
+  <div role="search" class="d-flex search-shell" :class="{ 'is-expanded': showInput }">
+    <Transition name="search-morph" mode="out-in" @after-enter="isExpanded && focusSearchInput()">
       <button
-        v-if="!isExpanded"
+        v-if="!showInput"
         type="button"
         class="search-collapsed-button"
         aria-label="Search content"
         @click="toggleExpand(true)"
       >
-        <VIcon icon="fasl fa-magnifying-glass" size="small" />
+        <VIcon :icon="ICONS.search" size="small" />
       </button>
       <div
         v-else
         :style="{ width: inputWidth }"
-        class="flex-full-width search-text-box d-flex is-active"
+        class="flex-full-width search-text-box d-flex"
+        :class="{ 'is-active': isExpanded }"
         @click="toggleExpand(true)"
       >
-        <VIcon icon="fasl fa-magnifying-glass" class="search-icon" />
+        <VIcon :icon="ICONS.search" class="search-icon" />
         <HandlebarsTextarea
           ref="searchInput"
           v-model="contentStore.searchQuery"
           class="search-editor"
           :placeholder="placeholderText"
+          :aria-label="placeholderText"
           :persistent-placeholder="true"
           density="compact"
           :rows="1"
@@ -151,21 +170,36 @@ onUnmounted(() => {
           :allow-line-breaks="false"
           variant="plain"
           :hide-details="true"
-          :highlight-mode="'metadataSearch'"
+          highlight-mode="metadataSearch"
           @focus="toggleExpand()"
+          @blur="handleBlur"
           @keydown="handleKeydown"
         />
+        <kbd
+          v-if="!mobile && !isExpanded && !contentStore.searchQuery"
+          class="search-shortcut"
+          aria-hidden="true"
+        >
+          {{ shortcutHint }}
+        </kbd>
         <div class="search-clear">
-          <VIcon
-            v-if="!mobile && isExpanded && contentStore.searchQuery.length > 0"
-            icon="fasl fa-xmark"
-            v-tippy="{ content: 'Clear Search', placement: 'bottom' }"
+          <BaseButton
+            v-if="!mobile && contentStore.searchQuery.length > 0"
+            :icon="ICONS.close"
+            intent="tertiary"
+            size="x-small"
+            density="comfortable"
+            tooltip="Clear search"
+            aria-label="Clear search"
             @click="resetInput()"
           />
-          <VIcon
+          <BaseButton
             v-if="mobile && isExpanded"
-            icon="fasl fa-xmark"
-            v-tippy="{ content: 'Close search', placement: 'bottom' }"
+            :icon="ICONS.close"
+            intent="tertiary"
+            size="x-small"
+            density="comfortable"
+            tooltip="Close search"
             aria-label="Close search"
             @click.stop="closeSearch()"
           />
@@ -179,6 +213,7 @@ onUnmounted(() => {
 .search-shell {
   --search-navbar-max-height: calc(var(--ci-navbar-height) - 12px);
   --search-editor-max-height: calc(var(--search-navbar-max-height) - 18px);
+
   position: relative;
   z-index: 30;
   max-width: 100%;
@@ -190,7 +225,7 @@ onUnmounted(() => {
   border-radius: 18px;
   min-height: 38px;
   max-height: var(--search-navbar-max-height);
-  padding: 0 10px 0 10px;
+  padding: 0 10px;
   gap: 8px;
   background: rgb(var(--v-theme-surface));
   align-items: center;
@@ -246,20 +281,33 @@ onUnmounted(() => {
   line-height: 20px;
   padding-top: 9px;
   padding-bottom: 9px;
-  padding-right: 0 !important;
+  padding-right: 0;
   overflow-y: auto;
 }
 
 .search-editor :deep(.handlebars-textarea-placeholder) {
   min-height: 38px;
-  padding-top: 9px !important;
-  padding-bottom: 9px !important;
+  padding-top: 9px;
+  padding-bottom: 9px;
   display: flex;
   align-items: center;
 }
 
+.search-shortcut {
+  flex: 0 0 auto;
+  padding: 1px 6px;
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 4px;
+  background: rgba(var(--v-theme-on-surface), 0.04);
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+  font-family: var(--ci-font-family);
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
 .search-clear {
-  width: 16px;
+  width: 28px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -282,10 +330,14 @@ onUnmounted(() => {
   transform: scale(0.96);
 }
 
-@media (max-width: 720px) {
-  .search-shell.is-expanded {
-    flex: 1 1 auto;
-    width: 100%;
-  }
+/*
+ * When the input is shown the shell must take the available navbar width: the text box is
+ * sized as `min(600px, 100%)` and a percentage only resolves against a definite parent width.
+ * A shrink-to-fit shell collapses the (empty) editor and hides the placeholder.
+ */
+.search-shell.is-expanded {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
 }
 </style>

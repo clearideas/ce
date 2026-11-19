@@ -5,7 +5,8 @@ import { describe, expect, it } from 'vitest'
 const repoRoot = path.resolve(import.meta.dirname, '../../../..')
 const sourceFilePattern = /\.(ts|tsx|vue|js|mjs)$/
 
-const importFromContractsEnterprise = /(?:from|import)\s*(?:\(\s*)?['"]@clearideas\/contracts-enterprise(?:\/|['"])/
+const importFromContractsEnterprise =
+  /(?:from|import)\s*(?:\(\s*)?['"]@clearideas\/contracts-enterprise(?:\/|['"])/
 
 const boundaries = [
   {
@@ -60,10 +61,12 @@ describe('CE/core import boundaries', () => {
 
 async function walk(dir: string): Promise<string[]> {
   const entries = await fs.readdir(dir, { withFileTypes: true })
-  const files = await Promise.all(entries.map(async entry => {
-    const full = path.join(dir, entry.name)
-    if (entry.isDirectory()) return walk(full)
-    return sourceFilePattern.test(entry.name) ? [full] : []
-  }))
+  const files = await Promise.all(
+    entries.map(async entry => {
+      const full = path.join(dir, entry.name)
+      if (entry.isDirectory()) return walk(full)
+      return sourceFilePattern.test(entry.name) ? [full] : []
+    }),
+  )
   return files.flat()
 }

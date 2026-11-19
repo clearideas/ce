@@ -1,7 +1,7 @@
 import 'vue3-toastify/dist/index.css'
 
-import { ref } from 'vue'
-import type { ToastTheme } from 'vue3-toastify'
+import { h, ref } from 'vue'
+import type { ToastContentProps, ToastTheme } from 'vue3-toastify'
 import { toast } from 'vue3-toastify'
 
 export interface Alert {
@@ -9,6 +9,13 @@ export interface Alert {
   message: string
   type: 'error' | 'success' | 'warning' | 'info' | undefined
   timeout: number | false
+}
+
+export interface AlertAction {
+  /** Button label, e.g. "Undo". */
+  label: string
+  /** Runs when the user clicks the action; the toast closes afterwards. */
+  onAction: () => void | Promise<void>
 }
 
 export const alertTheme = ref('light')
@@ -48,6 +55,43 @@ export function useAlert() {
     })
   }
 
+  /**
+   * A toast with one action button (e.g. "Site blocked. [Undo]"). The toast is rendered by
+   * vue3-toastify's own app instance, so the button is plain markup styled in `libs/toastify.scss`.
+   */
+  const addWithAction = (alert: Omit<Alert, 'id'>, action: AlertAction) => {
+    const autoCloseValue = alert.timeout === false ? false : alert.timeout > 0 ? alert.timeout : 8000
+    return toast(
+      ({ closeToast }: ToastContentProps) =>
+        h('div', { class: 'ci-toast-with-action' }, [
+          h('span', { class: 'ci-toast-with-action__message' }, alert.message),
+          h(
+            'button',
+            {
+              type: 'button',
+              class: 'ci-toast-with-action__button',
+              onClick: async (event: MouseEvent) => {
+                closeToast?.(event)
+                await action.onAction()
+              },
+            },
+            action.label,
+          ),
+        ]),
+      {
+        type: alert.type,
+        position: 'top-center',
+        hideProgressBar: true,
+        transition: 'slide',
+        autoClose: autoCloseValue,
+        closeOnClick: false,
+        closeButton: true,
+        pauseOnHover: true,
+        theme: alertTheme.value as ToastTheme,
+      },
+    )
+  }
+
   const addOfflineToast = (alert: Omit<Alert, 'id'>) => {
     const toastId = add(alert)
     if (toastId !== undefined) offlineToastIds.value.add(toastId)
@@ -65,5 +109,5 @@ export function useAlert() {
     offlineToastIds.value.clear()
   }
 
-  return { add, addOfflineToast, remove, alerts, dismissOfflineToasts }
+  return { add, addWithAction, addOfflineToast, remove, alerts, dismissOfflineToasts }
 }

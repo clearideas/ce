@@ -3,7 +3,10 @@ import type { UseDropZoneOptions } from '@vueuse/core'
 import { useDropZone, useFileDialog } from '@vueuse/core'
 import { computed, onMounted, onUnmounted, ref, useAttrs, watch } from 'vue'
 import { useContentStore } from '../../../stores'
+import BaseButton from '../../base/BaseButton.vue'
 import ContentListItem from '../ContentListItem.vue'
+import { ICONS } from '../../../icons'
+import type { ButtonIntent } from '../../../types/ui'
 
 interface Props {
   siteId: string
@@ -12,6 +15,7 @@ interface Props {
   icon?: string
   color?: string
   variant?: 'text' | 'flat' | 'elevated' | 'tonal' | 'outlined' | 'plain'
+  intent?: ButtonIntent
   density?: 'default' | 'comfortable' | 'compact'
   size?: string
   disableOnClick?: boolean
@@ -20,22 +24,19 @@ interface Props {
   refreshAfterPost?: boolean
   showAsItem?: boolean
   showAsMenu?: boolean
-  isSorting?: boolean
   dropStyle?: 'upload' | 'folder'
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  intent: 'primary',
   text: '',
-  variant: 'text',
   size: 'default',
-  color: 'primary',
-  prependIcon: 'fass fa-cloud-upload',
+  prependIcon: 'fas fa-cloud-arrow-up',
   disableOnClick: false,
   disableOnDrop: false,
   refreshAfterPost: false,
   showAsItem: false,
   showAsMenu: false,
-  isSorting: false,
   dropStyle: 'upload',
 })
 
@@ -82,11 +83,11 @@ async function uploadFiles(files: File[] | FileList) {
 }
 
 async function onDrop(files: File[] | null) {
-  if (files && !props.disableOnDrop && !props.isSorting) await uploadFiles(files)
+  if (files && !props.disableOnDrop) await uploadFiles(files)
 }
 
 function onGlobalDragStart(event: DragEvent) {
-  if (event.dataTransfer?.types.includes('Files') && !props.isSorting) isDragging.value = true
+  if (event.dataTransfer?.types.includes('Files')) isDragging.value = true
 }
 
 function onGlobalDragStop() {
@@ -113,16 +114,16 @@ const dz2 = useDropZone(dropZoneRef2, options)
 const dz3 = useDropZone(dropZoneRef3, options)
 
 watch([dz1.isOverDropZone, dz2.isOverDropZone, dz3.isOverDropZone], ([dz1Over, dz2Over, dz3Over]) => {
-  if (!props.disableOnDrop && !props.isSorting) isActive.value = dz1Over || dz2Over || dz3Over
+  if (!props.disableOnDrop) isActive.value = dz1Over || dz2Over || dz3Over
 })
 
 onChange(async selectedFiles => {
-  if (selectedFiles && !props.isSorting) await uploadFiles(selectedFiles)
+  if (selectedFiles) await uploadFiles(selectedFiles)
 })
 </script>
 
 <template>
-  <VBtn
+  <BaseButton
     v-if="!props.showAsItem && !props.showAsMenu"
     v-bind="attrs"
     ref="dropZoneRef1"
@@ -130,44 +131,50 @@ onChange(async selectedFiles => {
     :prepend-icon="buttonPrependIcon"
     :text="buttonText"
     :variant="props.variant"
+    :intent="props.intent"
     :color="props.color"
     :density="props.density"
     :size="props.size"
     :disabled="isUploading"
+    tooltip="Upload files"
+    aria-label="Upload files"
     class="drop-zone"
     :class="{
-      active: isActive && !props.isSorting,
-      dragging: isDragging && !props.isSorting,
-      sorting: props.isSorting,
+      active: isActive,
+      dragging: isDragging,
       'drop-zone--folder': props.dropStyle === 'folder',
     }"
-    rounded="xl"
-    v-tippy="{ content: 'Upload', placement: 'top' }"
     @click="handleClick"
   />
-  <VListItem v-else-if="props.showAsMenu" v-bind="attrs" prepend-icon="fasl fa-cloud-arrow-up" density="compact" title="Upload" @click="() => open()" />
+  <VListItem
+    v-else-if="props.showAsMenu"
+    v-bind="attrs"
+    :prepend-icon="ICONS.upload"
+    density="compact"
+    title="Upload"
+    @click="() => open()"
+  />
   <ContentListItem
     v-if="props.showAsItem && props.disableOnClick"
     v-bind="attrs"
     ref="dropZoneRef2"
     class="drop-zone rounded-lg"
     :class="{
-      active: isActive && !props.isSorting,
-      dragging: isDragging && !props.isSorting,
+      active: isActive,
+      dragging: isDragging,
       'drop-zone--folder': props.dropStyle === 'folder',
     }"
-    :is-sorting="props.isSorting"
   >
-    <template #checkbox v-if="$slots.checkbox"><slot name="checkbox"></slot></template>
+    <template v-if="$slots.checkbox" #checkbox><slot name="checkbox"></slot></template>
     <template #prepend>
-      <VIcon :icon="props.prependIcon || 'fasl fa-upload'" />
+      <VIcon :icon="props.prependIcon || 'fas fa-upload'" />
     </template>
     <template #text>
       <slot name="text">
         {{ displayText }}
       </slot>
     </template>
-    <template #append v-if="$slots.append"><slot name="append"></slot></template>
+    <template v-if="$slots.append" #append><slot name="append"></slot></template>
   </ContentListItem>
   <ContentListItem
     v-if="props.showAsItem && !props.disableOnClick"
@@ -175,23 +182,22 @@ onChange(async selectedFiles => {
     ref="dropZoneRef3"
     class="drop-zone rounded-lg"
     :class="{
-      active: isActive && !props.isSorting,
-      dragging: isDragging && !props.isSorting,
+      active: isActive,
+      dragging: isDragging,
       'drop-zone--folder': props.dropStyle === 'folder',
     }"
-    :is-sorting="props.isSorting"
     @click="handleClick"
   >
-    <template #checkbox v-if="$slots.checkbox"><slot name="checkbox"></slot></template>
+    <template v-if="$slots.checkbox" #checkbox><slot name="checkbox"></slot></template>
     <template #prepend>
-      <VIcon :icon="props.prependIcon || 'fasl fa-upload'" />
+      <VIcon :icon="props.prependIcon || 'fas fa-upload'" />
     </template>
     <template #text>
       <slot name="text">
         {{ displayText }}
       </slot>
     </template>
-    <template #append v-if="$slots.append"><slot name="append"></slot></template>
+    <template v-if="$slots.append" #append><slot name="append"></slot></template>
   </ContentListItem>
 </template>
 
@@ -223,13 +229,8 @@ onChange(async selectedFiles => {
   );
 }
 
-.drop-zone.sorting {
-  display: flex;
-  /* Style will be handled by ContentListItem.is-sorting */
-}
-
 .drop-zone--folder.drop-zone--folder-hover {
-  border-radius: 6px !important;
+  border-radius: 6px;
   border: solid 1px rgba(var(--v-theme-feature), 0.55);
   background: rgba(var(--v-theme-feature), 0.08);
   box-shadow: inset 0 0 0 1px rgba(var(--v-theme-feature), 0.16);

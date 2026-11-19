@@ -1,23 +1,33 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import type { AnalyticsRow } from '../../../stores/analytics.store'
 
-const props = withDefaults(defineProps<{ data: Record<string, any>[]; valueKey?: string }>(), {
+const props = withDefaults(defineProps<{ data: AnalyticsRow[]; valueKey?: string }>(), {
   data: () => [],
   valueKey: 'viewCount',
 })
 
-const maxValue = computed(() => Math.max(1, ...props.data.map(item => Number(item[props.valueKey] ?? item.count ?? 0))))
+const maxValue = computed(() =>
+  Math.max(1, ...props.data.map(item => Number(item[props.valueKey] ?? item.count ?? 0))),
+)
 </script>
 
 <template>
   <div class="dashboard-horizontal-bar">
-    <div v-for="(item, index) in props.data" :key="item.id ?? item.name ?? index" class="dashboard-horizontal-bar__row">
+    <div
+      v-for="(item, index) in props.data"
+      :key="item.id ?? item.name ?? index"
+      class="dashboard-horizontal-bar__row"
+    >
       <div class="dashboard-horizontal-bar__label">
         <span>{{ item.name ?? 'Unknown' }}</span>
         <strong>{{ Number(item[props.valueKey] ?? item.count ?? 0).toLocaleString() }}</strong>
       </div>
       <div class="dashboard-horizontal-bar__track">
-        <div class="dashboard-horizontal-bar__fill" :style="{ width: `${(Number(item[props.valueKey] ?? item.count ?? 0) / maxValue) * 100}%` }" />
+        <div
+          class="dashboard-horizontal-bar__fill"
+          :style="{ width: `${(Number(item[props.valueKey] ?? item.count ?? 0) / maxValue) * 100}%` }"
+        />
       </div>
     </div>
   </div>

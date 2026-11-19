@@ -2,7 +2,7 @@
 
 Self-hosted secure file sharing and AI-ready collaboration for professional teams.
 
-Clear Ideas Community Edition is a lightweight, open-source virtual data room (VDR) and AI-ready collaboration workspace for teams that want to inspect, run, and own the foundation of their collaboration layer. It includes site-based file sharing, access control, search, activity logging, scheduled email notifications, Model Context Protocol (MCP) tools, and optional site-scoped AI chat.
+Clear Ideas Community Edition is a lightweight, open-source virtual data room (VDR) and AI-ready collaboration workspace for teams that want to inspect, run, and own the foundation of their collaboration layer. It includes site-based file sharing, access control, search, activity logging, scheduled email notifications, Model Context Protocol (MCP) tools, and optional AI chat over your documents.
 
 The app is a single server: API routes live under `/api`, and the Vue web app is served by the same process.
 
@@ -36,9 +36,13 @@ The quick-start stack uses local development secrets and creates the first owner
 
 ![Preview PDFs and documents directly in the browser](docs/screenshots/ce-file-viewer.png)
 
+### Ask
+
+![Ask questions across your sites and open the files each answer is based on](docs/screenshots/ce-ask.png)
+
 ### Site AI
 
-![Ask site-scoped AI questions using your configured model](docs/screenshots/ce-site-ai.png)
+![Ask about one site; conversations are saved and listed under Ask](docs/screenshots/ce-site-ai.png)
 
 ### Site Settings
 
@@ -60,7 +64,7 @@ The quick-start stack uses local development secrets and creates the first owner
 - Log or SMTP email delivery
 - Scheduled notification worker with per-site/user preferences and digest emails
 - Model Context Protocol (MCP) endpoint with scoped access keys for external tools and AI clients
-- Optional non-persisted site AI chat using your configured provider and site content
+- Optional AI chat using your configured provider: **Ask** across every site with AI chat on (or one chosen site) and a per-site AI tab, with saved conversations and linked sources
 - Optional bundled operator documentation at `/docs`
 - HTTPS enforcement, CSRF protection, file access tokens, and configurable API rate limiting
 
@@ -73,7 +77,7 @@ Community Edition is intended for teams that want a self-hosted, inspectable Cle
 - Upload, organize, preview, search, and download files in site-based workspaces.
 - Invite users, assign site roles, and keep activity records for common collaboration events.
 - Run local storage and search indexing without a managed cloud dependency.
-- Optionally connect your own AI provider keys for non-persisted site chat over approved site content.
+- Optionally connect your own AI provider keys for chat over approved site content.
 - Use scoped Model Context Protocol (MCP) access keys for permitted external AI/client integrations.
 
 ### What It Is Not
@@ -321,7 +325,7 @@ MCP access keys let approved external tools call scoped Clear Ideas operations, 
 
 ## AI Configuration
 
-AI chat is optional and disabled unless a model is configured. When enabled, Community Edition can answer site-scoped questions using your configured provider and the local Clear Ideas MCP tools. Chat responses are not persisted.
+AI chat is optional and disabled unless a model is configured. When enabled, **Ask** answers questions across every site the user can read that has AI chat turned on (or one site), and each site's AI tab answers about that site. Chat runs on `@clearideas/agent-runtime` with read-only content tools (search, list, metadata, read file text); answers list and link the files they used. Conversations are stored per user in MongoDB and are private to that user.
 
 ```env
 AI_CHAT_MODEL=openai:gpt-5.6-luna
@@ -329,7 +333,7 @@ AI_CHAT_MODELS=openai:gpt-5.6-luna
 OPENAI_API_KEY=<key>
 ```
 
-Lightweight agents use `@clearideas/agent-runtime` 0.4.1 and the same provider keys. Configure a separate model or fall back to the chat model:
+Lightweight agents use `@clearideas/agent-runtime` 0.6.0 and the same provider keys. Configure a separate model or fall back to the chat model:
 
 ```env
 AI_AGENT_MODEL=openai:gpt-5.6-luna

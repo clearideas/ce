@@ -1,19 +1,18 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import BaseTabs from '../components/base/BaseTabs.vue'
-import ContentList from '../components/content/ContentList.vue'
-import ContentTiles from '../components/content/ContentTiles.vue'
 import SiteActions from '../components/sites/actions/SiteActions.vue'
 import SiteList from '../components/sites/SiteList.vue'
 import SiteTiles from '../components/sites/SiteTiles.vue'
-import { useProfileStore, useSiteStore } from '../stores'
+import { useSiteStore } from '../stores'
+import PageHeader from '../components/base/PageHeader.vue'
+import { usePreferences } from '../composables/usePreferences'
 
 const siteStore = useSiteStore()
-const profileStore = useProfileStore()
+const { preferences } = usePreferences()
 const route = useRoute()
 const router = useRouter()
-const contentHeaderRef = ref<HTMLElement | null>(null)
 
 const tabs = computed(() => [
   { title: 'All', key: 'all', to: { name: 'sites-tab', params: { sitesTab: 'all' } } },
@@ -21,16 +20,15 @@ const tabs = computed(() => [
   { title: 'Owned', key: 'owned', to: { name: 'sites-tab', params: { sitesTab: 'owned' } } },
 ])
 
-function dismissHero() {}
-
 onMounted(async () => {
-  await siteStore.getSitesIfRequired()
+  // A failure is shown by the list (siteStore.sitesError), not thrown into the console.
+  await siteStore.getSitesIfRequired().catch(() => undefined)
 })
 
 watch(
   () => route.fullPath,
   async () => {
-    await siteStore.setCurrentSite(undefined)
+    await siteStore.setCurrentSite(undefined).catch(() => undefined)
   },
   { immediate: true },
 )
@@ -47,63 +45,88 @@ watch(
 watch(
   () => siteStore.activeTab,
   nextTab => {
-    dismissHero()
     const currentTab = Array.isArray(route.params.sitesTab) ? route.params.sitesTab[0] : route.params.sitesTab
-    if ((currentTab ?? 'all') !== nextTab) void router.replace({ name: 'sites-tab', params: { sitesTab: nextTab } })
+    if ((currentTab ?? 'all') !== nextTab)
+      void router.replace({ name: 'sites-tab', params: { sitesTab: nextTab } })
   },
-)
-
-watch(
-  () => profileStore.tileView,
-  () => dismissHero(),
 )
 </script>
 
 <template>
   <div
     class="sites-view"
-    :class="{ 'table-active': !profileStore.tileView, 'tiles-active': profileStore.tileView }"
+    :class="{ 'table-active': !preferences.tileView, 'tiles-active': preferences.tileView }"
   >
-    <div class="content-header sites-header" ref="contentHeaderRef">
+    <PageHeader title="Sites" />
+    <div class="content-header sites-header">
       <BaseTabs v-model="siteStore.activeTab" :tabs="tabs" />
-      <SiteActions class="actions" @interact="dismissHero" />
+      <SiteActions class="actions" />
     </div>
     <div class="content-header-gap sites-header-gap"></div>
     <div class="sites-body">
-      <div v-if="siteStore.activeTab !== 'bookmarks' && !profileStore.tileView" class="sites-pane">
+      <div v-if="!preferences.tileView" class="sites-pane">
         <SiteList />
       </div>
-      <div
-        v-if="siteStore.activeTab !== 'bookmarks' && profileStore.tileView"
-        class="sites-tiles-shell"
-      >
+      <div v-else class="sites-tiles-shell page-bleed">
         <SiteTiles />
-      </div>
-      <div v-if="siteStore.activeTab === 'bookmarks' && !profileStore.tileView" class="sites-pane">
-        <ContentList display="bookmarks" />
-      </div>
-      <div
-        v-if="siteStore.activeTab === 'bookmarks' && profileStore.tileView"
-        class="sites-tiles-shell"
-      >
-        <ContentTiles display="bookmarks" />
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.sites-view { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
-.sites-body { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
-.sites-header { padding-right: 0; }
-.sites-header-gap { --content-header-body-gap: 10px; }
-.sites-view.table-active .sites-body { overflow: hidden; }
+.sites-view {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.sites-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.sites-header {
+  padding-right: 0;
+}
+
+.sites-header-gap {
+  --content-header-body-gap: 10px;
+}
+
+.sites-view.table-active .sites-body {
+  overflow: hidden;
+}
+
 .sites-view.tiles-active,
 .sites-view.tiles-active .sites-body,
 .sites-view.tiles-active .sites-pane,
-.sites-view.tiles-active .sites-tiles-shell { overflow: visible; }
-.sites-pane { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-.sites-tiles-shell { display: flex; flex-direction: column; flex: 1; min-height: 0; width: calc(100% + 16px); margin-left: -8px; margin-right: -8px; padding-left: 8px; padding-right: 8px; box-sizing: border-box; }
+.sites-view.tiles-active .sites-tiles-shell {
+  overflow: visible;
+}
+
+.sites-pane {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.sites-tiles-shell {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
 .sites-view.tiles-active :deep(.site-tiles),
-.sites-view.tiles-active :deep(.content-tiles) { margin-left: 0; margin-right: 0; }
+.sites-view.tiles-active :deep(.content-tiles) {
+  margin-left: 0;
+  margin-right: 0;
+}
 </style>

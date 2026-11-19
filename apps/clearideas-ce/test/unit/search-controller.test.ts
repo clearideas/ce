@@ -33,26 +33,86 @@ describe('search request flow (controller + index + database)', () => {
     const now = new Date('2026-03-01T10:00:00Z')
 
     const models = {
-      UserModel: createFakeModel([{ _id: ownerUserId, email: 'owner@example.com', roles: ['member'], attributes: {} }]),
+      UserModel: createFakeModel([
+        { _id: ownerUserId, email: 'owner@example.com', roles: ['member'], attributes: {} },
+      ]),
       AccountModel: createFakeModel([{ _id: accountId, owner: ownerUserId, name: 'Owner', attributes: {} }]),
       SiteModel: createFakeModel([
-        { _id: siteId, name: 'Finance', owner: accountId, members: [], visibility: 'private', attributes: { tags: ['acme'] } },
-        { _id: otherSiteId, name: 'Elsewhere', owner: objectId(99), members: [], visibility: 'private', attributes: {} },
+        {
+          _id: siteId,
+          name: 'Finance',
+          owner: accountId,
+          members: [],
+          visibility: 'private',
+          attributes: { tags: ['acme'] },
+        },
+        {
+          _id: otherSiteId,
+          name: 'Elsewhere',
+          owner: objectId(99),
+          members: [],
+          visibility: 'private',
+          attributes: {},
+        },
       ]),
       ContentModel: createFakeModel([
-        { _id: folderId, site: siteId, kind: 'Folder', status: 'active', name: 'Reports', parent: siteId, parentType: 'Site', attributes: {} },
         {
-          _id: objectId(30), site: siteId, kind: 'File', status: 'active', name: 'Annual_Report.pdf', key: 'annual.pdf',
-          contentType: 'application/pdf', extractionStatus: 'complete', extractedTextKey: 'annual.pdf.extracted.txt',
-          parent: folderId, parentType: 'Content', tags: ['finance'], uploadedAt: now, createdAt: now, updatedAt: now, attributes: {},
+          _id: folderId,
+          site: siteId,
+          kind: 'Folder',
+          status: 'active',
+          name: 'Reports',
+          parent: siteId,
+          parentType: 'Site',
+          attributes: {},
         },
         {
-          _id: objectId(31), site: siteId, kind: 'File', status: 'active', name: 'notes.md', key: 'notes.md', contentType: 'text/markdown',
-          parent: siteId, parentType: 'Site', uploadedAt: now, createdAt: now, updatedAt: now, attributes: { metadata: { owner: 'Jane' } },
+          _id: objectId(30),
+          site: siteId,
+          kind: 'File',
+          status: 'active',
+          name: 'Annual_Report.pdf',
+          key: 'annual.pdf',
+          contentType: 'application/pdf',
+          extractionStatus: 'complete',
+          extractedTextKey: 'annual.pdf.extracted.txt',
+          parent: folderId,
+          parentType: 'Content',
+          tags: ['finance'],
+          uploadedAt: now,
+          createdAt: now,
+          updatedAt: now,
+          attributes: {},
         },
         {
-          _id: objectId(32), site: otherSiteId, kind: 'File', status: 'active', name: 'secret-annual.txt', key: 'secret.txt', contentType: 'text/plain',
-          parent: otherSiteId, parentType: 'Site', uploadedAt: now, createdAt: now, updatedAt: now, attributes: {},
+          _id: objectId(31),
+          site: siteId,
+          kind: 'File',
+          status: 'active',
+          name: 'notes.md',
+          key: 'notes.md',
+          contentType: 'text/markdown',
+          parent: siteId,
+          parentType: 'Site',
+          uploadedAt: now,
+          createdAt: now,
+          updatedAt: now,
+          attributes: { metadata: { owner: 'Jane' } },
+        },
+        {
+          _id: objectId(32),
+          site: otherSiteId,
+          kind: 'File',
+          status: 'active',
+          name: 'secret-annual.txt',
+          key: 'secret.txt',
+          contentType: 'text/plain',
+          parent: otherSiteId,
+          parentType: 'Site',
+          uploadedAt: now,
+          createdAt: now,
+          updatedAt: now,
+          attributes: {},
         },
       ]),
       ActivityModel: createFakeModel([]),
@@ -64,8 +124,14 @@ describe('search request flow (controller + index + database)', () => {
       AgentScheduleModel: createFakeModel([]),
       AgentTaskModel: createFakeModel([]),
     }
-    await storage.writeObject({ key: 'annual.pdf.extracted.txt', body: Buffer.from('Revenue grew 12% year over year. Operating margin improved.') })
-    await storage.writeObject({ key: 'notes.md', body: Buffer.from('# Notes\n\nDiscussed revenue targets with Jane.') })
+    await storage.writeObject({
+      key: 'annual.pdf.extracted.txt',
+      body: Buffer.from('Revenue grew 12% year over year. Operating margin improved.'),
+    })
+    await storage.writeObject({
+      key: 'notes.md',
+      body: Buffer.from('# Notes\n\nDiscussed revenue targets with Jane.'),
+    })
     await storage.writeObject({ key: 'secret.txt', body: Buffer.from('revenue secrets of another site') })
 
     const search: SiteSearchIndexManager = createSiteSearchIndexManager({
@@ -75,7 +141,12 @@ describe('search request flow (controller + index + database)', () => {
       logger: silentLogger,
       flushDelayMs: 0,
     })
-    const controller = new CoreController({ auth: {}, models: models as any, providers: { storage } as any, search })
+    const controller = new CoreController({
+      auth: {},
+      models: models as any,
+      providers: { storage } as any,
+      search,
+    })
     cleanups.push(async () => {
       await search.close()
       await fs.rm(root, { recursive: true, force: true })
@@ -104,7 +175,11 @@ describe('search request flow (controller + index + database)', () => {
   const searchRecords = (models: any) =>
     models.ActivityModel.docs
       .filter((doc: any) => doc.action === 'content-searched')
-      .map((doc: any) => ({ parent: doc.parent ? String(doc.parent) : undefined, onModel: doc.onModel, ...doc.attributes }))
+      .map((doc: any) => ({
+        parent: doc.parent ? String(doc.parent) : undefined,
+        onModel: doc.onModel,
+        ...doc.attributes,
+      }))
 
   it('searches a site with full text, filename, and metadata, never leaking other sites', async () => {
     const { controller, call, siteId, folderId, search } = await setup()
@@ -121,7 +196,10 @@ describe('search request flow (controller + index + database)', () => {
 
     // Both files mention revenue; the hit from the other site is excluded.
     const shared = await call(controller.searchSite, { params: { siteId }, body: { q: 'revenue' } })
-    expect(shared.body.results.map((result: any) => result.name).sort()).toEqual(['Annual_Report.pdf', 'notes.md'])
+    expect(shared.body.results.map((result: any) => result.name).sort()).toEqual([
+      'Annual_Report.pdf',
+      'notes.md',
+    ])
 
     // Filename matching tolerates punctuation differences and is served by both index and database.
     const byName = await call(controller.searchSite, { params: { siteId }, body: { q: 'annual report' } })
@@ -142,7 +220,10 @@ describe('search request flow (controller + index + database)', () => {
 
     // Folder-scoped search only returns direct children of that folder.
     expect(fullText.body.results[0].folderId).toBe(folderId)
-    const inFolder = await call(controller.searchSiteFolder, { params: { siteId, id: folderId }, body: { q: 'revenue' } })
+    const inFolder = await call(controller.searchSiteFolder, {
+      params: { siteId, id: folderId },
+      body: { q: 'revenue' },
+    })
     expect(inFolder.body.results.map((result: any) => result.name)).toEqual(['Annual_Report.pdf'])
 
     await search.settle()
@@ -153,7 +234,14 @@ describe('search request flow (controller + index + database)', () => {
     const enqueueSpy = vi.spyOn(search, 'enqueueIndexContent')
     const indexSpy = vi.spyOn(search, 'indexFile')
     const removeSpy = vi.spyOn(search, 'removeContent')
-    for (const q of ['revenue', 'annual report', 'revnue grew', '@tag:finance', '@contentType:pdf', 'no-such-term']) {
+    for (const q of [
+      'revenue',
+      'annual report',
+      'revnue grew',
+      '@tag:finance',
+      '@contentType:pdf',
+      'no-such-term',
+    ]) {
       await call(controller.searchSite, { params: { siteId }, body: { q } })
     }
     await search.settle()
@@ -169,8 +257,18 @@ describe('search request flow (controller + index + database)', () => {
     await call(controller.searchSite, { params: { siteId }, body: { q: 'revenue' } })
     const lateId = objectId(40)
     await models.ContentModel.create({
-      _id: lateId, site: siteId, kind: 'File', status: 'active', name: 'late-addition.txt', key: 'late.txt', contentType: 'text/plain',
-      parent: siteId, parentType: 'Site', uploadedAt: new Date(), updatedAt: new Date(), attributes: {},
+      _id: lateId,
+      site: siteId,
+      kind: 'File',
+      status: 'active',
+      name: 'late-addition.txt',
+      key: 'late.txt',
+      contentType: 'text/plain',
+      parent: siteId,
+      parentType: 'Site',
+      uploadedAt: new Date(),
+      updatedAt: new Date(),
+      attributes: {},
     })
     expect(search.hasDocument(siteId, lateId)).toBe(false)
     const found = await call(controller.searchSite, { params: { siteId }, body: { q: 'late addition' } })
@@ -191,10 +289,21 @@ describe('search request flow (controller + index + database)', () => {
 
     // Scoped searches are always attributed to their site, even with no results.
     await call(controller.searchSite, { params: { siteId }, body: { q: 'revenue' } })
-    await call(controller.searchSiteFolder, { params: { siteId, id: folderId }, body: { q: 'nothing-matches-here' } })
+    await call(controller.searchSiteFolder, {
+      params: { siteId, id: folderId },
+      body: { q: 'nothing-matches-here' },
+    })
     expect(searchRecords(models)).toEqual([
       { parent: siteId, onModel: 'Site', q: 'revenue', scope: 'site', source: 'ce-search', resultCount: 2 },
-      { parent: siteId, onModel: 'Site', q: 'nothing-matches-here', scope: 'folder', source: 'ce-search', folderId, resultCount: 0 },
+      {
+        parent: siteId,
+        onModel: 'Site',
+        q: 'nothing-matches-here',
+        scope: 'folder',
+        source: 'ce-search',
+        folderId,
+        resultCount: 0,
+      },
     ])
     models.ActivityModel.docs.length = 0
 
@@ -203,23 +312,48 @@ describe('search request flow (controller + index + database)', () => {
     await call(controller.searchAll, { body: { q: 'revenue' }, permittedSiteIds })
     expect(searchRecords(models).sort((a: any, b: any) => a.parent.localeCompare(b.parent))).toEqual([
       { parent: siteId, onModel: 'Site', q: 'revenue', scope: 'all', source: 'ce-search', resultCount: 2 },
-      { parent: otherSiteId, onModel: 'Site', q: 'revenue', scope: 'all', source: 'ce-search', resultCount: 1 },
+      {
+        parent: otherSiteId,
+        onModel: 'Site',
+        q: 'revenue',
+        scope: 'all',
+        source: 'ce-search',
+        resultCount: 1,
+      },
     ])
     models.ActivityModel.docs.length = 0
 
     // "secrets" only matches the other site: the Finance administrator must never see this term.
     await call(controller.searchAll, { body: { q: 'secrets' }, permittedSiteIds })
     expect(searchRecords(models)).toEqual([
-      { parent: otherSiteId, onModel: 'Site', q: 'secrets', scope: 'all', source: 'ce-search', resultCount: 1 },
+      {
+        parent: otherSiteId,
+        onModel: 'Site',
+        q: 'secrets',
+        scope: 'all',
+        source: 'ce-search',
+        resultCount: 1,
+      },
     ])
     models.ActivityModel.docs.length = 0
 
     // No matches anywhere: audit record for the user only, attached to no site.
     await call(controller.searchAll, { body: { q: 'unicorns' }, permittedSiteIds })
     const [record] = models.ActivityModel.docs
-    expect(record).toMatchObject({ action: 'content-searched', user: ownerUserId, target: ownerUserId, onModel: 'User' })
+    expect(record).toMatchObject({
+      action: 'content-searched',
+      user: ownerUserId,
+      target: ownerUserId,
+      onModel: 'User',
+    })
     expect(record.parent).toBeUndefined()
-    expect(record.attributes).toEqual({ q: 'unicorns', scope: 'all', source: 'ce-search', resultCount: 0, matchedSiteCount: 0 })
+    expect(record.attributes).toEqual({
+      q: 'unicorns',
+      scope: 'all',
+      source: 'ce-search',
+      resultCount: 0,
+      matchedSiteCount: 0,
+    })
   })
 
   it('searches across all permitted sites ranked by relevance', async () => {
@@ -229,7 +363,9 @@ describe('search request flow (controller + index + database)', () => {
     expect(names).toContain('Annual_Report.pdf')
     expect(names).toContain('notes.md')
     expect(names).not.toContain('secret-annual.txt')
-    expect(all.body.results.every((result: any) => result.siteId === siteId && result.siteId !== otherSiteId)).toBe(true)
+    expect(
+      all.body.results.every((result: any) => result.siteId === siteId && result.siteId !== otherSiteId),
+    ).toBe(true)
 
     // Without any permitted sites the global search returns nothing (and touches no index).
     const none = await call(controller.searchAll, { body: { q: 'revenue' }, permittedSiteIds: [] })

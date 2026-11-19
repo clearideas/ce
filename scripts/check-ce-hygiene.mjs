@@ -11,6 +11,7 @@ const warnings = []
 
 await checkNoUnusedTypeScript()
 await checkNoTrackedRuntimeArtifacts()
+await checkUntrackedSourceFiles()
 await checkForbiddenSourceTerms()
 await checkOrphanScss()
 await checkReachableSourceFiles()
@@ -44,6 +45,24 @@ async function checkNoUnusedTypeScript() {
     if (result.status !== 0) {
       failures.push(`Unused TypeScript check failed for ${project}\n${trimCommandOutput(result)}`)
     }
+  }
+}
+
+async function checkUntrackedSourceFiles() {
+  // Files copied over an older checkout (instead of checking the branch out) survive as untracked
+  // leftovers; source-scanning tests then fail on code that is no longer part of the app.
+  const result = spawnSync(
+    'git',
+    ['ls-files', '--others', '--exclude-standard', '--', 'apps/clearideas-ce/src', 'apps/clearideas-ce/src-web/src', 'apps/clearideas-ce/test', 'packages'],
+    { cwd: root, encoding: 'utf8', shell: false },
+  )
+  if (result.status !== 0) return
+  const files = result.stdout
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(file => /\.(ts|mts|vue|scss|css|js|mjs)$/.test(file))
+  if (files.length > 0) {
+    warnings.push(`Untracked source files (new work not yet added, or leftovers from an older copy — preview removal with \`git clean -n -- apps packages\`):\n${files.join('\n')}`)
   }
 }
 

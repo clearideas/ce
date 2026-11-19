@@ -11,12 +11,42 @@ export type AnalyticsFilter = {
   timeZone?: string
 }
 
-export type AnalyticsRowsResponse<T = Record<string, any>> = {
+/**
+ * A row of an analytics report. Reports share a loose shape (name/count/…); the columns present
+ * depend on the report, so every field is optional.
+ */
+export type AnalyticsRow = Record<string, unknown> & {
+  id?: string
+  name?: string
+  count?: number
+  size?: number
+  hour?: number
+  viewCount?: number
+  userCount?: number
+  zeroResultCount?: number
+  lastActive?: string
+  lastViewedAt?: string
+  lastSearchedAt?: string
+}
+
+export type AnalyticsRowsResponse<T = AnalyticsRow> = {
   rows: T[]
 }
 
+/** Summary figures shown on the analytics dashboard. */
+export type AnalyticsDashboardData = Record<string, unknown> & {
+  storageSize?: number
+  totalContent?: number
+  totalSites?: number
+  totalOwnedOrAdministeredSites?: number
+  monthlyActiveUsers?: number
+  mostAccessedContent?: AnalyticsRow[]
+  mostActiveUsers?: AnalyticsRow[]
+  contentActivity?: AnalyticsRow[]
+}
+
 export const useAnalyticsStore = defineStore('analytics', () => {
-  const currentReport = ref<Record<string, unknown> | null>(null)
+  const currentReport = ref<AnalyticsDashboardData | null>(null)
   const loadingAnalytics = ref(false)
   const loading = loadingAnalytics
 

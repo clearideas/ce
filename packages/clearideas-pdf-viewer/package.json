@@ -1,0 +1,24 @@
+{
+  "name": "@clearideas/pdf-viewer",
+  "version": "0.1.0",
+  "description": "Vue 3 + Vuetify PDF viewer (pdf.js) used by Clear Ideas. Consumed from source by Vite; no build step.",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "types": "./src/index.ts",
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "type-check": "vue-tsc --noEmit -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "pdfjs-dist": "^6.2.0",
+    "vue": "^3.5.0",
+    "vue-tippy": "^6.7.0",
+    "vuetify": "^4.0.0"
+  }
+}

@@ -2,11 +2,13 @@
 import { useHandlebarsHighlight } from '../../composables/useHandlebarsHighlight'
 import { parseMetadataSearchExpressions } from '../../utils/metadataSearch'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
-import { VIcon } from 'vuetify/components'
+import BaseButton from './BaseButton.vue'
 
 interface Props {
   modelValue?: string
   placeholder?: string
+  /** Accessible name for the editor when no visible label exists. */
+  ariaLabel?: string
   disabled?: boolean
   rows?: number | string
   maxRows?: number | string
@@ -16,7 +18,7 @@ interface Props {
   clearIcon?: string
   variant?: string
   hideDetails?: boolean
-  rules?: Array<(v: any) => boolean | string>
+  rules?: Array<(v: string) => boolean | string>
   class?: string | string[] | Record<string, boolean>
   maxlength?: number | string
   counter?: boolean | number | string
@@ -39,13 +41,14 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   modelValue: '',
   placeholder: '',
+  ariaLabel: '',
   disabled: false,
   rows: 1,
   maxRows: 10,
   autoGrow: false,
   density: 'default',
   clearable: false,
-  clearIcon: 'fasl fa-xmark',
+  clearIcon: 'fas fa-xmark',
   variant: 'plain',
   hideDetails: true,
   rules: () => [],
@@ -107,17 +110,13 @@ const wrapperStyle = computed(() => {
         ? `${props.contentPaddingInline}px`
         : props.contentPaddingInline,
     '--handlebars-textarea-padding-top':
-      typeof props.contentPaddingTop === 'number'
-        ? `${props.contentPaddingTop}px`
-        : props.contentPaddingTop,
+      typeof props.contentPaddingTop === 'number' ? `${props.contentPaddingTop}px` : props.contentPaddingTop,
     '--handlebars-textarea-padding-bottom':
       typeof props.contentPaddingBottom === 'number'
         ? `${props.contentPaddingBottom}px`
         : props.contentPaddingBottom,
     '--handlebars-textarea-content-offset-top':
-      typeof props.contentOffsetTop === 'number'
-        ? `${props.contentOffsetTop}px`
-        : props.contentOffsetTop,
+      typeof props.contentOffsetTop === 'number' ? `${props.contentOffsetTop}px` : props.contentOffsetTop,
     '--handlebars-textarea-placeholder-offset-inline':
       typeof props.placeholderOffsetInline === 'number'
         ? `${props.placeholderOffsetInline}px`
@@ -800,8 +799,16 @@ defineExpose({
     :style="wrapperStyle"
     @click="handleWrapperClick"
   >
+    <!-- eslint-disable-next-line vuejs-accessibility/interactive-supports-focus -- focusable via contenteditable / dynamic tabindex -->
     <div
       ref="editorRef"
+      role="textbox"
+      :tabindex="disabled ? -1 : 0"
+      :aria-multiline="allowLineBreaks"
+      :aria-placeholder="placeholder || undefined"
+      :aria-label="ariaLabel || undefined"
+      :aria-disabled="disabled || undefined"
+      :aria-readonly="readonly || undefined"
       :contenteditable="!disabled && !readonly"
       :class="editorClasses"
       @input="handleInput"
@@ -821,11 +828,14 @@ defineExpose({
     >
       {{ placeholder }}
     </div>
-    <VIcon
+    <BaseButton
       v-if="clearable && modelValue && !disabled && !readonly"
       :icon="clearIcon"
+      intent="tertiary"
+      size="x-small"
+      tooltip="Clear"
+      aria-label="Clear"
       class="clear-icon"
-      v-tippy="{ content: 'Clear' }"
       @click="handleClear"
     />
     <div v-if="counter && !hideDetails" class="counter-text">
@@ -843,10 +853,8 @@ defineExpose({
 .handlebars-textarea-editor {
   width: 100%;
   min-height: 40px;
-  padding-top: calc(
-    var(--handlebars-textarea-padding-top) + var(--handlebars-textarea-content-offset-top)
-  );
-  padding-right: calc(var(--handlebars-textarea-padding-inline) + 30px) !important;
+  padding-top: calc(var(--handlebars-textarea-padding-top) + var(--handlebars-textarea-content-offset-top));
+  padding-right: calc(var(--handlebars-textarea-padding-inline) + 30px);
   padding-bottom: var(--handlebars-textarea-padding-bottom);
   padding-left: var(--handlebars-textarea-padding-inline);
   font-size: var(--handlebars-textarea-font-size);
@@ -873,7 +881,8 @@ defineExpose({
   transform: translateY(calc(-50% + var(--handlebars-textarea-placeholder-offset-top)));
   font-size: var(--handlebars-textarea-font-size);
   line-height: var(--handlebars-textarea-line-height);
-  color: rgba(var(--v-theme-on-surface), 0.38);
+  /* Placeholder text is real text for WCAG 1.4.3: medium emphasis keeps it >= 4.5:1 in both themes. */
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
   pointer-events: none;
   white-space: pre-wrap;
   word-wrap: break-word;
@@ -881,9 +890,7 @@ defineExpose({
 }
 
 .handlebars-textarea-placeholder--top {
-  top: calc(
-    var(--handlebars-textarea-padding-top) + var(--handlebars-textarea-placeholder-offset-top)
-  );
+  top: calc(var(--handlebars-textarea-padding-top) + var(--handlebars-textarea-placeholder-offset-top));
   transform: none;
 }
 
@@ -912,15 +919,7 @@ defineExpose({
 .clear-icon {
   position: absolute;
   top: calc(50% - 12px);
-  right: 0px;
-  cursor: pointer;
-  opacity: 0.6;
-  transition: opacity 0.2s;
-  height: 24px;
-}
-
-.clear-icon:hover {
-  opacity: 1;
+  right: 0;
 }
 
 .counter-text {

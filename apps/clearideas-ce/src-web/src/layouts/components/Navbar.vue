@@ -8,9 +8,10 @@ import Logo from '../../components/brand/Logo.vue'
 import NavSearchBar from './NavSearchBar.vue'
 import NavUserProfileMenu from './NavUserProfileMenu.vue'
 import ThemeToggle from './ThemeToggle.vue'
+import { ICONS } from '../../icons'
 
 const props = defineProps<{ session: Session }>()
-const emit = defineEmits<{ logout: [] }>()
+defineEmits<{ logout: [] }>()
 const isDrawerOpen = defineModel<boolean>('isDrawerOpen', { default: false })
 const isVerticalMenuMini = defineModel<boolean>('isVerticalMenuMini', { default: false })
 const { mobile, lgAndUp } = useDisplay()
@@ -21,7 +22,12 @@ const isSearchExpanded = ref(false)
   <VAppBar app location="top" color="transparent" flat>
     <div class="navbar" :class="{ 'search-expanded': isSearchExpanded }">
       <div class="logo">
-        <RouterLink to="/sites" aria-label="Clear Ideas home">
+        <RouterLink
+          to="/sites"
+          :aria-label="
+            mobile || isVerticalMenuMini ? 'Clear Ideas home' : 'Clear Ideas Community Edition home'
+          "
+        >
           <Icon v-if="mobile || isVerticalMenuMini" height="34" class="mt-1 ci-nav-icon" />
           <div v-else class="ci-nav-brand">
             <Logo class="ci-nav-logo" />
@@ -33,27 +39,27 @@ const isSearchExpanded = ref(false)
           icon
           variant="plain"
           size="x-small"
-          :class="isVerticalMenuMini ? 'rail-mode-is-on' : ''"
           aria-label="Toggle menu"
+          :aria-expanded="!isVerticalMenuMini"
           @click="isVerticalMenuMini = !isVerticalMenuMini"
         >
-          <VIcon size="15" :icon="isVerticalMenuMini ? 'fasl fa-chevron-right' : 'fasl fa-chevron-left'" />
+          <VIcon size="15" :icon="isVerticalMenuMini ? 'fas fa-chevron-right' : 'fas fa-chevron-left'" />
         </VBtn>
       </div>
       <div class="search">
         <NavSearchBar v-model="isSearchExpanded" />
       </div>
       <div class="actions">
-        <ThemeToggle
-          v-if="!(mobile && isSearchExpanded)"
-        />
+        <ThemeToggle v-if="!(mobile && isSearchExpanded)" />
         <div v-if="!(mobile && isSearchExpanded)" class="navbar-user-trigger">
           <NavUserProfileMenu :session="props.session" @logout="$emit('logout')" />
         </div>
         <VAppBarNavIcon
           v-show="mobile"
-          icon="fasl fa-bars"
+          :icon="ICONS.menu"
           size="small"
+          aria-label="Open navigation"
+          :aria-expanded="isDrawerOpen"
           @click.stop="isDrawerOpen = !isDrawerOpen"
         />
       </div>
@@ -65,15 +71,18 @@ const isSearchExpanded = ref(false)
 :deep(.v-toolbar),
 :deep(.v-toolbar__content),
 :deep(.v-app-bar) {
-  overflow: visible !important;
+  overflow: visible;
 }
 
 :deep(.v-toolbar__content) {
   position: relative;
   z-index: 20;
   width: 100%;
+
+  // VToolbar sets the content height as an inline style; only `!important` beats it.
+  // stylelint-disable-next-line declaration-no-important
   height: var(--ci-navbar-height) !important;
-  padding: 0 !important;
+  padding: 0;
 }
 
 .navbar {
@@ -126,12 +135,12 @@ const isSearchExpanded = ref(false)
 }
 
 .navbar-control {
-  min-height: 36px !important;
+  min-height: 36px;
 }
 
 .navbar-theme-btn {
-  width: 36px !important;
-  height: 36px !important;
+  width: 36px;
+  height: 36px;
 }
 
 .navbar-user-trigger {

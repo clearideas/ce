@@ -2,9 +2,15 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useContentTypes } from '../../composables/useContentTypes'
 import { useContentStore, useSiteStore } from '../../stores'
-import BasePDFViewer from './BasePDFViewer.vue'
+import { BasePDFViewer } from '@clearideas/pdf-viewer'
 
-interface Props { id: string; siteId: string; contentType: string; name: string; initialPage?: number }
+interface Props {
+  id: string
+  siteId: string
+  contentType: string
+  name: string
+  initialPage?: number
+}
 const props = defineProps<Props>()
 const contentStore = useContentStore()
 const siteStore = useSiteStore()
@@ -20,7 +26,10 @@ const printAllowed = computed(() => {
 })
 
 async function loadPdfUrl() {
-  if (!isPDF.value) { pdfData.value = null; return }
+  if (!isPDF.value) {
+    pdfData.value = null
+    return
+  }
   resolving.value = true
   try {
     const payload = await contentStore.getFileBlob()
@@ -37,7 +46,7 @@ watch(() => [props.id, props.siteId, props.contentType], loadPdfUrl)
 <template>
   <div class="pdf-embed">
     <div v-if="resolving && !pdfData" class="pdf-embed__loading">
-      <VProgressCircular indeterminate color="primary" size="100" width="8" />
+      <VProgressCircular aria-label="Loading document" indeterminate color="primary" size="100" width="8" />
     </div>
     <BasePDFViewer
       v-else-if="pdfData"
@@ -49,10 +58,6 @@ watch(() => [props.id, props.siteId, props.contentType], loadPdfUrl)
       :toolbar-bottom-inset="60"
       rotate-enabled
       :print-enabled="printAllowed"
-      loading-label="Loading PDF"
-      no-pages-label="No renderable pages"
-      failed-load-label="Failed to load PDF"
-      failed-render-label="Failed to render page"
     />
   </div>
 </template>
@@ -68,7 +73,7 @@ watch(() => [props.id, props.siteId, props.contentType], loadPdfUrl)
   color: var(--ci-on-surface);
   border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   border-radius: 6px;
-  box-shadow: 0 8px 28px rgba(15, 23, 42, 0.06);
+  box-shadow: var(--ci-shadow-md);
 }
 
 .pdf-embed__loading {

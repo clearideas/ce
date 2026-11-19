@@ -22,7 +22,10 @@ import type { AgentHostService } from '../../services/agent/agent-host.js'
 
 export function buildAgentRoutes(ctx: CeAppContext, agentHost: AgentHostService) {
   const router = Router()
+  // Scoped to the agent paths: this router is mounted at /api, and an unscoped limiter would also
+  // count every later /api request (MCP, app config) against the agent limit.
   router.use(
+    ['/agents', '/agent-runs', '/agent-schedules'],
     rateLimit({
       windowMs: Number(process.env.CLEARIDEAS_AGENT_RATE_LIMIT_WINDOW_MS ?? 15 * 60 * 1000),
       limit: Number(process.env.CLEARIDEAS_AGENT_RATE_LIMIT_LIMIT ?? 120),

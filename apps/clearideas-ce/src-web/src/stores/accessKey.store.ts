@@ -36,14 +36,24 @@ export const useAccessKeyStore = defineStore('accessKey', () => {
     return keyTypes.value
   }
 
-  async function createAccessKey(input?: { name?: string; description?: string; keyType?: string; scopes?: string[]; expiresIn?: number }) {
+  async function createAccessKey(input?: {
+    name?: string
+    description?: string
+    keyType?: string
+    scopes?: string[]
+    expiresIn?: number
+  }) {
     error.value = ''
     creatingKey.value = true
     try {
       const response = await ceApi.createAccessKey(input)
       newKey.value = response.key
       await getAccessKeys()
-      alert.add({ message: 'Access key created. Store the secret now; it will not be shown again.', type: 'success', timeout: 5000 })
+      alert.add({
+        message: 'Access key created. Store the secret now; it will not be shown again.',
+        type: 'success',
+        timeout: 5000,
+      })
       return response
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Could not create access key'
@@ -75,5 +85,18 @@ export const useAccessKeyStore = defineStore('accessKey', () => {
     error.value = ''
   }
 
-  return { accessKeys, newKey, loading, creatingKey, error, keyTypes, getAccessKeys, fetchKeyTypes, createAccessKey, revokeAccessKey, clearNewKey, clearError }
+  return {
+    accessKeys,
+    newKey,
+    loading,
+    creatingKey,
+    error,
+    keyTypes,
+    getAccessKeys,
+    fetchKeyTypes,
+    createAccessKey,
+    revokeAccessKey,
+    clearNewKey,
+    clearError,
+  }
 })

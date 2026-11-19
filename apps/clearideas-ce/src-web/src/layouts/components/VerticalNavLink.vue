@@ -2,22 +2,7 @@
 import { computed } from 'vue'
 import { useDisplay } from 'vuetify'
 
-import { isNavLinkActive } from './utils'
-
-type NavMenuItem = {
-  name?: string
-  title?: string
-  icon?: string
-  iconClass?: string
-  iconColor?: string
-  to?: Record<string, any> | string
-  href?: string
-  target?: string
-  avatar?: string
-  divider?: boolean
-  onClick?: () => void
-  mobileTitle?: string
-}
+import { isNavLinkActive, type NavMenuItem } from './utils'
 
 interface Props {
   navItem: NavMenuItem
@@ -39,10 +24,6 @@ const mobile = defineModel('mobile', {
 const display = useDisplay()
 
 const tippyKey = computed(() => `tippy-${props.isVerticalMenuMini ? 'rail' : 'expanded'}`)
-const iconTippyConfig = computed(() => {
-  if (!props.isVerticalMenuMini || !props.tippy) return null
-  return props.tippy
-})
 const textTippyConfig = computed(() => {
   if (props.isVerticalMenuMini) return mobile.value ? { content: navItemLabel.value } : null
   if (!props.tippy) return null
@@ -60,56 +41,50 @@ function handleClick() {
 </script>
 
 <template>
-  <div>
-    <VDivider v-if="props.navItem.divider" />
-    <VListItem
-      v-if="props.navItem.to"
-      :to="props.navItem.to"
-      :active="isNavLinkActive(props.navItem)"
-      :target="props.navItem.target ? props.navItem.target : ''"
-      @click="handleClick"
-      :aria-label="navItemLabel"
-    >
-      <template #prepend>
-        <VImg
-          v-if="props.navItem.avatar"
-          :src="props.navItem.avatar"
-          contain
-          height="22"
-          width="22"
-          class="mr-4"
-        />
-        <VIcon
-          v-else
-          :key="`icon-${tippyKey}`"
-          v-tippy="iconTippyConfig"
-          :icon="props.navItem.icon"
-          :class="props.navItem.iconClass"
-          :color="props.navItem.iconColor"
-        />
-      </template>
-      <template #title>
-        <span :key="`text-${tippyKey}`" v-tippy="textTippyConfig">
-          {{ display.mobile.value && hasMobileTitle ? navItemMobileTitle : navItemTitle }}
-        </span>
-      </template>
-    </VListItem>
+  <VDivider aria-hidden="true" v-if="props.navItem.divider" />
+  <VListItem
+    v-if="props.navItem.to"
+    :to="props.navItem.to"
+    :active="isNavLinkActive(props.navItem)"
+    :target="props.navItem.target ? props.navItem.target : ''"
+    :aria-label="navItemLabel"
+    @click="handleClick"
+  >
+    <template #prepend>
+      <VImg
+        v-if="props.navItem.avatar"
+        :src="props.navItem.avatar"
+        contain
+        height="22"
+        width="22"
+        class="mr-4"
+      />
+      <!-- No v-tippy on the icon: tippy's focus listener makes an <svg> keyboard-focusable in Chromium,
+           which put every nav icon in the Tab order. The link itself carries the name. -->
+      <VIcon
+        v-else
+        :icon="props.navItem.icon"
+        :class="props.navItem.iconClass"
+        :color="props.navItem.iconColor"
+      />
+    </template>
+    <template #title>
+      <span :key="`text-${tippyKey}`" v-tippy="textTippyConfig">
+        {{ display.mobile.value && hasMobileTitle ? navItemMobileTitle : navItemTitle }}
+      </span>
+    </template>
+  </VListItem>
 
-    <VListItem
-      v-else-if="props.navItem.href"
-      v-tippy="{ content: mobile ? navItemLabel : undefined }"
-      :title="display.mobile.value && hasMobileTitle ? navItemMobileTitle : navItemLabel"
-      :href="props.navItem.href"
-      :active="isNavLinkActive(props.navItem)"
-      :target="props.navItem.target ? props.navItem.target : ''"
-    >
-      <template #prepend>
-        <VIcon
-          :icon="props.navItem.icon"
-          :class="props.navItem.iconClass"
-          :color="props.navItem.iconColor"
-        />
-      </template>
-    </VListItem>
-  </div>
+  <VListItem
+    v-else-if="props.navItem.href"
+    v-tippy="{ content: mobile ? navItemLabel : undefined }"
+    :title="display.mobile.value && hasMobileTitle ? navItemMobileTitle : navItemLabel"
+    :href="props.navItem.href"
+    :active="isNavLinkActive(props.navItem)"
+    :target="props.navItem.target ? props.navItem.target : ''"
+  >
+    <template #prepend>
+      <VIcon :icon="props.navItem.icon" :class="props.navItem.iconClass" :color="props.navItem.iconColor" />
+    </template>
+  </VListItem>
 </template>

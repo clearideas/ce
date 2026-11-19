@@ -23,6 +23,7 @@ export interface CreateTestCeRuntimeOptions {
   baseUrl?: string
   env?: Record<string, string>
   agentModelAdapter?: ModelAdapter
+  chatModelAdapter?: ModelAdapter
 }
 
 export async function createTestCeRuntime(options: CreateTestCeRuntimeOptions = {}): Promise<TestCeRuntime> {
@@ -33,7 +34,11 @@ export async function createTestCeRuntime(options: CreateTestCeRuntimeOptions = 
   const searchRoot = path.join(tempRoot, 'search')
   if (!options.webRoot) {
     await fs.mkdir(webRoot, { recursive: true })
-    await fs.writeFile(path.join(webRoot, 'index.html'), '<!doctype html><title>Clear Ideas Community Edition</title><div id="app">CE shell</div>', 'utf8')
+    await fs.writeFile(
+      path.join(webRoot, 'index.html'),
+      '<!doctype html><title>Clear Ideas Community Edition</title><div id="app">CE shell</div>',
+      'utf8',
+    )
   }
 
   const email = createCapturedEmailProvider()
@@ -62,6 +67,7 @@ export async function createTestCeRuntime(options: CreateTestCeRuntimeOptions = 
     httpsRequired: false,
     startWorkers: false,
     agentModelAdapter: options.agentModelAdapter,
+    chatModelAdapter: options.chatModelAdapter,
   })
 
   return {
@@ -79,12 +85,20 @@ export async function createTestCeRuntime(options: CreateTestCeRuntimeOptions = 
   }
 }
 
-export async function signIn(input: { agent: SuperTest<Test>; email: CapturedEmailProvider; address?: string; name?: string }) {
+export async function signIn(input: {
+  agent: SuperTest<Test>
+  email: CapturedEmailProvider
+  address?: string
+  name?: string
+}) {
   const address = input.address ?? 'ce-test@clearideas.local'
   await input.agent.post('/api/auth/code/send').send({ email: address }).expect(200)
   const code = input.email.lastCode(address)
   if (!code) throw new Error(`No auth code captured for ${address}`)
-  const response = await input.agent.post('/api/auth/code/verify').send({ email: address, code, name: input.name ?? 'CE Test User' }).expect(200)
+  const response = await input.agent
+    .post('/api/auth/code/verify')
+    .send({ email: address, code, name: input.name ?? 'CE Test User' })
+    .expect(200)
   return response.body.user as { id: string; email: string; name: string }
 }
 

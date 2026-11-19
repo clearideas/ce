@@ -10,16 +10,16 @@ const { currentTheme, themeSwitcher, themeSwitcherIcon } = useAppTheme()
 
 <template>
   <VBtn
+    v-tippy="{
+      content: currentTheme === 'dark' ? 'Light mode' : 'Dark mode',
+      placement: 'bottom',
+    }"
     :icon="themeSwitcherIcon"
     variant="text"
     color="secondary"
     size="small"
     :class="['navbar-control', 'navbar-theme-btn', $props.class]"
     :aria-label="currentTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
-    v-tippy="{
-      content: currentTheme === 'dark' ? 'Light mode' : 'Dark mode',
-      placement: 'bottom',
-    }"
     @click.stop="themeSwitcher"
   />
 </template>

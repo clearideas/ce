@@ -34,7 +34,11 @@ describe('search terms analytics report', () => {
       let payload: any
       await controller.postSearchTerms(
         { sub: adminUserId, accountId, body, query: {}, params } as any,
-        { json: (value: any) => { payload = value } } as any,
+        {
+          json: (value: any) => {
+            payload = value
+          },
+        } as any,
       )
       return payload
     }
@@ -66,9 +70,30 @@ describe('search terms analytics report', () => {
 
   it('merges terms that differ only by case or whitespace and summarises users, sources and misses', async () => {
     const { call } = setup([
-      { _id: 'annual report', count: 3, users: ['u1', 'u2'], lastSearchedAt: new Date('2026-03-02T00:00:00Z'), zeroResultCount: 0, sources: ['ce-search', 'ce-search', 'ce-mcp'] },
-      { _id: 'annual   report', count: 2, users: ['u2', 'u3'], lastSearchedAt: new Date('2026-03-03T00:00:00Z'), zeroResultCount: 1, sources: ['ce-chat', 'ce-search'] },
-      { _id: 'unicorns', count: 1, users: ['u1'], lastSearchedAt: new Date('2026-03-01T00:00:00Z'), zeroResultCount: 1, sources: ['ce-search'] },
+      {
+        _id: 'annual report',
+        count: 3,
+        users: ['u1', 'u2'],
+        lastSearchedAt: new Date('2026-03-02T00:00:00Z'),
+        zeroResultCount: 0,
+        sources: ['ce-search', 'ce-search', 'ce-mcp'],
+      },
+      {
+        _id: 'annual   report',
+        count: 2,
+        users: ['u2', 'u3'],
+        lastSearchedAt: new Date('2026-03-03T00:00:00Z'),
+        zeroResultCount: 1,
+        sources: ['ce-chat', 'ce-search'],
+      },
+      {
+        _id: 'unicorns',
+        count: 1,
+        users: ['u1'],
+        lastSearchedAt: new Date('2026-03-01T00:00:00Z'),
+        zeroResultCount: 1,
+        sources: ['ce-search'],
+      },
     ])
     const payload = await call({ limit: 10 })
     expect(payload.rows).toEqual([
@@ -97,11 +122,23 @@ describe('search terms analytics report', () => {
     const pipelines: any[] = []
     const models = {
       SiteModel: { find: () => ({ select: () => ({ lean: async () => [] }) }) },
-      ActivityModel: { aggregate: async (pipeline: any[]) => { pipelines.push(pipeline); return [] } },
+      ActivityModel: {
+        aggregate: async (pipeline: any[]) => {
+          pipelines.push(pipeline)
+          return []
+        },
+      },
     }
     const controller = new AnalyticsController({ auth: {}, models: models as any, providers: {} })
     let payload: any
-    await controller.postSearchTerms({ sub: adminUserId, accountId, body: {}, query: {}, params: {} } as any, { json: (value: any) => { payload = value } } as any)
+    await controller.postSearchTerms(
+      { sub: adminUserId, accountId, body: {}, query: {}, params: {} } as any,
+      {
+        json: (value: any) => {
+          payload = value
+        },
+      } as any,
+    )
     expect(payload).toEqual({ rows: [] })
     expect(pipelines).toEqual([])
   })

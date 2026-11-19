@@ -15,13 +15,19 @@ const emit = defineEmits(['update:modelValue'])
 
 const selectedIcon = ref<string>(props.modelValue || '')
 
+/** "fa-file-pdf" → "File pdf": an accessible name for the icon-only choice buttons. */
+function iconLabel(icon: string) {
+  const words = icon.replace(/^fa-/, '').split('-').join(' ')
+  return words.charAt(0).toUpperCase() + words.slice(1)
+}
+
 function handleIconChange(icon: string) {
   emit('update:modelValue', icon)
 }
 
-function handleIconClick(icon: string, toggle: any) {
+function handleIconClick(icon: string, toggle: (() => void) | undefined) {
   if (props.disabled) return
-  toggle() // Invoke the toggle function to maintain default behavior
+  toggle?.() // Invoke the toggle function to maintain default behavior
   handleIconChange(icon) // Call handleIconChange to emit events
 }
 
@@ -35,22 +41,19 @@ watch(
 
 <template>
   <VContainer class="px-0">
-    <VItemGroup v-model="selectedIcon" :disabled="props.disabled">
-      <VItem
-        v-for="(icon, index) in icons"
-        :key="index"
-        v-slot="{ selectedClass, toggle }"
-        :value="icon"
-      >
+    <VItemGroup v-model="selectedIcon" :disabled="props.disabled" role="group" aria-label="Site icon">
+      <VItem v-for="(icon, index) in icons" :key="index" v-slot="{ selectedClass, toggle }" :value="icon">
         <div class="site-icon-button-wrap">
           <button
             class="site-icon-button"
             :class="[selectedClass, { disabled: props.disabled }]"
             type="button"
             :disabled="props.disabled"
+            :aria-label="iconLabel(icon)"
+            :aria-pressed="selectedIcon === icon"
             @click="handleIconClick(icon, toggle)"
           >
-            <VIcon :icon="`fasl ${icon}`" size="24" />
+            <VIcon :icon="`fas ${icon}`" size="24" />
           </button>
         </div>
       </VItem>

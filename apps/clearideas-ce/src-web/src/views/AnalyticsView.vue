@@ -3,20 +3,24 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Dashboard from '../components/analytics/Dashboard.vue'
 import AnalyticsTableReport from '../components/analytics/AnalyticsTableReport.vue'
+import EmptyState from '../components/base/EmptyState.vue'
 import NewSite from '../components/sites/actions/NewSite.vue'
+import { ICONS } from '../icons'
 import { useAnalyticsStore, useProfileStore, type AnalyticsFilter } from '../stores'
-import { useDisplay } from 'vuetify'
+import type { AnalyticsDashboardData, AnalyticsRow } from '../stores/analytics.store'
+import PageHeader from '../components/base/PageHeader.vue'
+import SideNavLayout, { type SideNavItem } from '../components/base/SideNavLayout.vue'
 
-type AnalyticsCategory = 'dashboard' | 'most-accessed' | 'content-activity' | 'search-terms' | 'most-active' | 'usage-times'
+type AnalyticsCategory =
+  'dashboard' | 'most-accessed' | 'content-activity' | 'search-terms' | 'most-active' | 'usage-times'
 
 const route = useRoute()
 const router = useRouter()
 const analyticsStore = useAnalyticsStore()
 const profileStore = useProfileStore()
-const { smAndDown } = useDisplay()
 const category = ref<AnalyticsCategory>('dashboard')
-const dashboardData = ref<Record<string, any> | null>(null)
-const rows = ref<Record<string, any>[]>([])
+const dashboardData = ref<AnalyticsDashboardData | null>(null)
+const rows = ref<AnalyticsRow[]>([])
 const error = ref('')
 const ready = ref(false)
 const filter = ref<AnalyticsFilter>({
@@ -32,16 +36,27 @@ const analyticsFilter = computed<AnalyticsFilter>(() => ({
 }))
 
 const menu = [
-  { title: 'Dashboard', icon: 'fasl fa-chart-line', category: 'dashboard' },
+  { title: 'Dashboard', icon: 'fas fa-chart-line', category: 'dashboard' },
   { heading: 'Content' },
-  { title: 'Most accessed', icon: 'fasl fa-file', category: 'most-accessed' },
-  { title: 'Content activity', icon: 'fasl fa-chart-simple', category: 'content-activity' },
-  { title: 'Search terms', icon: 'fasl fa-magnifying-glass', category: 'search-terms' },
+  { title: 'Most accessed', icon: 'fas fa-file', category: 'most-accessed' },
+  { title: 'Content activity', icon: 'fas fa-chart-simple', category: 'content-activity' },
+  { title: 'Search terms', icon: 'fas fa-magnifying-glass', category: 'search-terms' },
   { heading: 'Users' },
-  { title: 'Most active', icon: 'fasl fa-users', category: 'most-active' },
+  { title: 'Most active', icon: 'fas fa-users', category: 'most-active' },
   { heading: 'Engagement' },
-  { title: 'Usage times', icon: 'fasl fa-clock', category: 'usage-times' },
+  { title: 'Usage times', icon: 'fas fa-clock', category: 'usage-times' },
 ] as const
+
+const navItems: SideNavItem[] = menu.map(item =>
+  'heading' in item
+    ? { heading: item.heading }
+    : {
+        key: item.category,
+        label: item.title,
+        icon: item.icon,
+        href: router.resolve({ name: 'analytics-category', params: { category: item.category } }).href,
+      },
+)
 
 const reportTitle = computed(() => {
   if (category.value === 'most-active') return 'Most active users'
@@ -54,11 +69,14 @@ const reportTitle = computed(() => {
 const reportSubtitle = computed(() => {
   if (category.value === 'most-active') return 'Users with the most activity in the selected period.'
   if (category.value === 'content-activity') return 'Counts by action across accessible sites.'
-  if (category.value === 'search-terms') return 'What people searched for in the sites you administer. Global searches are attributed only to the sites where they matched.'
+  if (category.value === 'search-terms')
+    return 'What people searched for in the sites you administer. Global searches are attributed only to the sites where they matched.'
   if (category.value === 'usage-times') return 'Activity grouped by hour of day.'
   return 'Content with the most views in the selected period.'
 })
-const availableSitesCount = computed(() => Number(dashboardData.value?.totalOwnedOrAdministeredSites ?? dashboardData.value?.totalSites ?? 0))
+const availableSitesCount = computed(() =>
+  Number(dashboardData.value?.totalOwnedOrAdministeredSites ?? dashboardData.value?.totalSites ?? 0),
+)
 const showAnalyticsEmptyState = computed(() => ready.value && !error.value && availableSitesCount.value === 0)
 
 async function selectCategory(next: AnalyticsCategory) {
@@ -80,10 +98,14 @@ async function refresh() {
       rows.value = []
       return
     }
-    if (category.value === 'most-active') rows.value = (await analyticsStore.mostActive(analyticsFilter.value)).rows
-    else if (category.value === 'content-activity') rows.value = (await analyticsStore.contentActivity(analyticsFilter.value)).rows
-    else if (category.value === 'search-terms') rows.value = (await analyticsStore.searchTerms(analyticsFilter.value)).rows
-    else if (category.value === 'usage-times') rows.value = (await analyticsStore.usageTimes(analyticsFilter.value)).rows
+    if (category.value === 'most-active')
+      rows.value = (await analyticsStore.mostActive(analyticsFilter.value)).rows
+    else if (category.value === 'content-activity')
+      rows.value = (await analyticsStore.contentActivity(analyticsFilter.value)).rows
+    else if (category.value === 'search-terms')
+      rows.value = (await analyticsStore.searchTerms(analyticsFilter.value)).rows
+    else if (category.value === 'usage-times')
+      rows.value = (await analyticsStore.usageTimes(analyticsFilter.value)).rows
     else rows.value = (await analyticsStore.mostAccessed(analyticsFilter.value)).rows
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Could not load analytics'
@@ -93,9 +115,11 @@ async function refresh() {
 }
 
 function syncCategoryFromRoute() {
-  const routeCategory = Array.isArray(route.params.category) ? route.params.category[0] : route.params.category
+  const routeCategory = Array.isArray(route.params.category)
+    ? route.params.category[0]
+    : route.params.category
   const valid = menu.some(item => 'category' in item && item.category === routeCategory)
-  category.value = valid ? routeCategory as AnalyticsCategory : 'dashboard'
+  category.value = valid ? (routeCategory as AnalyticsCategory) : 'dashboard'
 }
 
 function todayInput() {
@@ -115,76 +139,73 @@ function toDateInput(date: Date) {
   return `${year}-${month}-${day}`
 }
 
-watch(() => route.params.category, async () => {
-  syncCategoryFromRoute()
-  await refresh()
-})
+watch(
+  () => route.params.category,
+  async () => {
+    syncCategoryFromRoute()
+    await refresh()
+  },
+)
 
 onMounted(async () => {
   syncCategoryFromRoute()
+  // Queries are bucketed by the user's saved time zone; do not send the first one without it.
+  await profileStore.ensureProfile().catch(() => undefined)
   await refresh()
 })
 </script>
 
 <template>
-  <div class="analytics-view">
-    <div class="settings analytics-shell mobile-collapsible">
-      <div class="settings-left settings-menu-pane">
-        <VList nav density="compact" open-strategy="single" class="layout-vertical-nav rounded" bg-color="transparent">
-          <template v-for="item in menu" :key="'category' in item ? item.category : item.heading">
-            <VListSubheader v-if="'heading' in item" class="text-uppercase text-disabled">{{ item.heading }}</VListSubheader>
-            <VListItem
-              v-else
-              v-tippy="smAndDown ? { content: item.title, placement: 'right' } : null"
-              :active="category === item.category"
-              @click="selectCategory(item.category)"
-            >
-              <template #prepend><VIcon :icon="item.icon" /></template>
-              <template #title>{{ item.title }}</template>
-            </VListItem>
+  <div class="analytics-view page-bleed">
+    <PageHeader
+      :title="category === 'dashboard' ? 'Analytics' : `Analytics: ${reportTitle}`"
+      document-title="Analytics"
+    />
+    <SideNavLayout
+      class="analytics-shell"
+      :items="navItems"
+      :model-value="category"
+      label="Analytics reports"
+      @update:model-value="key => selectCategory(key as AnalyticsCategory)"
+    >
+      <VAlert v-if="error" type="error" class="mb-4">{{ error }}</VAlert>
+      <div v-else-if="!ready" class="analytics-gate analytics-gate--loading">
+        <VProgressCircular
+          aria-label="Loading analytics"
+          indeterminate
+          color="primary"
+          :size="38"
+          :width="3"
+        />
+      </div>
+      <div v-else-if="showAnalyticsEmptyState" class="analytics-gate analytics-gate--empty">
+        <EmptyState
+          :icon="ICONS.analytics"
+          title="Create a site to view analytics"
+          text="Analytics will appear here after you create a site and users begin working with content."
+        >
+          <template #actions>
+            <NewSite text="New site" />
           </template>
-        </VList>
+        </EmptyState>
       </div>
-
-      <div class="settings-right analytics-content">
-        <div class="settings-content-viewport">
-          <div class="d-flex flex-column ga-3 settings-content-scroll">
-            <VAlert v-if="error" type="error" class="mb-4">{{ error }}</VAlert>
-            <div v-else-if="!ready" class="analytics-gate analytics-gate--loading">
-              <VProgressCircular indeterminate color="primary" :size="38" :width="3" />
-            </div>
-            <div v-else-if="showAnalyticsEmptyState" class="analytics-gate analytics-gate--empty">
-              <VEmptyState title="Create a site to view analytics" justify="center" class="analytics-empty-state">
-                <template #media>
-                  <VIcon color="accent-1">fasl fa-home mb-6</VIcon>
-                </template>
-                <template #text>
-                  <p class="text-medium-emphasis analytics-empty-state-copy">
-                    Analytics will appear here after you create a site and users begin working with content.
-                  </p>
-                </template>
-                <template #actions>
-                  <NewSite color="primary" variant="flat" size="large" text="New site" />
-                </template>
-              </VEmptyState>
-            </div>
-            <Dashboard v-else-if="category === 'dashboard'" :initial-data="dashboardData" />
-            <AnalyticsTableReport v-else v-model:filter="filter" :title="reportTitle" :subtitle="reportSubtitle" :rows="rows" :loading="analyticsStore.loadingAnalytics" :report="category" @refresh="refresh" />
-          </div>
-        </div>
-      </div>
-    </div>
+      <Dashboard v-else-if="category === 'dashboard'" :initial-data="dashboardData" />
+      <AnalyticsTableReport
+        v-else
+        v-model:filter="filter"
+        :title="reportTitle"
+        :subtitle="reportSubtitle"
+        :rows="rows"
+        :loading="analyticsStore.loadingAnalytics"
+        :report="category"
+        @refresh="refresh"
+      />
+    </SideNavLayout>
   </div>
 </template>
 
 <style scoped>
 .analytics-view {
-  width: calc(100% + 16px);
-  margin-left: -8px;
-  margin-right: -8px;
-  padding-left: 8px;
-  padding-right: 8px;
-  box-sizing: border-box;
   overflow: visible;
 }
 
@@ -192,11 +213,7 @@ onMounted(async () => {
   width: 100%;
 }
 
-.analytics-content {
-  min-width: 0;
-}
-
-.analytics-content :deep(.v-card-title) {
+.analytics-shell :deep(.v-card-title) {
   font-weight: 600;
 }
 
@@ -207,26 +224,5 @@ onMounted(async () => {
   min-height: 100%;
   flex: 1 1 auto;
   padding: 16px 0 12px;
-}
-
-.analytics-empty-state-copy {
-  max-width: 34rem;
-}
-
-@media (max-width: 900px) {
-  .analytics-shell {
-    flex-direction: row;
-  }
-
-  .settings-left {
-    flex: 0 0 56px;
-    max-width: 56px;
-    width: 56px;
-  }
-
-  .analytics-content {
-    flex: 1 1 auto;
-    min-width: 0;
-  }
 }
 </style>

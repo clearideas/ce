@@ -43,7 +43,7 @@ const icons: string[] = [
   'fa-map',
   'fa-medal',
   'fa-newspaper',
-  'fa-puzzle',
+  'fa-puzzle-piece',
   'fa-rocket',
   'fa-trophy',
   'fa-umbrella-beach',

@@ -143,7 +143,7 @@ OPENAI_API_KEY=<key>
 ANTHROPIC_API_KEY=<key>
 ```
 
-If no AI model is configured, site AI chat remains unavailable.
+If no AI model is configured, **Ask** and the site AI tab explain that chat is not configured. `AI_CHAT_MODEL` is the default model; `AI_CHAT_MODELS` lists the models users may pick from. See **AI Chat** for scope, access and storage.
 
 ## Bundled Operator Docs
 

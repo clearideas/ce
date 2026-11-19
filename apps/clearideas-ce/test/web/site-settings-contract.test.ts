@@ -4,13 +4,16 @@ import { ceApi } from '../../src-web/src/api/client'
 function mockUpdateSiteFetch() {
   const fetchMock = vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
     const body = typeof init?.body === 'string' ? JSON.parse(init.body) : {}
-    return new Response(JSON.stringify({
-      site: {
-        id: 'site-1',
-        name: 'CE Site',
-        ...body,
-      },
-    }), { headers: { 'content-type': 'application/json' } })
+    return new Response(
+      JSON.stringify({
+        site: {
+          id: 'site-1',
+          name: 'CE Site',
+          ...body,
+        },
+      }),
+      { headers: { 'content-type': 'application/json' } },
+    )
   })
   vi.stubGlobal('fetch', fetchMock)
   return fetchMock
@@ -38,21 +41,26 @@ describe('CE site settings request contracts', () => {
       },
     })
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/sites/site-1', expect.objectContaining({
-      method: 'PATCH',
-      body: JSON.stringify(payload),
-    }))
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/sites/site-1',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      }),
+    )
   })
 
   it('rejects decorated site attributes locally before fetch', async () => {
     const fetchMock = mockUpdateSiteFetch()
 
-    expect(() => ceApi.updateSite('site-1', {
-      attributes: {
-        notifications: true,
-        latestUpdatedAt: '2026-05-20T12:00:00.000Z',
-      },
-    })).toThrow('Update site payload is invalid')
+    expect(() =>
+      ceApi.updateSite('site-1', {
+        attributes: {
+          notifications: true,
+          latestUpdatedAt: '2026-05-20T12:00:00.000Z',
+        },
+      }),
+    ).toThrow('Update site payload is invalid')
 
     expect(fetchMock).not.toHaveBeenCalled()
   })

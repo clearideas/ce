@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import hljs from 'highlight.js'
-import { computed, ref } from 'vue'
+import { hljs } from '../../utils/highlight'
+import { computed, ref, useId } from 'vue'
 
 const props = defineProps<{
   modelValue: string
@@ -29,8 +29,26 @@ function updateValue(event: Event) {
   emit('update:modelValue', (event.target as HTMLTextAreaElement).value)
 }
 
+/**
+ * Tab indents (two spaces). So the editor is never a keyboard trap (WCAG 2.1.2): Shift+Tab always
+ * moves focus back, and after Escape the next Tab moves focus on instead of indenting.
+ */
+const tabMovesFocus = ref(false)
+const hintId = useId()
+
 function insertIndent(event: KeyboardEvent) {
-  if (event.key !== 'Tab') return
+  if (event.key === 'Escape') {
+    tabMovesFocus.value = true
+    return
+  }
+  if (event.key !== 'Tab') {
+    tabMovesFocus.value = false
+    return
+  }
+  if (event.shiftKey || tabMovesFocus.value) {
+    tabMovesFocus.value = false
+    return
+  }
   event.preventDefault()
   const textarea = event.currentTarget as HTMLTextAreaElement
   const start = textarea.selectionStart
@@ -47,11 +65,17 @@ function insertIndent(event: KeyboardEvent) {
   <div class="manifest-field" :class="{ 'manifest-field--error': error }">
     <div class="manifest-field__label">Agent manifest (JSON)</div>
     <div class="manifest-editor">
-      <pre ref="highlightedCode" class="manifest-editor__highlight hljs" aria-hidden="true"><code class="language-json" v-html="highlightedManifest" /></pre>
+      <pre
+        ref="highlightedCode"
+        class="manifest-editor__highlight hljs"
+        aria-hidden="true"
+        tabindex="-1"
+      ><code class="language-json" v-html="highlightedManifest" /></pre>
       <textarea
         class="manifest-editor__input"
         :value="modelValue"
         aria-label="Agent manifest (JSON)"
+        :aria-describedby="hintId"
         autocomplete="off"
         autocapitalize="off"
         spellcheck="false"
@@ -60,9 +84,16 @@ function insertIndent(event: KeyboardEvent) {
         @keydown="insertIndent"
       />
     </div>
+    <span :id="hintId" class="d-sr-only"
+      >Tab inserts two spaces. Press Escape, then Tab, to leave the editor.</span
+    >
     <div class="manifest-field__details">
       <span :class="error ? 'text-error' : 'text-medium-emphasis'">
-        {{ error ? 'Manifest must be valid JSON.' : 'CE supports prompt steps, conditions, variables, and read-only Site tools.' }}
+        {{
+          error
+            ? 'Manifest must be valid JSON.'
+            : 'CE supports prompt steps, conditions, variables, and read-only Site tools.'
+        }}
       </span>
       <span class="text-medium-emphasis">JSON · {{ lineCount }} lines</span>
     </div>
@@ -94,7 +125,9 @@ function insertIndent(event: KeyboardEvent) {
   border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   border-radius: 6px;
   background: rgb(var(--v-theme-surface));
-  transition: border-color 120ms ease, box-shadow 120ms ease;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
 }
 
 .manifest-field:focus-within .manifest-editor {
@@ -124,7 +157,7 @@ function insertIndent(event: KeyboardEvent) {
   tab-size: 2;
   white-space: pre;
   overflow-wrap: normal;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
   font-size: 13px;
   font-variant-ligatures: none;
   line-height: 1.6;

@@ -4,6 +4,7 @@ import BaseButton from '../base/BaseButton.vue'
 import IconCheckbox from '../base/IconCheckbox.vue'
 import SettingsCard from '../base/SettingsCard.vue'
 import { useProfileStore, useSiteStore } from '../../stores'
+import EmptyState from '../base/EmptyState.vue'
 
 const profileStore = useProfileStore()
 const siteStore = useSiteStore()
@@ -49,16 +50,20 @@ async function suppressInvitation(siteId: string) {
   await profileStore.getProfile()
 }
 
-watch(() => profileStore.loading, loading => {
-  if (!loading) initializeComponentState()
-}, { immediate: true })
+watch(
+  () => profileStore.loading,
+  loading => {
+    if (!loading) initializeComponentState()
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
   <SettingsCard
     title="Site invitations"
     subtitle="Choose whether site invitations are accepted automatically and review pending shared sites."
-    icon="fasl fa-envelope-open-text"
+    icon="fas fa-envelope-open-text"
     :is-initialized="isInitialized"
   >
     <template #content>
@@ -71,17 +76,16 @@ watch(() => profileStore.loading, loading => {
       />
 
       <div v-if="siteStore.loadingSites" class="text-center py-8">
-        <VProgressCircular indeterminate />
+        <VProgressCircular aria-hidden="true" indeterminate />
         <div class="mt-2">Loading site invitations</div>
       </div>
-      <VEmptyState v-else-if="pendingSites.length === 0 && !autoAcceptInvites" title="No pending invitations">
-        <template #text>
-          <p class="text-medium-emphasis">Pending site invitations will appear here.</p>
-        </template>
-        <template #media>
-          <VIcon icon="fasl fa-envelope-open-text" />
-        </template>
-      </VEmptyState>
+      <EmptyState
+        v-else-if="pendingSites.length === 0 && !autoAcceptInvites"
+        icon="fas fa-envelope-open-text"
+        title="No pending invitations"
+        text="Pending site invitations will appear here."
+        compact
+      />
       <div v-else-if="pendingSites.length > 0" class="settings-management-section">
         <div v-for="site in pendingSites" :key="site.id" class="settings-management-item">
           <div class="settings-status-item-icon">
@@ -94,20 +98,32 @@ watch(() => profileStore.loading, loading => {
             />
             <VIcon
               v-else
-              :icon="(site.icon && `fasl ${site.icon}`) || 'fasl fa-folder-open'"
+              :icon="(site.icon && `fas ${site.icon}`) || 'fas fa-folder-open'"
               size="24"
               color="primary"
             />
           </div>
           <div class="d-flex flex-column flex-grow-1 min-w-0">
-            <div class="title ellipsis">{{ site.name }}</div>
+            <div class="title text-truncate">{{ site.name }}</div>
             <div class="subtitle">
               <div class="text-caption text-medium-emphasis">Shared site</div>
             </div>
           </div>
           <div class="site-invitations-actions">
-            <BaseButton text="Suppress" color="secondary" variant="outlined" density="compact" @click="suppressInvitation(site.id)" />
-            <BaseButton text="Accept" color="primary" variant="flat" density="compact" @click="acceptInvitation(site.id)" />
+            <BaseButton
+              text="Suppress"
+              color="secondary"
+              variant="outlined"
+              density="compact"
+              @click="suppressInvitation(site.id)"
+            />
+            <BaseButton
+              text="Accept"
+              color="primary"
+              variant="flat"
+              density="compact"
+              @click="acceptInvitation(site.id)"
+            />
           </div>
         </div>
       </div>

@@ -33,6 +33,7 @@ watch(
 <template>
   <div class="content-upload-status" :style="{ height: isActive ? 'auto' : `${props.height}px` }">
     <VProgressLinear
+      aria-label="Upload progress"
       v-if="isActive"
       :model-value="progress"
       :indeterminate="contentStore.isIndeterminate"

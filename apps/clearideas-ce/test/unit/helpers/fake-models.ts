@@ -26,7 +26,12 @@ function eq(a: any, b: any) {
 
 function matchesCondition(value: any, condition: any): boolean {
   if (condition instanceof RegExp) return condition.test(String(value ?? ''))
-  if (condition && typeof condition === 'object' && !(condition instanceof Date) && !Array.isArray(condition)) {
+  if (
+    condition &&
+    typeof condition === 'object' &&
+    !(condition instanceof Date) &&
+    !Array.isArray(condition)
+  ) {
     const keys = Object.keys(condition)
     if (keys.some(key => key.startsWith('$'))) {
       return keys.every(key => {
@@ -40,7 +45,8 @@ function matchesCondition(value: any, condition: any): boolean {
             return !expected.some((candidate: any) => eq(value, candidate))
           case '$regex': {
             // MongoDB's PCRE understands \p{..} classes natively; emulate that with the `u` flag.
-            const regex = expected instanceof RegExp ? expected : new RegExp(expected, `${condition.$options ?? ''}u`)
+            const regex =
+              expected instanceof RegExp ? expected : new RegExp(expected, `${condition.$options ?? ''}u`)
             return regex.test(String(value ?? ''))
           }
           case '$options':
@@ -86,9 +92,10 @@ function sortDocs(docs: any[], sort?: Record<string, number>) {
       if (av === bv) continue
       if (av == null) return 1
       if (bv == null) return -1
-      const comparison = av instanceof Date || bv instanceof Date
-        ? new Date(av).getTime() - new Date(bv).getTime()
-        : String(av).localeCompare(String(bv))
+      const comparison =
+        av instanceof Date || bv instanceof Date
+          ? new Date(av).getTime() - new Date(bv).getTime()
+          : String(av).localeCompare(String(bv))
       if (comparison !== 0) return comparison * direction
     }
     return 0

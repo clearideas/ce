@@ -6,7 +6,9 @@ import BaseButton from '../components/base/BaseButton.vue'
 import Logo from '../components/brand/Logo.vue'
 import AuthLayout from '../layouts/AuthLayout.vue'
 import { useAuthStore } from '../stores'
+import { usePageTitle } from '../composables/usePageTitle'
 
+usePageTitle('Sign in')
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
@@ -83,7 +85,6 @@ function submit() {
   if (step.value === 'email') void sendCode()
   if (step.value === 'code') void verifyCode()
 }
-
 </script>
 
 <template>
@@ -95,13 +96,17 @@ function submit() {
             <Logo class="auth-logo" />
             <p class="auth-edition mb-0">Community Edition</p>
           </div>
-          <h1 class="auth-title">{{ step === 'redirecting' ? 'Opening Clear Ideas' : 'Sign in with email code' }}</h1>
+          <h1 class="auth-title">
+            {{ step === 'redirecting' ? 'Opening Clear Ideas' : 'Sign in with email code' }}
+          </h1>
         </div>
         <VAlert v-if="error" type="error" class="mb-4">{{ error }}</VAlert>
         <VAlert v-if="success" type="success" class="mb-4">{{ success }}</VAlert>
         <div v-if="step === 'redirecting'" class="auth-redirecting">
-          <VProgressCircular indeterminate color="primary" size="34" />
-          <p class="text-body-2 text-medium-emphasis mb-0">Authentication confirmed. Taking you to your workspace...</p>
+          <VProgressCircular aria-hidden="true" indeterminate color="primary" size="34" />
+          <p class="text-body-2 text-medium-emphasis mb-0">
+            Authentication confirmed. Taking you to your workspace...
+          </p>
         </div>
         <VForm v-else @submit.prevent="submit">
           <VTextField
@@ -175,7 +180,8 @@ function submit() {
   font-size: 1.42rem;
   font-weight: 500;
   line-height: 1;
-  transform: translateY(-3px);
+  /* Optical alignment with the logo mark. */
+  transform: translateY(-10px);
   white-space: nowrap;
 }
 

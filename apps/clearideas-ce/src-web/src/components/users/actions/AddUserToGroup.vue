@@ -2,6 +2,8 @@
 import { computed, ref, watch } from 'vue'
 import BaseButton from '../../base/BaseButton.vue'
 import BaseDialog from '../../base/BaseDialog.vue'
+import IconCheckbox from '../../base/IconCheckbox.vue'
+import { ICONS } from '../../../icons'
 import { useUserStore } from '../../../stores'
 
 interface Props {
@@ -34,18 +36,24 @@ const filter = ref('')
 
 const group = computed(() => userStore.userGroups.find(item => item.id === props.userGroupId))
 const groupUserIds = computed(() => new Set((group.value?.users ?? []).map(id => String(id))))
-const userOptions = computed(() => availableUsers.value
-  .filter(user => !groupUserIds.value.has(user.id))
-  .filter(user => {
-    const q = filter.value.trim().toLowerCase()
-    if (!q) return true
-    return [user.displayName, user.name, user.email].some(value => String(value ?? '').toLowerCase().includes(q))
-  })
-  .map(user => ({
-    title: user.displayName || user.name || user.email,
-    subtitle: user.email,
-    value: user.id,
-  })))
+const userOptions = computed(() =>
+  availableUsers.value
+    .filter(user => !groupUserIds.value.has(user.id))
+    .filter(user => {
+      const q = filter.value.trim().toLowerCase()
+      if (!q) return true
+      return [user.displayName, user.name, user.email].some(value =>
+        String(value ?? '')
+          .toLowerCase()
+          .includes(q),
+      )
+    })
+    .map(user => ({
+      title: user.displayName || user.name || user.email,
+      subtitle: user.email,
+      value: user.id,
+    })),
+)
 
 function toggleDialog() {
   isDialogVisible.value = !isDialogVisible.value
@@ -86,7 +94,7 @@ watch(isDialogVisible, async value => {
   <BaseButton
     v-if="!!!props.showAsMenu && !!!props.showAsIcon"
     :color="props.color"
-    prepend-icon="fasl fa-user-plus"
+    prepend-icon="fas fa-user-plus"
     :variant="props.variant ?? 'plain'"
     density="comfortable"
     slim
@@ -94,76 +102,59 @@ watch(isDialogVisible, async value => {
     :text="props.buttonText || 'Add user to group'"
     @click="toggleDialog"
   />
-  <VIcon
-    v-if="!!props.showAsIcon"
-    :color="props.color"
-    icon="fass fa-user-plus"
-    aria-label="Add user to group"
-    @click="toggleDialog"
+  <BaseButton
+    v-if="props.showAsIcon"
+    :icon="ICONS.add"
+    intent="tertiary"
+    color="success"
+    size="small"
+    density="comfortable"
+    :tooltip="`Add users to ${props.userGroupName}`"
+    :aria-label="`Add users to ${props.userGroupName}`"
+    @click.stop="toggleDialog"
   />
   <VListItem
     v-if="props.showAsMenu"
-    prepend-icon="fasl fa-user-plus"
+    prepend-icon="fas fa-user-plus"
     density="compact"
     @click.stop="toggleDialog"
   >
     <VListItemTitle>{{ props.text || 'Add user to group' }}</VListItemTitle>
   </VListItem>
 
-  <BaseDialog v-model="isDialogVisible" width="500" :title="`Add users to ${props.userGroupName}`">
+  <BaseDialog
+    v-model="isDialogVisible"
+    width="500"
+    :title="`Add users to ${props.userGroupName}`"
+    confirm-text="Add users"
+    :confirm-disabled="selectedUsers.length === 0"
+    :loading="loading"
+    @confirm="addUsers"
+    @cancel="handleCancel"
+  >
     <VCardText>
       <VTextField
         v-model="filter"
-        label="Users"
+        label="Filter users"
         autofocus
         clearable
         hide-details="auto"
         :loading="loadingUsers"
       />
-      <div class="chips mt-3">
-        <VChip
-          v-for="userId in selectedUsers"
-          :key="userId"
-          closable
-          size="small"
-          @click:close="selectedUsers = selectedUsers.filter(id => id !== userId)"
-        >
-          {{ userOptions.find(user => user.value === userId)?.title ?? userId }}
-        </VChip>
-      </div>
-      <VList class="mt-3 add-user-to-group-list" density="compact" nav>
-        <VListItem v-if="!loadingUsers && userOptions.length === 0">
-          <VListItemTitle>No users available to add</VListItemTitle>
-        </VListItem>
-        <VListItem
+      <p v-if="!loadingUsers && userOptions.length === 0" class="text-body-2 text-medium-emphasis mt-3 mb-0">
+        No users available to add
+      </p>
+      <div v-else class="add-user-to-group-list mt-3" role="group" aria-label="Users">
+        <IconCheckbox
           v-for="user in userOptions"
+          :id="user.value"
           :key="user.value"
-          :title="user.title"
-          :subtitle="user.subtitle"
-          @click="selectedUsers = selectedUsers.includes(user.value) ? selectedUsers.filter(id => id !== user.value) : [...selectedUsers, user.value]"
-        >
-          <template #prepend>
-            <VCheckboxBtn :model-value="selectedUsers.includes(user.value)" />
-          </template>
-        </VListItem>
-      </VList>
+          v-model="selectedUsers"
+          :label="user.title"
+          :description="user.subtitle"
+        />
+      </div>
     </VCardText>
-    <VDivider />
-    <VCardActions class="bg-surface-light">
-      <VSpacer />
-      <BaseButton text="Cancel" color="default" type="reset" variant="flat" :slim="false" @click="handleCancel" />
-      <BaseButton
-        text="Add users"
-        color="success"
-        type="submit"
-        variant="flat"
-        density="default"
-        :disabled="selectedUsers.length === 0"
-        :loading="loading"
-        :slim="false"
-        @click="addUsers"
-      />
-    </VCardActions>
   </BaseDialog>
 </template>
 

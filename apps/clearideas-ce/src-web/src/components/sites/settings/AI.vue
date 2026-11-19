@@ -4,6 +4,7 @@ import BaseButton from '../../base/BaseButton.vue'
 import IconCheckbox from '../../base/IconCheckbox.vue'
 import SettingsCard from '../../base/SettingsCard.vue'
 import NewAccessKey from '../../settings/NewAccessKey.vue'
+import { useDirtyForm } from '../../../composables/useDirtyForm'
 import { useSiteStore } from '../../../stores'
 
 const siteStore = useSiteStore()
@@ -12,6 +13,9 @@ const ai = ref({
   chatEnabled: false,
   mcpEnabled: false,
 })
+const saving = ref(false)
+const { dirty, markClean } = useDirtyForm(() => ({ ...ai.value }))
+defineExpose({ dirty })
 
 function initializeComponentState() {
   const current = siteStore.currentSite?.attributes?.ai ?? {}
@@ -20,9 +24,20 @@ function initializeComponentState() {
     mcpEnabled: current.mcpEnabled === true || siteStore.currentSite?.attributes?.mcp?.enabled === true,
   }
   isInitialized.value = true
+  markClean()
 }
 
 async function handleUpdate() {
+  saving.value = true
+  try {
+    await updateSite()
+    markClean()
+  } finally {
+    saving.value = false
+  }
+}
+
+async function updateSite() {
   await siteStore.updateCurrentSite({
     attributes: {
       ai: {
@@ -42,7 +57,8 @@ watch(() => siteStore.currentSite, initializeComponentState, { immediate: true }
     title="AI"
     subtitle="Enable site-scoped AI chat and MCP access for this site."
     :is-initialized="isInitialized"
-    icon="fasl fa-robot"
+    icon="fas fa-robot"
+    :dirty="dirty"
   >
     <template #content>
       <div class="d-flex flex-column ga-2 mb-4">
@@ -56,13 +72,11 @@ watch(() => siteStore.currentSite, initializeComponentState, { immediate: true }
           label="Enable MCP access"
           description="Allow MCP clients to access this site's CE content through access keys."
         />
-        <div class="text-body-2 text-medium-emphasis">
-          MCP endpoint: <code>/api/mcp</code>
-        </div>
+        <div class="text-body-2 text-medium-emphasis">MCP endpoint: <code>/api/mcp</code></div>
       </div>
     </template>
     <template #footer>
-      <BaseButton text="Save AI" color="primary" variant="flat" @click="handleUpdate" />
+      <BaseButton text="Save" :loading="saving" :disabled="!dirty" @click="handleUpdate" />
       <NewAccessKey text="Create access key" size="default" />
     </template>
   </SettingsCard>
